@@ -53,10 +53,10 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           <div className="space-y-1.5">
             <h4 className="font-bold text-[#0b1c30] text-xs flex items-center gap-1.5">
               <FileText size={14} className="text-[#059669]" />
-              1. Naturaleza de la Plataforma
+              1. Naturaleza de la Plataforma y Titularidad
             </h4>
             <p>
-              APANA es una herramienta SaaS de catálogo digital. No intermedia en cobros ni procesa pagos; las transacciones son acuerdos privados entre comerciante y comprador.
+              La plataforma tecnológica, marca y software denominado <strong>APANA</strong> es de titularidad, desarrollo y operación exclusiva de <strong>MIVO (Mivo E.I.R.L.)</strong>. Es una herramienta SaaS de catálogo digital que no intermedia en cobros ni procesa pagos.
             </p>
           </div>
 
@@ -66,17 +66,17 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
               2. Prohibición de Suplantación
             </h4>
             <p>
-              Está estrictamente prohibido usar números ajenos o marcas registradas no autorizadas. Las cuentas fraudulentas serán suspendidas de inmediato y reportadas.
+              Está estrictamente prohibido usar números ajenos o marcas registradas no autorizadas. Las cuentas fraudulentas serán suspendidas de inmediato y reportadas a las autoridades.
             </p>
           </div>
 
           <div className="space-y-1.5">
             <h4 className="font-bold text-[#0b1c30] text-xs flex items-center gap-1.5">
               <FileText size={14} className="text-[#059669]" />
-              3. Deslinde de Responsabilidad
+              3. Deslinde de Responsabilidad y Contacto
             </h4>
             <p>
-              APANA no es responsable por los acuerdos comerciales, envíos, entregas o calidad de productos comercializados por los usuarios de la plataforma.
+              APANA no es responsable por los acuerdos comerciales, envíos o calidad de productos. Canal oficial de soporte y denuncias: <a href="mailto:soporte@beapana.com" className="text-[#059669] font-semibold hover:underline">soporte@beapana.com</a>.
             </p>
           </div>
         </div>

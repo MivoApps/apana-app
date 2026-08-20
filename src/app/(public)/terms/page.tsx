@@ -71,8 +71,11 @@ export default function TermsPage() {
           <section className="space-y-3">
             <h2 className="text-lg sm:text-xl font-bold text-[#0b1c30] flex items-center gap-2">
               <FileText size={18} className="text-[#059669]" />
-              2. Naturaleza del Servicio
+              2. Naturaleza del Servicio y Titularidad
             </h2>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              La plataforma tecnológica, marca y software denominado <strong>APANA</strong> es de titularidad, desarrollo y operación exclusiva de <strong>MIVO (Mivo E.I.R.L.)</strong>.
+            </p>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               APANA es un proveedor de tecnología (Software as a Service - SaaS) que facilita a los emprendedores la creación de catálogos digitales interactivos y la generación de enlaces de contacto directo hacia la aplicación WhatsApp.
             </p>
@@ -129,9 +132,12 @@ export default function TermsPage() {
 
           {/* Section 6: Contacto y Soporte */}
           <section className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 space-y-2">
-            <h3 className="font-bold text-sm text-[#0b1c30]">Canal de Soporte y Denuncias</h3>
+            <h3 className="font-bold text-sm text-[#0b1c30]">Canal Oficial de Soporte, Legal y Denuncias</h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Si detectas una tienda que utiliza indebidamente tu número de teléfono o suplanta tu marca comercial, contáctanos inmediatamente a través de nuestros canales oficiales para proceder con la baja inmediata de la cuenta infractora.
+              Para consultas legales, solicitudes de información, soporte técnico o reportes de tiendas que utilicen indebidamente un número telefónico o marca comercial, contáctanos directamente a nuestro correo oficial:
+            </p>
+            <p className="text-xs font-bold text-[#059669]">
+              ✉️ <a href="mailto:soporte@beapana.com" className="hover:underline">soporte@beapana.com</a>
             </p>
           </section>
 
@@ -140,7 +146,7 @@ export default function TermsPage() {
 
       {/* Footer */}
       <footer className="py-6 text-center text-xs text-slate-500 border-t border-[#bccac0]/20 bg-white">
-        © {new Date().getFullYear()} APANA. Todos los derechos reservados.
+        © {new Date().getFullYear()} APANA • Desarrollado por Mivo E.I.R.L. Todos los derechos reservados.
       </footer>
     </div>
   );
