@@ -298,32 +298,59 @@ export const deleteProductFromFS = async (storeId: string, productId: string): P
   await deleteDoc(productRef);
 };
 
-export const recordAnalyticsEvent = async (storeId: string, eventType: 'visit' | 'click') => {
+export interface StoreAnalyticsDay {
+  date: string;
+  label: string;
+  visits: number;
+  clicks: number;
+  productViews: number;
+  cartAdds: number;
+  hourlyVisits?: Record<string, number>;
+  hourlyClicks?: Record<string, number>;
+  dayOfWeek?: number;
+}
+
+export const recordAnalyticsEvent = async (
+  storeId: string, 
+  eventType: 'visit' | 'click' | 'product_view' | 'cart_add'
+) => {
   const today = new Date();
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const day = String(today.getDate()).padStart(2, '0');
   const dateStr = `${year}-${month}-${day}`;
+  const currentHour = today.getHours();
 
   try {
     const docRef = doc(db, 'stores', storeId, 'analytics', dateStr);
-    await setDoc(docRef, {
-      visits: eventType === 'visit' ? increment(1) : increment(0),
-      clicks: eventType === 'click' ? increment(1) : increment(0),
-    }, { merge: true });
+    const updates: Record<string, any> = {};
+
+    if (eventType === 'visit') {
+      updates.visits = increment(1);
+      updates[`hourlyVisits.${currentHour}`] = increment(1);
+    } else if (eventType === 'click') {
+      updates.clicks = increment(1);
+      updates[`hourlyClicks.${currentHour}`] = increment(1);
+    } else if (eventType === 'product_view') {
+      updates.productViews = increment(1);
+    } else if (eventType === 'cart_add') {
+      updates.cartAdds = increment(1);
+    }
+
+    await setDoc(docRef, updates, { merge: true });
   } catch (error) {
     console.error('Error logging analytics event:', error);
   }
 };
 
-export const getStoreAnalyticsLast7Days = async (storeId: string) => {
+export const getStoreAnalyticsDays = async (storeId: string, daysCount: number = 7): Promise<StoreAnalyticsDay[]> => {
   try {
-    const results = [];
+    const results: StoreAnalyticsDay[] = [];
     const promises = [];
     const dates = [];
 
-    // Generar ultimos 7 dias
-    for (let i = 6; i >= 0; i--) {
+    // Generar ultimos N dias
+    for (let i = daysCount - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const year = d.getFullYear();
@@ -333,9 +360,12 @@ export const getStoreAnalyticsLast7Days = async (storeId: string) => {
 
       const weekday = d.toLocaleDateString('es-ES', { weekday: 'short' });
       const dayNum = d.getDate();
-      const cleanLabel = (weekday.charAt(0).toUpperCase() + weekday.slice(1)).replace('.', '');
+      const monthShort = d.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
+      const cleanLabel = daysCount > 7 
+        ? `${dayNum} ${monthShort}`
+        : `${(weekday.charAt(0).toUpperCase() + weekday.slice(1)).replace('.', '')} ${dayNum}`;
 
-      dates.push({ dateStr, label: `${cleanLabel} ${dayNum}` });
+      dates.push({ dateStr, label: cleanLabel, dayOfWeek: d.getDay() });
 
       const docRef = doc(db, 'stores', storeId, 'analytics', dateStr);
       promises.push(getDoc(docRef));
@@ -348,18 +378,31 @@ export const getStoreAnalyticsLast7Days = async (storeId: string) => {
       const dateInfo = dates[i];
       let visits = 0;
       let clicks = 0;
+      let productViews = 0;
+      let cartAdds = 0;
+      let hourlyVisits: Record<string, number> = {};
+      let hourlyClicks: Record<string, number> = {};
 
       if (snap.exists()) {
         const data = snap.data();
         visits = data.visits || 0;
         clicks = data.clicks || 0;
+        productViews = data.productViews || 0;
+        cartAdds = data.cartAdds || 0;
+        hourlyVisits = data.hourlyVisits || {};
+        hourlyClicks = data.hourlyClicks || {};
       }
 
       results.push({
         date: dateInfo.dateStr,
         label: dateInfo.label,
+        dayOfWeek: dateInfo.dayOfWeek,
         visits,
-        clicks
+        clicks,
+        productViews,
+        cartAdds,
+        hourlyVisits,
+        hourlyClicks,
       });
     }
 
@@ -368,6 +411,10 @@ export const getStoreAnalyticsLast7Days = async (storeId: string) => {
     console.error('Error fetching store analytics:', error);
     return [];
   }
+};
+
+export const getStoreAnalyticsLast7Days = async (storeId: string) => {
+  return getStoreAnalyticsDays(storeId, 7);
 };
 
 // --- SERVICIOS DE SUPERADMIN (OWNER APANA) ---
@@ -488,11 +535,14 @@ export const adminCleanSuperAdminStoresInFS = async (adminUid: string): Promise<
       deleted++;
     }
 
-    // 3. Actualizar rol en users/angelocastellanos99@gmail.com a 'admin'
-    const userRef = doc(db, 'users', 'angelocastellanos99@gmail.com');
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-      await updateDoc(userRef, { role: 'admin' });
+    // 3. Actualizar rol a 'admin' para los superadmins
+    const adminEmails = ['angelo@mivo.pe', 'angelocastellanos99@gmail.com'];
+    for (const email of adminEmails) {
+      const uRef = doc(db, 'users', email);
+      const uSnap = await getDoc(uRef);
+      if (uSnap.exists()) {
+        await updateDoc(uRef, { role: 'admin' });
+      }
     }
 
     return deleted;
@@ -618,5 +668,102 @@ export const adminExtendStoreSubscriptionInFS = async (storeId: string, daysToAd
   } catch (error) {
     console.error('Error al extender suscripción:', error);
     throw error;
+  }
+};
+
+// ==========================================
+// SOLICITUDES DE VERIFICACIÓN OTP WHATSAPP
+// ==========================================
+
+export interface OtpRequest {
+  phone: string; // ej: "51987654321"
+  code: string; // 6 dígitos ej: "482910"
+  storeId: string;
+  storeName: string;
+  userId: string;
+  status: 'pending' | 'verified' | 'expired';
+  createdAt: number;
+  expiresAt: number;
+  otpSentAt?: number;
+}
+
+export const createOtpRequestInFS = async (
+  rawPhone: string,
+  code: string,
+  storeId: string,
+  storeName: string,
+  userId: string
+): Promise<boolean> => {
+  try {
+    const digitsOnly = rawPhone.replace(/\D/g, '');
+    const cleanPhone = digitsOnly.startsWith('51') ? digitsOnly : `51${digitsOnly}`;
+
+    const otpDocRef = doc(db, 'otp_requests', cleanPhone);
+    const now = Date.now();
+
+    await setDoc(otpDocRef, {
+      phone: cleanPhone,
+      code,
+      storeId,
+      storeName,
+      userId,
+      status: 'pending',
+      createdAt: now,
+      expiresAt: now + 15 * 60 * 1000, // 15 minutos de validez
+    }, { merge: true });
+
+    return true;
+  } catch (error) {
+    console.error('Error creando solicitud OTP en Firestore:', error);
+    return false;
+  }
+};
+
+export const verifyOtpCodeInFS = async (
+  rawPhone: string,
+  inputCode: string,
+  storeId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const digitsOnly = rawPhone.replace(/\D/g, '');
+    const cleanPhone = digitsOnly.startsWith('51') ? digitsOnly : `51${digitsOnly}`;
+
+    const otpDocRef = doc(db, 'otp_requests', cleanPhone);
+    const snap = await getDoc(otpDocRef);
+
+    if (!snap.exists()) {
+      return { success: false, error: 'No se encontró una solicitud pendiente para este número.' };
+    }
+
+    const data = snap.data() as OtpRequest;
+
+    if (data.code !== inputCode.trim()) {
+      return { success: false, error: 'El código ingresado es incorrecto.' };
+    }
+
+    if (Date.now() > data.expiresAt) {
+      return { success: false, error: 'El código ha expirado. Solicita uno nuevo por WhatsApp.' };
+    }
+
+    // Marcar como verificado en otp_requests
+    await updateDoc(otpDocRef, {
+      status: 'verified',
+      verifiedAt: Date.now(),
+    });
+
+    // Actualizar la tienda a verificada
+    const storeRef = doc(db, 'stores', storeId);
+    await updateDoc(storeRef, {
+      isWhatsappVerified: true,
+      whatsappPhone: cleanPhone,
+      whatsappVerifiedAt: Date.now(),
+      updatedAt: serverTimestamp(),
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error verificando OTP en Firestore:', error);
+    return { success: false, error: error?.message || 'Error al validar el código.' };
   }
 };

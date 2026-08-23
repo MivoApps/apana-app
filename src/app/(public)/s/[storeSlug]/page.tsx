@@ -3,10 +3,10 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { 
-  ShoppingBag, 
-  Search, 
-  Heart, 
+import {
+  ShoppingBag,
+  Search,
+  Heart,
   MessageCircle,
   Check,
   Plus,
@@ -15,8 +15,13 @@ import {
   Sparkles,
   Truck,
   ArrowRight,
-  MessageSquare
+  MessageSquare,
+  Crown,
+  BadgeCheck,
+  MapPin,
+  Clock,
 } from 'lucide-react';
+import { InstagramIcon } from '@/components/ui/InstagramIcon';
 import { useAppStore } from '@/lib/app-store';
 import { useCartStore } from '@/lib/cart-store';
 import { formatCurrency } from '@/lib/whatsapp';
@@ -34,16 +39,19 @@ import { getStoreBySlugFromFS, getProductsByStoreIdFromFS } from '@/lib/firebase
 import { Store, Product } from '@/types/store';
 
 import { TermsModal } from '@/components/ui/TermsModal';
+import { ProductOptionsModal } from '@/components/public/ProductOptionsModal';
+import { SelectedOption } from '@/types/store';
 
 export default function PublicStorePage({ params }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { stores, getStoreBySlug, getProductsByStoreId, createOrUpdateStore } = useAppStore();
-  const { items, getTotalItems, getTotalPrice } = useCartStore();
+  const { items, getTotalItems, getTotalPrice, addItem } = useCartStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('todos');
   const [mounted, setMounted] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [selectedModalProduct, setSelectedModalProduct] = useState<Product | null>(null);
 
   // Estado Firestore híbrido
   const [fsStore, setFsStore] = useState<Store | null>(null);
@@ -74,7 +82,7 @@ export default function PublicStorePage({ params }: Props) {
         setFsStore(JSON.parse(cachedPublicStore));
         setFsProducts(JSON.parse(cachedPublicProds));
         setIsFetchingFS(false);
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // 2. Revalidar de Firestore silenciosamente en segundo plano
@@ -86,7 +94,7 @@ export default function PublicStorePage({ params }: Props) {
 
         // Registrar visita única por sesión
         const sessionVisitKey = `apana_session_visited_${fetchedStore.id}`;
-        if (!sessionStorage.getItem(sessionVisitKey) && fetchedStore.plan === 'emprendedor') {
+        if (!sessionStorage.getItem(sessionVisitKey) && (fetchedStore.plan === 'emprendedor' || fetchedStore.plan === 'negocio')) {
           sessionStorage.setItem(sessionVisitKey, 'true');
           const { recordAnalyticsEvent } = await import('@/lib/firebase/firestore');
           recordAnalyticsEvent(fetchedStore.id, 'visit');
@@ -164,9 +172,9 @@ export default function PublicStorePage({ params }: Props) {
   const filteredProducts = storeProducts.filter((product) => {
     const matchesSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase());
     const isEmprendedor = store?.plan === 'emprendedor';
-    const matchesCategory = 
-      !isEmprendedor || 
-      selectedCategory === 'todos' || 
+    const matchesCategory =
+      !isEmprendedor ||
+      selectedCategory === 'todos' ||
       product.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -195,13 +203,12 @@ export default function PublicStorePage({ params }: Props) {
       </header>
 
       {/* Main Container */}
-      <main className={`pt-16 pb-24 min-h-screen transition-colors ${
-        store.themeStyle === 'elegante'
-          ? 'bg-[#FAF9F6] text-[#1a1a1a]'
+      <main className={`pt-16 pb-24 min-h-screen transition-colors ${store.themeStyle === 'elegante'
+          ? 'bg-[#FAF8F5] text-stone-900'
           : store.themeStyle === 'moderna'
-          ? 'bg-slate-50 text-[#0b1c30]'
-          : 'bg-white text-[#0b1c30]'
-      }`}>
+            ? 'bg-slate-50 text-[#0b1c30]'
+            : 'bg-white text-[#0b1c30]'
+        }`}>
         {/* Banner Informativo si la Tienda está Pausada */}
         {store.status === 'pausada' && (
           <div className="bg-amber-500 text-white px-4 py-3 text-xs text-center flex items-center justify-center gap-2 shadow-xs font-semibold">
@@ -231,55 +238,145 @@ export default function PublicStorePage({ params }: Props) {
 
         <div className="flex flex-col w-full max-w-[640px] mx-auto">
           {/* Header Tienda Info Dinámico según Tema */}
-          <div className={`px-4 py-6 flex flex-col items-center gap-2 text-center transition-all ${
-            store.themeStyle === 'elegante'
-              ? 'bg-gradient-to-b from-[#182330] to-[#0b1c30] text-white py-8 rounded-b-3xl shadow-sm border-b border-amber-950/20 mb-2'
+          <div className={`px-4 py-6 flex flex-col items-center gap-2 text-center transition-all ${store.themeStyle === 'elegante'
+              ? 'bg-[#FAF8F5] text-stone-900 py-8 border-b border-[#E7E2D9] mb-3'
               : store.themeStyle === 'moderna'
-              ? 'bg-white text-[#0b1c30] border-b border-slate-200/80 shadow-2xs mb-2'
-              : 'bg-white text-[#0b1c30] border-b border-[#bccac0]/20'
-          }`}>
-            <div
-              style={{ backgroundColor: store.primaryColor || '#059669' }}
-              className={`w-20 h-20 text-white flex items-center justify-center font-bold text-2xl shadow-sm transition-all ${
+                ? 'bg-white text-[#0b1c30] border-b border-slate-200/80 shadow-2xs mb-2 py-7'
+                : 'bg-white text-neutral-900 border-b border-neutral-100 py-6'
+            }`}>
+            {store.logoUrl ? (
+              <div className={`w-20 h-20 overflow-hidden shadow-sm transition-all ${
                 store.themeStyle === 'elegante'
-                  ? 'rounded-2xl'
+                  ? 'rounded-2xl border border-stone-200/60'
                   : store.themeStyle === 'moderna'
                   ? 'rounded-3xl shadow-md'
-                  : 'rounded-2xl'
-              }`}
-            >
-              {store.name.substring(0, 2).toUpperCase()}
+                  : 'rounded-full w-16 h-16 shadow-xs'
+              }`}>
+                <img src={store.logoUrl} alt={store.name} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div
+                style={{ backgroundColor: store.primaryColor || '#059669' }}
+                className={`w-20 h-20 text-white flex items-center justify-center font-bold text-2xl shadow-sm transition-all ${
+                  store.themeStyle === 'elegante'
+                    ? 'rounded-2xl border border-stone-200/60 font-playfair'
+                    : store.themeStyle === 'moderna'
+                    ? 'rounded-3xl shadow-md'
+                    : 'rounded-full w-16 h-16 shadow-xs'
+                }`}
+              >
+                {store.name.substring(0, 2).toUpperCase()}
+              </div>
+            )}
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${store.themeStyle === 'elegante'
+                  ? 'text-stone-900 font-playfair'
+                  : store.themeStyle === 'moderna'
+                    ? 'text-[#0b1c30] font-space-grotesk font-extrabold'
+                    : 'text-neutral-900 font-plus-jakarta'
+                }`}>
+                {store.name}
+              </h2>
+              {store.plan === 'negocio' && (
+                <div className="inline-flex items-center select-none" title="Negocio Oficial Verificado">
+                  {store.themeStyle === 'elegante' ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100/70 border border-amber-300 text-amber-900 font-bold text-[11px] shadow-2xs">
+                      <BadgeCheck size={14} className="text-amber-700 fill-amber-300/60" />
+                      <span>Verificada</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-[11px] shadow-2xs">
+                      <BadgeCheck size={14} className="text-[#059669] fill-emerald-100" />
+                      <span>Verificada</span>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            <h2 className={`text-2xl font-bold tracking-tight ${
-              store.themeStyle === 'elegante'
-                ? 'text-white font-playfair'
+            <p className={`text-xs max-w-sm mx-auto leading-relaxed ${store.themeStyle === 'elegante'
+                ? 'text-stone-600 font-sans'
                 : store.themeStyle === 'moderna'
-                ? 'text-[#0b1c30] font-space-grotesk font-extrabold'
-                : 'text-[#0b1c30] font-plus-jakarta'
-            }`}>
-              {store.name}
-            </h2>
-            <p className={`text-xs max-w-sm mx-auto leading-relaxed ${
-              store.themeStyle === 'elegante'
-                ? 'text-amber-100/80 font-sans'
-                : store.themeStyle === 'moderna'
-                ? 'text-slate-600 font-sans font-medium'
-                : 'text-[#6d7a72] font-plus-jakarta'
-            }`}>
+                  ? 'text-slate-600 font-sans font-medium'
+                  : 'text-neutral-500 font-plus-jakarta'
+              }`}>
               {store.description}
             </p>
 
-            {/* Píldora de Confianza / Envíos */}
-            <div className="flex items-center gap-2 mt-1">
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border ${
-                store.themeStyle === 'elegante'
-                  ? 'bg-amber-950/40 border-amber-500/30 text-amber-200'
-                  : 'bg-emerald-50 border-emerald-100 text-emerald-800'
-              }`}>
-                <Truck size={13} className="text-[#059669]" />
-                <span>Envíos a todo el país • Pedidos por WhatsApp</span>
+            {/* Píldoras de Información Comercial (Ubicación, Horario y Envíos) */}
+            <div className="flex flex-wrap items-center justify-center gap-1.5 mt-1">
+              {/* Modalidad de Envíos */}
+              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold border ${store.themeStyle === 'elegante'
+                  ? 'bg-white border-[#E7E2D9] text-stone-700 shadow-2xs'
+                  : store.themeStyle === 'moderna'
+                    ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
+                    : 'bg-neutral-100/70 border-neutral-200/60 text-neutral-600'
+                }`}>
+                <Truck size={13} className={store.themeStyle === 'elegante' ? 'text-amber-700' : 'text-[#059669]'} />
+                <span>
+                  {store.shippingType === 'gratis'
+                    ? 'Envío Gratis'
+                    : 'Envíos: A coordinar por WhatsApp'}
+                </span>
               </span>
+
+              {/* Ubicación */}
+              {store.city && (
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${store.themeStyle === 'elegante'
+                    ? 'bg-white border-[#E7E2D9] text-stone-600 shadow-2xs'
+                    : 'bg-slate-100 border-slate-200/80 text-slate-700'
+                  }`}>
+                  <MapPin size={12} className="text-slate-500" />
+                  <span>{store.city}</span>
+                </span>
+              )}
+
+              {/* Horario */}
+              {store.schedule && (
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${store.themeStyle === 'elegante'
+                    ? 'bg-white border-[#E7E2D9] text-stone-600 shadow-2xs'
+                    : 'bg-slate-100 border-slate-200/80 text-slate-700'
+                  }`}>
+                  <Clock size={12} className="text-slate-500" />
+                  <span>{store.schedule}</span>
+                </span>
+              )}
             </div>
+
+            {/* Enlaces de Redes Sociales (Instagram / TikTok) */}
+            {(store.socialLinks?.instagram || store.socialLinks?.tiktok) && (
+              <div className="flex items-center gap-2 mt-1">
+                {store.socialLinks?.instagram && (
+                  <a
+                    href={
+                      store.socialLinks.instagram.startsWith('http')
+                        ? store.socialLinks.instagram
+                        : `https://instagram.com/${store.socialLinks.instagram.replace('@', '')}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-pink-50 border border-pink-200 text-pink-700 hover:bg-pink-100 transition-colors shadow-2xs"
+                  >
+                    <InstagramIcon size={12} />
+                    <span>Instagram</span>
+                  </a>
+                )}
+                {store.socialLinks?.tiktok && (
+                  <a
+                    href={
+                      store.socialLinks.tiktok.startsWith('http')
+                        ? store.socialLinks.tiktok
+                        : `https://tiktok.com/@${store.socialLinks.tiktok.replace('@', '')}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200 transition-colors shadow-2xs"
+                  >
+                    <span className="text-[10px]">🎵</span>
+                    <span>TikTok</span>
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Buscador de Productos Stitch */}
@@ -295,19 +392,18 @@ export default function PublicStorePage({ params }: Props) {
             />
           </div>
 
-          {/* Barra Horizontal de Categorías (Sólo Plan Emprendedor) */}
-          {store.plan === 'emprendedor' && store.categories && store.categories.length > 0 && (
+          {/* Barra Horizontal de Categorías (Plan Emprendedor y Negocio) */}
+          {(store.plan === 'emprendedor' || store.plan === 'negocio') && store.categories && store.categories.length > 0 && (
             <div className="w-full max-w-md mx-auto px-4 mb-4">
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin snap-x snap-mandatory">
                 {/* Chip 'Todos' */}
                 <button
                   type="button"
                   onClick={() => setSelectedCategory('todos')}
-                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 snap-start ${
-                    selectedCategory === 'todos'
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 snap-start ${selectedCategory === 'todos'
                       ? 'text-white'
                       : 'bg-white text-[#3d4a42] border border-[#bccac0]/30 hover:bg-slate-50'
-                  }`}
+                    }`}
                   style={
                     selectedCategory === 'todos'
                       ? { backgroundColor: store.primaryColor || '#059669' }
@@ -324,11 +420,10 @@ export default function PublicStorePage({ params }: Props) {
                       key={idx}
                       type="button"
                       onClick={() => setSelectedCategory(cat)}
-                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 snap-start ${
-                        isSelected
+                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 snap-start ${isSelected
                           ? 'text-white'
                           : 'bg-white text-[#3d4a42] border border-[#bccac0]/30 hover:bg-slate-50'
-                      }`}
+                        }`}
                       style={
                         isSelected
                           ? { backgroundColor: store.primaryColor || '#059669' }
@@ -344,9 +439,8 @@ export default function PublicStorePage({ params }: Props) {
           )}
 
           {/* Grid de Productos Dinámico según Tema */}
-          <div className={`grid gap-3.5 px-4 mb-8 ${
-            store.themeStyle === 'moderna' ? 'grid-cols-1' : 'grid-cols-2'
-          }`}>
+          <div className={`grid gap-3.5 px-4 mb-8 ${store.themeStyle === 'moderna' ? 'grid-cols-1' : 'grid-cols-2'
+            }`}>
             {filteredProducts.length === 0 ? (
               <div className="col-span-full py-12 text-center text-[#6d7a72] text-sm">
                 Esta tienda aún no tiene productos publicados.
@@ -361,18 +455,16 @@ export default function PublicStorePage({ params }: Props) {
                   return (
                     <article
                       key={product.id}
-                      className={`bg-white rounded-2xl border border-slate-200/80 overflow-hidden flex flex-row items-center p-2.5 group cursor-pointer shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 relative ${
-                        isOutOfStock ? 'opacity-70 bg-slate-50' : ''
-                      }`}
+                      className={`bg-white rounded-2xl border border-slate-200/80 overflow-hidden flex flex-row items-center p-2.5 group cursor-pointer shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 relative ${isOutOfStock ? 'opacity-70 bg-slate-50' : ''
+                        }`}
                     >
                       <Link href={`/s/${store.slug}/p/${product.id}`} className="flex w-full flex-row items-center gap-3.5">
                         <div className="w-24 h-24 rounded-2xl shrink-0 overflow-hidden bg-slate-100 relative">
                           <img
                             src={product.imageUrl || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80'}
                             alt={product.title}
-                            className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
-                              isOutOfStock ? 'grayscale contrast-75' : ''
-                            }`}
+                            className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${isOutOfStock ? 'grayscale contrast-75' : ''
+                              }`}
                           />
                           {isNewProduct && (
                             <span className="absolute top-1.5 left-1.5 bg-[#059669] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">
@@ -389,9 +481,8 @@ export default function PublicStorePage({ params }: Props) {
                         </div>
                         <div className="flex-1 flex flex-col gap-1 text-left justify-center py-1">
                           <div className="flex items-center gap-2">
-                            <h3 className={`font-space-grotesk font-bold text-sm text-[#0b1c30] uppercase tracking-wider line-clamp-1 group-hover:text-emerald-700 transition-colors ${
-                              isOutOfStock ? 'text-slate-500' : ''
-                            }`}>
+                            <h3 className={`font-space-grotesk font-bold text-sm text-[#0b1c30] uppercase tracking-wider line-clamp-1 group-hover:text-emerald-700 transition-colors ${isOutOfStock ? 'text-slate-500' : ''
+                              }`}>
                               {product.title}
                             </h3>
                             {isOutOfStock && (
@@ -406,9 +497,8 @@ export default function PublicStorePage({ params }: Props) {
                             </p>
                           )}
                           <span
-                            className={`font-space-grotesk font-extrabold text-base mt-0.5 ${
-                              isOutOfStock ? 'text-slate-400' : ''
-                            }`}
+                            className={`font-space-grotesk font-extrabold text-base mt-0.5 ${isOutOfStock ? 'text-slate-400' : ''
+                              }`}
                             style={!isOutOfStock ? { color: store.primaryColor || '#059669' } : undefined}
                           >
                             {formatCurrency(product.price)}
@@ -424,18 +514,16 @@ export default function PublicStorePage({ params }: Props) {
                   return (
                     <article
                       key={product.id}
-                      className={`bg-white rounded-2xl border border-[#e8dfd5] overflow-hidden flex flex-col group cursor-pointer shadow-2xs hover:shadow-md hover:border-amber-400/50 transition-all duration-300 relative ${
-                        isOutOfStock ? 'opacity-70 bg-[#f4f1ea]' : ''
-                      }`}
+                      className={`bg-white rounded-2xl border border-[#e8dfd5] overflow-hidden flex flex-col group cursor-pointer shadow-2xs hover:shadow-md hover:border-amber-400/50 transition-all duration-300 relative ${isOutOfStock ? 'opacity-70 bg-[#f4f1ea]' : ''
+                        }`}
                     >
                       <Link href={`/s/${store.slug}/p/${product.id}`} className="flex w-full flex-col">
                         <div className="aspect-square relative overflow-hidden bg-[#FAF9F6]">
                           <img
                             src={product.imageUrl || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80'}
                             alt={product.title}
-                            className={`w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 ${
-                              isOutOfStock ? 'grayscale contrast-75' : ''
-                            }`}
+                            className={`w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 ${isOutOfStock ? 'grayscale contrast-75' : ''
+                              }`}
                           />
                           {isNewProduct && (
                             <span className="absolute top-2 left-2 bg-[#059669] text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-xs z-10">
@@ -451,15 +539,13 @@ export default function PublicStorePage({ params }: Props) {
                           )}
                         </div>
                         <div className="p-3.5 flex flex-col gap-1 text-center">
-                          <h3 className={`font-playfair font-bold text-sm text-[#1a1a1a] line-clamp-1 group-hover:text-amber-900 transition-colors ${
-                            isOutOfStock ? 'text-stone-500' : ''
-                          }`}>
+                          <h3 className={`font-playfair font-bold text-sm text-[#1a1a1a] line-clamp-1 group-hover:text-amber-900 transition-colors ${isOutOfStock ? 'text-stone-500' : ''
+                            }`}>
                             {product.title}
                           </h3>
                           <span
-                            className={`font-playfair italic font-bold text-sm tracking-wide mt-0.5 ${
-                              isOutOfStock ? 'text-stone-400' : ''
-                            }`}
+                            className={`font-playfair italic font-bold text-sm tracking-wide mt-0.5 ${isOutOfStock ? 'text-stone-400' : ''
+                              }`}
                             style={!isOutOfStock ? { color: store.primaryColor || '#059669' } : undefined}
                           >
                             {formatCurrency(product.price)}
@@ -470,47 +556,41 @@ export default function PublicStorePage({ params }: Props) {
                   );
                 }
 
-                // MINIMALISTA (Clean Geometry, Sans-Serif, Soft Elevation)
+                // MINIMALISTA (Editorial Lookbook, Clean Photos without Box Borders, Left-aligned Typography)
                 return (
                   <article
                     key={product.id}
-                    className={`bg-white rounded-xl border border-slate-100 overflow-hidden flex flex-col group cursor-pointer shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 relative ${
-                      isOutOfStock ? 'opacity-70 bg-slate-50' : ''
-                    }`}
+                    className="flex flex-col group cursor-pointer relative"
                   >
-                    <Link href={`/s/${store.slug}/p/${product.id}`} className="flex w-full flex-col">
-                      <div className="aspect-square relative overflow-hidden bg-slate-50">
+                    <Link href={`/s/${store.slug}/p/${product.id}`} className="flex w-full flex-col gap-2">
+                      <div className="aspect-square relative overflow-hidden rounded-2xl bg-neutral-100/90">
                         <img
                           src={product.imageUrl || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80'}
                           alt={product.title}
-                          className={`w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 ${
-                            isOutOfStock ? 'grayscale contrast-75' : ''
-                          }`}
+                          className={`w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 ${isOutOfStock ? 'grayscale contrast-75' : ''
+                            }`}
                         />
                         {isNewProduct && (
-                          <span className="absolute top-2 left-2 bg-[#059669] text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-xs z-10">
-                            ✨ Nuevo
+                          <span className="absolute top-2 left-2 bg-neutral-900/80 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-md shadow-2xs z-10">
+                            Nuevo
                           </span>
                         )}
                         {isOutOfStock && (
-                          <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-10">
-                            <span className="bg-white/95 text-slate-800 text-[10px] font-black uppercase px-2.5 py-1 rounded-md tracking-wider shadow-sm">
+                          <div className="absolute inset-0 bg-black/35 backdrop-blur-[1px] flex items-center justify-center z-10">
+                            <span className="bg-white/95 text-neutral-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider shadow-xs">
                               Agotado
                             </span>
                           </div>
                         )}
                       </div>
-                      <div className="p-3 flex flex-col gap-1 text-center">
-                        <h3 className={`font-plus-jakarta font-semibold text-xs text-[#0b1c30] line-clamp-1 ${
-                          isOutOfStock ? 'text-slate-500' : ''
-                        }`}>
+                      <div className="flex flex-col gap-0.5 text-left px-0.5">
+                        <h3 className={`font-plus-jakarta font-semibold text-xs text-neutral-800 line-clamp-1 group-hover:text-black transition-colors ${isOutOfStock ? 'text-neutral-400' : ''
+                          }`}>
                           {product.title}
                         </h3>
                         <span
-                          className={`font-plus-jakarta font-bold text-sm ${
-                            isOutOfStock ? 'text-slate-400' : ''
-                          }`}
-                          style={!isOutOfStock ? { color: store.primaryColor || '#059669' } : undefined}
+                          className={`font-plus-jakarta font-bold text-xs ${isOutOfStock ? 'text-neutral-400' : 'text-neutral-900'
+                            }`}
                         >
                           {formatCurrency(product.price)}
                         </span>
@@ -581,7 +661,7 @@ export default function PublicStorePage({ params }: Props) {
               try {
                 const { recordAnalyticsEvent } = await import('@/lib/firebase/firestore');
                 await recordAnalyticsEvent(store.id, 'click');
-              } catch (err) {}
+              } catch (err) { }
             }
           }}
           className="fixed bottom-20 right-4 z-30 w-12 h-12 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all animate-in zoom-in-75 duration-300"
@@ -650,11 +730,10 @@ export default function PublicStorePage({ params }: Props) {
                       <label className="text-xs font-semibold text-[#0b1c30] ml-1">
                         Número de Celular
                       </label>
-                      <div className={`relative flex items-center bg-white border rounded-xl overflow-hidden shadow-xs transition-all ${
-                        isInvalidStart
+                      <div className={`relative flex items-center bg-white border rounded-xl overflow-hidden shadow-xs transition-all ${isInvalidStart
                           ? 'border-red-500 ring-2 ring-red-500/10'
                           : 'border-[#bccac0] focus-within:border-[#059669] focus-within:ring-2 focus-within:ring-[#059669]/10'
-                      }`}>
+                        }`}>
                         <div className="flex items-center gap-1.5 px-3 py-2.5 bg-gray-50 border-r border-gray-200 select-none shrink-0">
                           <span className="text-base leading-none" role="img" aria-label="Bandera de Perú">🇵🇪</span>
                           <span className="text-xs font-bold text-[#0b1c30]">+51</span>
@@ -712,6 +791,16 @@ export default function PublicStorePage({ params }: Props) {
 
       {/* Modal de Términos y Condiciones */}
       <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
+
+      {/* Modal / Bottom Sheet de Selección de Variantes */}
+      <ProductOptionsModal
+        product={selectedModalProduct}
+        isOpen={!!selectedModalProduct}
+        onClose={() => setSelectedModalProduct(null)}
+        onAddToCart={(prod, opts) => addItem(prod, opts)}
+        primaryColor={store.primaryColor}
+        themeStyle={store.themeStyle}
+      />
     </div>
   );
 }

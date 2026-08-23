@@ -105,24 +105,10 @@ export default function OnboardingWizardPage() {
       const existingStore = await getStoreByUserIdFromFS(user.uid);
 
       if (existingStore) {
-        // Consultar los productos de la tienda
-        const productsInFS = await getProductsByStoreIdFromFS(existingStore.id);
-
-        // Si la tienda ya fue configurada y ya tiene productos creados ➔ El Wizard ya NO aplica ➔ Redirigir a Dashboard
-        if (productsInFS.length > 0) {
-          router.replace('/dashboard');
-          return;
-        }
-
-        setBusinessName(existingStore.name || '');
-        setWhatsappPhone(existingStore.whatsappPhone || '');
-        const savedStep = localStorage.getItem('apana_wizard_step');
-        if (savedStep) {
-          const parsed = parseInt(savedStep, 10);
-          if (parsed >= 1 && parsed <= 5) {
-            setStep(parsed);
-          }
-        }
+        // La tienda YA EXISTE en Firestore ➔ El Wizard de creación inicial ya concluyó
+        localStorage.removeItem('apana_wizard_step');
+        router.replace('/dashboard');
+        return;
       } else {
         // Si no hay tienda creada en Firestore ➔ Resetear todos los campos a vacíos y forzar Paso 1
         localStorage.removeItem('apana_wizard_step');
@@ -157,12 +143,16 @@ export default function OnboardingWizardPage() {
     let createdFsStore = null;
     if (user) {
       try {
+        const digitsOnly = whatsappPhone.replace(/\D/g, '');
+        const fullWhatsapp = digitsOnly.startsWith('51') ? digitsOnly : `51${digitsOnly}`;
+
         createdFsStore = await createOrUpdateStoreInFS(user.uid, {
           name: businessName,
           category,
           themeStyle: targetStyle,
           primaryColor: selectedColorHex,
-          whatsappPhone: whatsappPhone || '',
+          whatsappPhone: fullWhatsapp,
+          isWhatsappVerified: false,
           ownerEmail: user.email || '',
           ownerName: user.displayName || businessName,
         });
@@ -288,39 +278,77 @@ export default function OnboardingWizardPage() {
             </div>
           )}
 
-          {/* PASO 2: Nombre de Tienda */}
+          {/* PASO 2: Nombre de Tienda y WhatsApp */}
           {step === 2 && (
-            <div className="flex flex-col gap-6 bg-white p-6 rounded-2xl border border-[#bccac0]/40 shadow-xs">
-              <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-5 bg-white p-6 rounded-2xl border border-[#bccac0]/40 shadow-xs">
+              <div className="flex flex-col gap-1">
                 <h1 className="text-2xl font-bold text-[#0b1c30] tracking-tight">
-                  ¿Cómo se llama tu negocio?
+                  Datos de tu Negocio
                 </h1>
-                <p className="text-sm text-[#3d4a42]">
-                  Así es como tus clientes te identificarán. No te preocupes, puedes cambiarlo después.
+                <p className="text-xs text-[#3d4a42]">
+                  Nombre comercial y el número donde recibirás los pedidos de tus clientes.
                 </p>
               </div>
 
-              <div className="relative">
-                <input
-                  id="business-name"
-                  type="text"
-                  placeholder="Ej. Joyas Andrea"
-                  value={businessName}
-                  onChange={(e) => setBusinessName(e.target.value)}
-                  required
-                  className="w-full h-12 px-4 rounded-lg bg-white border border-[#bccac0] text-[#0b1c30] text-base placeholder:text-[#6d7a72] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
-                />
-                {businessName.trim() && (
-                  <CheckCircle2 size={20} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#059669]" />
-                )}
+              {/* Campo Nombre */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="business-name" className="text-xs font-bold text-slate-700">
+                  Nombre de tu tienda o marca *
+                </label>
+                <div className="relative">
+                  <input
+                    id="business-name"
+                    type="text"
+                    placeholder="Ej. Joyas Andrea"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    required
+                    className="w-full h-12 px-4 rounded-xl bg-white border border-[#bccac0] text-[#0b1c30] text-sm font-semibold placeholder:text-[#6d7a72] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                  />
+                  {businessName.trim() && (
+                    <CheckCircle2 size={18} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#059669]" />
+                  )}
+                </div>
+              </div>
+
+              {/* Campo Celular WhatsApp */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="whatsapp-phone" className="text-xs font-bold text-slate-700">
+                    Número de WhatsApp para pedidos *
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-medium">9 dígitos</span>
+                </div>
+                <div className="relative flex items-center bg-gray-50 border border-[#bccac0] rounded-xl overflow-hidden shadow-xs focus-within:border-[#059669] focus-within:ring-2 focus-within:ring-[#059669]/10 transition-all">
+                  <div className="flex items-center gap-1.5 px-3.5 py-3 bg-gray-100 border-r border-gray-200 select-none shrink-0">
+                    <span className="text-base leading-none">🇵🇪</span>
+                    <span className="text-xs font-bold text-[#0b1c30]">+51</span>
+                  </div>
+                  <input
+                    id="whatsapp-phone"
+                    type="tel"
+                    maxLength={9}
+                    placeholder="987 654 321"
+                    value={whatsappPhone}
+                    onChange={(e) => setWhatsappPhone(e.target.value.replace(/\D/g, ''))}
+                    required
+                    className="h-12 w-full bg-transparent px-3.5 text-sm font-semibold text-[#0b1c30] tracking-wider focus:outline-none"
+                  />
+                  {whatsappPhone.length === 9 && (
+                    <CheckCircle2 size={18} className="mr-3.5 text-[#059669] shrink-0" />
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400 leading-tight">
+                  Tus clientes te enviarán sus pedidos directamente a este número.
+                </p>
               </div>
 
               <Button
                 onClick={nextStep}
                 variant="primary"
                 fullWidth
-                disabled={!businessName.trim()}
-                className="h-12 flex items-center justify-center gap-2 mt-2"
+                disabled={!businessName.trim() || whatsappPhone.length < 9}
+                className="h-12 flex items-center justify-center gap-2 mt-2 font-bold cursor-pointer"
               >
                 Siguiente
                 <ArrowRight size={18} />
@@ -410,7 +438,7 @@ export default function OnboardingWizardPage() {
                     ✨ Recomendado para Moda, Ropa y Accesorios
                   </span>
                   <p className="text-xs text-slate-500">
-                    Diseño nórdico, cuadrícula limpia de 2 columnas con bordes suaves y espacios amplios.
+                    Estilo lookbook limpio sin marcos de caja, fotos flotantes y tipografía nórdica.
                   </p>
                 </button>
 
@@ -533,12 +561,18 @@ export default function OnboardingWizardPage() {
               </div>
 
               <div className="w-full flex flex-col gap-3 mt-2">
-                <Link href="/products/new?from=wizard">
-                  <Button variant="primary" fullWidth className="h-12 flex items-center justify-center gap-2 bg-[#059669] hover:bg-[#00855d]">
-                    <PackagePlus size={18} />
-                    Publicar Mi Primer Producto
-                  </Button>
-                </Link>
+                <Button
+                  onClick={() => {
+                    localStorage.removeItem('apana_wizard_step');
+                    router.replace('/products/new');
+                  }}
+                  variant="primary"
+                  fullWidth
+                  className="h-12 flex items-center justify-center gap-2 bg-[#059669] hover:bg-[#00855d] cursor-pointer"
+                >
+                  <PackagePlus size={18} />
+                  Publicar Mi Primer Producto
+                </Button>
               </div>
             </div>
           )}

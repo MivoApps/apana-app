@@ -17,13 +17,17 @@ import {
   ShoppingBag,
   Settings as SettingsIcon,
   Lock,
-  X
+  X,
+  LogOut,
+  ShieldCheck,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/lib/app-store';
 import { Store, StoreStyle } from '@/types/store';
 import { LiveStorePreview } from '@/components/merchant/LiveStorePreview';
 import { TermsModal } from '@/components/ui/TermsModal';
+import { WhatsAppVerifyModal } from '@/components/merchant/WhatsAppVerifyModal';
 
 // Paleta de colores oficiales
 const STITCH_COLORS = [
@@ -39,11 +43,28 @@ const STITCH_COLORS = [
 
 import { useAuth } from '@/lib/firebase/auth-context';
 import { createOrUpdateStoreInFS, getStoreByUserIdFromFS } from '@/lib/firebase/firestore';
+import { compressAndCropImage, formatBytes } from '@/lib/image-optimizer';
+import {
+  Upload,
+  Image as ImageIcon,
+  Clock,
+  MapPin,
+  Truck,
+  Trash2,
+} from 'lucide-react';
+import { InstagramIcon } from '@/components/ui/InstagramIcon';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const { createOrUpdateStore } = useAppStore();
+
+  const handleLogout = async () => {
+    sessionStorage.clear();
+    localStorage.clear();
+    await logout();
+    window.location.href = '/login';
+  };
 
   const [isLoading, setIsLoading] = useState(true);
   const [fsStore, setFsStore] = useState<Store | null>(null);
@@ -51,6 +72,16 @@ export default function SettingsPage() {
   // Form State
   const [storeName, setStoreName] = useState('');
   const [storeDescription, setStoreDescription] = useState('');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [logoError, setLogoError] = useState('');
+
+  // Nuevos campos comerciales opcionales
+  const [city, setCity] = useState('');
+  const [schedule, setSchedule] = useState('');
+  const [shippingType, setShippingType] = useState<'coordinar' | 'gratis'>('coordinar');
+  const [instagram, setInstagram] = useState('');
+  const [tiktok, setTiktok] = useState('');
 
   const cleanInitialPhone = (phoneStr: string) => {
     const digitsOnly = phoneStr.replace(/\D/g, '');
@@ -68,10 +99,47 @@ export default function SettingsPage() {
 
   // Estados para Modal Seguro de Cambio de WhatsApp
   const [showChangePhoneModal, setShowChangePhoneModal] = useState(false);
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [newPhoneInput, setNewPhoneInput] = useState('');
   const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
   const [acceptTermsChecked, setAcceptTermsChecked] = useState(false);
   const [phoneChangeError, setPhoneChangeError] = useState('');
+
+  // Manejo de Subida y Optimización de Logo
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validación de tamaño máximo previo (5MB)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      setLogoError('La imagen seleccionada supera el límite máximo de 5MB.');
+      return;
+    }
+
+    setLogoError('');
+    setIsUploadingLogo(true);
+
+    try {
+      // Optimizar en el navegador: recortar centrado a 400x400 WebP ultraligero
+      const result = await compressAndCropImage(file, {
+        maxWidth: 400,
+        maxHeight: 400,
+        quality: 0.85,
+        outputFormat: 'image/webp',
+      });
+      setLogoUrl(result.dataUrl);
+    } catch (err: any) {
+      console.error('Error optimizando logo:', err);
+      setLogoError('No se pudo procesar la imagen. Intenta con otro archivo.');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoUrl(null);
+  };
 
   const handleConfirmChangePhone = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,10 +161,19 @@ export default function SettingsPage() {
         const updatedStore = await createOrUpdateStoreInFS(user.uid, {
           name: storeName,
           whatsappPhone: fullPhone,
+          isWhatsappVerified: false,
           themeStyle: selectedStyle,
           primaryColor: selectedColorHex,
           description: storeDescription,
           categories: categories,
+          logoUrl: logoUrl,
+          city: city,
+          schedule: schedule,
+          shippingType: shippingType,
+          socialLinks: {
+            instagram: instagram,
+            tiktok: tiktok,
+          },
         });
         setFsStore(updatedStore);
         setWhatsappPhone(newPhoneInput);
@@ -106,6 +183,7 @@ export default function SettingsPage() {
       setShowChangePhoneModal(false);
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
+      setIsVerifyModalOpen(true);
     } catch (err: any) {
       setPhoneChangeError(err?.message || 'Error al actualizar el número.');
     } finally {
@@ -130,6 +208,12 @@ export default function SettingsPage() {
           setFsStore(parsed);
           setStoreName(parsed.name || '');
           setStoreDescription(parsed.description || '');
+          setLogoUrl(parsed.logoUrl || null);
+          setCity(parsed.city || '');
+          setSchedule(parsed.schedule || '');
+          setShippingType(parsed.shippingType || 'coordinar');
+          setInstagram(parsed.socialLinks?.instagram || '');
+          setTiktok(parsed.socialLinks?.tiktok || '');
           setWhatsappPhone(cleanInitialPhone(parsed.whatsappPhone || ''));
           setSelectedStyle(parsed.themeStyle || 'minimalista');
           setSelectedColorHex(parsed.primaryColor || '#059669');
@@ -146,6 +230,12 @@ export default function SettingsPage() {
         setFsStore(storeFromFS);
         setStoreName(storeFromFS.name || '');
         setStoreDescription(storeFromFS.description || '');
+        setLogoUrl(storeFromFS.logoUrl || null);
+        setCity(storeFromFS.city || '');
+        setSchedule(storeFromFS.schedule || '');
+        setShippingType(storeFromFS.shippingType || 'coordinar');
+        setInstagram(storeFromFS.socialLinks?.instagram || '');
+        setTiktok(storeFromFS.socialLinks?.tiktok || '');
         setWhatsappPhone(cleanInitialPhone(storeFromFS.whatsappPhone || ''));
         setSelectedStyle(storeFromFS.themeStyle || 'minimalista');
         setSelectedColorHex(storeFromFS.primaryColor || '#059669');
@@ -159,12 +249,19 @@ export default function SettingsPage() {
   }, [user, authLoading, router]);
 
   const currentStore = fsStore;
+  const isFreePlan = !fsStore?.plan || fsStore.plan === 'gratis';
 
   // Detectar si hay cambios con relación al valor guardado en Firestore
   const hasChanges = Boolean(
     currentStore && (
       storeName !== (currentStore.name || '') ||
       storeDescription !== (currentStore.description || '') ||
+      logoUrl !== (currentStore.logoUrl || null) ||
+      city !== (currentStore.city || '') ||
+      schedule !== (currentStore.schedule || '') ||
+      shippingType !== (currentStore.shippingType || 'coordinar') ||
+      instagram !== (currentStore.socialLinks?.instagram || '') ||
+      tiktok !== (currentStore.socialLinks?.tiktok || '') ||
       whatsappPhone !== cleanInitialPhone(currentStore.whatsappPhone || '') ||
       selectedStyle !== (currentStore.themeStyle || 'minimalista') ||
       selectedColorHex !== (currentStore.primaryColor || '#059669') ||
@@ -173,7 +270,6 @@ export default function SettingsPage() {
   );
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Permitir solo números y limitar a un máximo de 9 caracteres
     const value = e.target.value.replace(/\D/g, '').slice(0, 9);
     setWhatsappPhone(value);
   };
@@ -199,7 +295,6 @@ export default function SettingsPage() {
     if (!hasChanges || isSubmitting) return;
     setIsSubmitting(true);
 
-    // Guardar con el código de país peruano 51 al inicio
     const fullPhone = `51${whatsappPhone}`;
 
     if (user) {
@@ -211,9 +306,16 @@ export default function SettingsPage() {
           primaryColor: selectedColorHex,
           description: storeDescription,
           categories: categories,
+          logoUrl: logoUrl,
+          city: city,
+          schedule: schedule,
+          shippingType: shippingType,
+          socialLinks: {
+            instagram: instagram,
+            tiktok: tiktok,
+          },
         });
         setFsStore(updatedStore);
-        // Actualizar caché también
         sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(updatedStore));
         sessionStorage.removeItem(`apana_public_store_${updatedStore.slug}`);
       } catch (err) {
@@ -257,12 +359,25 @@ export default function SettingsPage() {
             </button>
             <h1 className="font-bold text-lg text-[#0b1c30]">Ajustes de la Tienda</h1>
           </div>
-          <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${fsStore?.plan === 'emprendedor'
-              ? 'bg-amber-100 text-amber-800 border border-amber-200/50'
-              : 'bg-emerald-100 text-[#059669]'
+          <div className="flex items-center gap-2">
+            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+              fsStore?.plan === 'negocio'
+                ? 'bg-amber-100 text-amber-900 border border-amber-300 font-extrabold'
+                : fsStore?.plan === 'emprendedor'
+                  ? 'bg-emerald-100 text-[#059669] border border-emerald-200'
+                  : 'bg-slate-100 text-slate-700'
             }`}>
-            {fsStore?.plan === 'emprendedor' ? 'Plan Emprendedor' : 'Plan Gratis'}
-          </span>
+              {fsStore?.plan === 'negocio' ? 'Plan Negocio Pro' : fsStore?.plan === 'emprendedor' ? 'Plan Emprendedor' : 'Plan Gratis'}
+            </span>
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Cerrar Sesión"
+              className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -270,13 +385,84 @@ export default function SettingsPage() {
       <main className="pt-16 px-4 max-w-[640px] w-full mx-auto flex flex-col gap-6">
         <form onSubmit={handleSave} className="flex flex-col gap-6">
 
-          {/* Card 1: Información Básica */}
+          {/* Card 1: Información Básica e Identidad */}
           <section className="bg-white rounded-2xl p-5 border border-[#bccac0]/40 shadow-xs flex flex-col gap-4">
             <div className="flex items-center gap-2.5 pb-2 border-b border-gray-100">
               <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center">
                 <StoreIcon size={18} />
               </div>
-              <h2 className="font-bold text-base text-[#0b1c30]">Información del Negocio</h2>
+              <div className="flex flex-col">
+                <h2 className="font-bold text-base text-[#0b1c30]">Identidad del Negocio</h2>
+                <p className="text-[11px] text-[#6d7a72]">Logo, nombre y contacto oficial de tu tienda</p>
+              </div>
+            </div>
+
+            {/* Subida y Optimización de Logo */}
+            <div className="flex flex-col gap-2 p-4 bg-slate-50/80 rounded-2xl border border-slate-200/70">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-[#0b1c30] flex items-center gap-1.5">
+                  <ImageIcon size={14} className="text-[#059669]" />
+                  Logo Oficial de la Marca
+                </label>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full">
+                  ✨ Todos los planes
+                </span>
+              </div>
+
+              <div className="flex items-center gap-4 pt-1">
+                {/* Visualizador de Logo / Avatar */}
+                <div
+                  className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-slate-200 bg-white shadow-xs flex items-center justify-center shrink-0 relative group"
+                  style={!logoUrl ? { backgroundColor: selectedColorHex } : undefined}
+                >
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="Logo de la tienda" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-white font-black text-xl font-sans">
+                      {storeName ? storeName.substring(0, 2).toUpperCase() : 'AP'}
+                    </span>
+                  )}
+                  {isUploadingLogo && (
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Acciones de Carga */}
+                <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label className="cursor-pointer px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5">
+                      <Upload size={13} />
+                      <span>{logoUrl ? 'Cambiar Logo' : 'Subir Logo'}</span>
+                      <input
+                        type="file"
+                        accept="image/png, image/jpeg, image/webp, image/svg+xml"
+                        className="hidden"
+                        onChange={handleLogoUpload}
+                        disabled={isUploadingLogo}
+                      />
+                    </label>
+
+                    {logoUrl && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveLogo}
+                        className="px-3 py-2 bg-white hover:bg-red-50 text-red-600 border border-red-200/80 font-bold text-xs rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                      >
+                        <Trash2 size={13} />
+                        <span>Eliminar</span>
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400 leading-tight">
+                    Recomendado: Imagen cuadrada (PNG, JPG, WebP o SVG, máx 5MB). Se optimizará automáticamente.
+                  </p>
+                  {logoError && (
+                    <span className="text-[11px] text-red-600 font-medium">{logoError}</span>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -312,9 +498,26 @@ export default function SettingsPage() {
 
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <label htmlFor="whatsappPhone" className="text-xs font-semibold text-[#0b1c30]">
-                  Número de WhatsApp para Pedidos
-                </label>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="whatsappPhone" className="text-xs font-semibold text-[#0b1c30]">
+                    Número de WhatsApp para Pedidos
+                  </label>
+                  {fsStore?.isWhatsappVerified ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#059669] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      <ShieldCheck size={12} />
+                      Verificado
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsVerifyModalOpen(true)}
+                      className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-2 py-0.5 rounded-full transition-colors cursor-pointer"
+                    >
+                      <AlertCircle size={12} className="text-amber-600" />
+                      Validar con APANA ➔
+                    </button>
+                  )}
+                </div>
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -322,7 +525,7 @@ export default function SettingsPage() {
                       setNewPhoneInput(whatsappPhone);
                       setShowChangePhoneModal(true);
                     }}
-                    className="text-[11px] font-bold text-[#059669] hover:underline flex items-center gap-1"
+                    className="text-[11px] font-bold text-[#059669] hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     ✏️ Cambiar Número
                   </button>
@@ -330,7 +533,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => setIsTermsOpen(true)}
-                    className="text-[11px] text-slate-500 hover:text-[#059669] hover:underline flex items-center gap-1"
+                    className="text-[11px] text-slate-500 hover:text-[#059669] hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     Declaración Jurada
                   </button>
@@ -356,13 +559,13 @@ export default function SettingsPage() {
                     setNewPhoneInput(whatsappPhone);
                     setShowChangePhoneModal(true);
                   }}
-                  className="px-3 py-1.5 mr-2 text-xs font-semibold text-[#059669] bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors shrink-0"
+                  className="px-3 py-1.5 mr-2 text-xs font-semibold text-[#059669] bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors shrink-0 cursor-pointer"
                 >
                   Modificar
                 </button>
               </div>
               <p className="text-[11px] text-slate-400 leading-tight">
-                El número de WhatsApp está respaldado por tu declaración jurada de titularidad.
+                El número de WhatsApp está respaldado por tu declaración jurada de titularidad y validación anti-fraude.
               </p>
             </div>
 
@@ -380,7 +583,141 @@ export default function SettingsPage() {
             )}
           </section>
 
-          {/* Card 2: Personalización Visual */}
+          {/* Card 2: Información Comercial, Redes y Envíos (Opcional) */}
+          <section className="bg-white rounded-2xl p-5 border border-[#bccac0]/40 shadow-xs flex flex-col gap-4">
+            <div className="flex items-center gap-2.5 pb-2 border-b border-gray-100">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center">
+                <Truck size={18} />
+              </div>
+              <div className="flex flex-col">
+                <h2 className="font-bold text-base text-[#0b1c30]">Ubicación, Horarios y Envíos</h2>
+                <p className="text-[11px] text-[#6d7a72]">Campos opcionales para orientar a tus clientes</p>
+              </div>
+            </div>
+
+            {/* Ubicación / Ciudad */}
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="city" className="text-xs font-semibold text-[#0b1c30] flex items-center gap-1.5">
+                <MapPin size={13} className="text-[#059669]" />
+                Ubicación / Ciudad o Distrito
+              </label>
+              <input
+                id="city"
+                type="text"
+                placeholder="ej. Miraflores, Lima o Envíos a todo el Perú"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+              />
+            </div>
+
+            {/* Horario y Días de Atención */}
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="schedule" className="text-xs font-semibold text-[#0b1c30] flex items-center gap-1.5">
+                <Clock size={13} className="text-[#059669]" />
+                Horario y Días de Atención
+              </label>
+              <input
+                id="schedule"
+                type="text"
+                placeholder="ej. Lun a Sáb: 9:00 am - 8:00 pm"
+                value={schedule}
+                onChange={(e) => setSchedule(e.target.value)}
+                className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+              />
+            </div>
+
+            {/* Modalidad de Envío (Radio Buttons) */}
+            <div className="flex flex-col gap-2 pt-1">
+              <label className="text-xs font-semibold text-[#0b1c30]">
+                Modalidad de Envío para tus Clientes
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Opción 1: A coordinar por interno (POR DEFECTO) */}
+                <label
+                  onClick={() => setShippingType('coordinar')}
+                  className={`p-3.5 rounded-xl border flex flex-col gap-1 cursor-pointer transition-all ${
+                    shippingType === 'coordinar'
+                      ? 'bg-emerald-50/80 border-[#059669] ring-2 ring-[#059669] shadow-xs'
+                      : 'bg-gray-50/70 border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-[#0b1c30]">🤝 A coordinar</span>
+                    <input
+                      type="radio"
+                      name="shippingType"
+                      checked={shippingType === 'coordinar'}
+                      onChange={() => setShippingType('coordinar')}
+                      className="accent-[#059669]"
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-medium leading-tight">
+                    Por defecto: Costo y entrega se pactan por WhatsApp.
+                  </span>
+                </label>
+
+                {/* Opción 2: Envío Gratis */}
+                <label
+                  onClick={() => setShippingType('gratis')}
+                  className={`p-3.5 rounded-xl border flex flex-col gap-1 cursor-pointer transition-all ${
+                    shippingType === 'gratis'
+                      ? 'bg-emerald-50/80 border-[#059669] ring-2 ring-[#059669] shadow-xs'
+                      : 'bg-gray-50/70 border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-[#0b1c30]">🎁 Envío Gratis</span>
+                    <input
+                      type="radio"
+                      name="shippingType"
+                      checked={shippingType === 'gratis'}
+                      onChange={() => setShippingType('gratis')}
+                      className="accent-[#059669]"
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-medium leading-tight">
+                    Se muestra "Envío Gratis" en el catálogo y carrito.
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* Redes Sociales */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-100">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="instagram" className="text-xs font-semibold text-[#0b1c30] flex items-center gap-1.5">
+                  <InstagramIcon size={13} className="text-pink-600" />
+                  Instagram
+                </label>
+                <input
+                  id="instagram"
+                  type="text"
+                  placeholder="ej. @mitienda o instagram.com/mitienda"
+                  value={instagram}
+                  onChange={(e) => setInstagram(e.target.value)}
+                  className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="tiktok" className="text-xs font-semibold text-[#0b1c30] flex items-center gap-1.5">
+                  <span className="font-bold text-xs">🎵</span>
+                  TikTok
+                </label>
+                <input
+                  id="tiktok"
+                  type="text"
+                  placeholder="ej. @mitienda o tiktok.com/@mitienda"
+                  value={tiktok}
+                  onChange={(e) => setTiktok(e.target.value)}
+                  className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Card 3: Personalización Visual */}
           <section className="bg-white rounded-2xl p-5 border border-[#bccac0]/40 shadow-xs flex flex-col gap-4">
             <div className="flex items-center gap-2.5 pb-2 border-b border-gray-100">
               <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center">
@@ -394,9 +731,9 @@ export default function SettingsPage() {
               <label className="text-xs font-semibold text-[#0b1c30]">Estilo de Plantilla</label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 {[
-                  { id: 'minimalista', name: '🍃 Minimalista', desc: 'Moda, Ropa y Decoración' },
-                  { id: 'moderna', name: '⚡ Moderna', desc: 'Comida, Café y Urbana' },
-                  { id: 'elegante', name: '⚜️ Elegante', desc: 'Joyería, Postres y Lujo' },
+                  { id: 'minimalista', name: '🍃 Minimalista', desc: 'Lookbook sin marcos, Moda y Ropa' },
+                  { id: 'moderna', name: '⚡ Moderna', desc: 'Lista horizontal, Comida y Delivery' },
+                  { id: 'elegante', name: '⚜️ Elegante', desc: 'Boutique marfil, Joyería y Gourmet' },
                 ].map((styleItem) => {
                   const isSelected = selectedStyle === styleItem.id;
                   return (
@@ -456,18 +793,19 @@ export default function SettingsPage() {
                 themeStyle={selectedStyle}
                 primaryColor={selectedColorHex}
                 categoryName={categories[0] || 'General'}
+                logoUrl={logoUrl}
               />
             </div>
           </section>
 
-          {/* Card: Categorías de Productos */}
+          {/* Card 4: Categorías de Productos (Desbloqueado para Emprendedor y Negocio Pro) */}
           <section className="bg-white rounded-2xl p-5 border border-[#bccac0]/40 shadow-xs flex flex-col gap-4 relative overflow-hidden">
             <div className="flex items-center gap-2.5 pb-2 border-b border-gray-100">
               <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center">
                 <Package size={18} />
               </div>
               <h2 className="font-bold text-base text-[#0b1c30]">Categorías de Productos</h2>
-              {fsStore?.plan !== 'emprendedor' && (
+              {isFreePlan && (
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-100 text-amber-800 ml-auto flex items-center gap-1">
                   <Lock size={10} />
                   Top
@@ -475,14 +813,14 @@ export default function SettingsPage() {
               )}
             </div>
 
-            {fsStore?.plan !== 'emprendedor' ? (
+            {isFreePlan ? (
               /* ESTADO BLOQUEADO (Plan Gratis) */
               <div className="flex flex-col gap-3 py-2 text-center items-center">
                 <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">
                   <Lock size={22} />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <h3 className="text-sm font-bold text-slate-800">Función del Plan Emprendedor</h3>
+                  <h3 className="text-sm font-bold text-slate-800">Función del Plan Emprendedor y Pro</h3>
                   <p className="text-xs text-slate-500 leading-relaxed max-w-sm">
                     Las categorías te permiten agrupar tus productos (ej: Panes, Postres, Bebidas) para que tus clientes puedan filtrar tu menú ágilmente en tu catálogo.
                   </p>
@@ -494,7 +832,7 @@ export default function SettingsPage() {
                 </Link>
               </div>
             ) : (
-              /* ESTADO ACTIVO (Plan Emprendedor) */
+              /* ESTADO ACTIVO (Plan Emprendedor y Negocio Pro) */
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="newCategory" className="text-xs font-semibold text-[#0b1c30]">
@@ -556,7 +894,7 @@ export default function SettingsPage() {
             )}
           </section>
 
-          {/* Card 3: Plan Actual y Ver Todos los Planes */}
+          {/* Card 5: Plan Actual y Ver Todos los Planes */}
           <section className="bg-white rounded-2xl p-5 border border-[#bccac0]/40 shadow-xs flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#059669] flex items-center justify-center font-bold">
@@ -564,9 +902,14 @@ export default function SettingsPage() {
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-[#6d7a72]">Tipo de Plan</span>
-                <span className={`text-sm font-bold ${fsStore?.plan === 'emprendedor' ? 'text-amber-800 font-extrabold' : 'text-[#0b1c30]'
-                  }`}>
-                  {fsStore?.plan === 'emprendedor' ? 'Plan Emprendedor' : 'Plan Gratis'}
+                <span className={`text-sm font-bold ${
+                  fsStore?.plan === 'negocio'
+                    ? 'text-amber-900 font-extrabold'
+                    : fsStore?.plan === 'emprendedor'
+                    ? 'text-emerald-800 font-extrabold'
+                    : 'text-[#0b1c30]'
+                }`}>
+                  {fsStore?.plan === 'negocio' ? 'Plan Negocio Pro' : fsStore?.plan === 'emprendedor' ? 'Plan Emprendedor' : 'Plan Gratis'}
                 </span>
               </div>
             </div>
@@ -581,8 +924,26 @@ export default function SettingsPage() {
             </Link>
           </section>
 
+          {/* Card 4: Sesión y Cuenta */}
+          <section className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-4">
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs text-[#6d7a72]">Sesión Iniciada</span>
+              <span className="text-sm font-bold text-[#0b1c30] truncate">
+                {user?.email || 'Comerciante'}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200/60 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-2xs"
+            >
+              <LogOut size={14} />
+              <span>Cerrar Sesión</span>
+            </button>
+          </section>
+
           {/* Botón Guardar Cambios */}
-          <div className="pt-2">
+          <div className="pt-1">
             <Button
               type="submit"
               variant="primary"
@@ -756,6 +1117,23 @@ export default function SettingsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Modal de Validación Anti-Fraude de WhatsApp */}
+      {fsStore && (
+        <WhatsAppVerifyModal
+          isOpen={isVerifyModalOpen}
+          onClose={() => setIsVerifyModalOpen(false)}
+          storeId={fsStore.id}
+          storeName={fsStore.name}
+          phone={fsStore.whatsappPhone || ''}
+          onSuccess={async () => {
+            if (user) {
+              const updated = await getStoreByUserIdFromFS(user.uid);
+              if (updated) setFsStore(updated);
+            }
+          }}
+        />
       )}
 
       {/* Modal de Términos y Condiciones */}

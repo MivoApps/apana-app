@@ -53,6 +53,7 @@ import {
 } from '@/lib/firebase/firestore';
 
 const SUPERADMIN_EMAILS = [
+  'angelo@mivo.pe',
   'angelocastellanos99@gmail.com'
 ];
 

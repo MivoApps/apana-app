@@ -1,5 +1,6 @@
 export type StoreStatus = 'activa' | 'pausada' | 'pendiente' | 'eliminada';
 export type StoreStyle = 'minimalista' | 'moderna' | 'elegante';
+export type StorePlan = 'gratis' | 'emprendedor' | 'negocio';
 
 export interface Store {
   id: string;
@@ -24,7 +25,10 @@ export interface Store {
     facebook?: string;
     tiktok?: string;
   };
-  plan?: 'gratis' | 'emprendedor' | string; // Tipo de suscripción de la tienda
+  schedule?: string; // ej. "Lun a Sáb: 9:00 am - 8:00 pm"
+  shippingType?: 'coordinar' | 'gratis'; // 'coordinar' por defecto
+  shippingNotes?: string;
+  plan?: StorePlan | string; // Tipo de suscripción: 'gratis' | 'emprendedor' | 'negocio'
   subscriptionStatus?: 'active' | 'cancelled' | 'cancel_at_period_end' | 'expiring_soon' | 'grace_period' | 'expired' | 'free';
   cancelAtPeriodEnd?: boolean;
   subscriptionStartDate?: number;
@@ -32,9 +36,27 @@ export interface Store {
   lastPaymentDate?: number;
   lastPaymentAmount?: number;
   lastCulqiChargeId?: string;
-  categories?: string[]; // Categorías de productos de la tienda (Plan Emprendedor)
+  categories?: string[]; // Categorías de productos de la tienda (Plan Emprendedor y Negocio)
+  isWhatsappVerified?: boolean; // Validación anti-fraude del WhatsApp del comercio
+  whatsappVerificationCode?: string; // Código de 6 dígitos enviado
+  whatsappVerifiedAt?: number; // Timestamp de verificación
   createdAt?: any;
   updatedAt?: any;
+}
+
+export interface ProductOptionValue {
+  id: string;
+  name: string; // ej. "250g", "Vainilla", "Negro", "L"
+  priceDifference?: number; // Precio diferencial opcional ej. 5.00 (+S/ 5) o 0
+  imageUrl?: string; // Foto opcional asociada a la variante (Plan Negocio)
+  inStock?: boolean;
+}
+
+export interface ProductOptionGroup {
+  id: string;
+  title: string; // ej. "Talla", "Color", "Presentación", "Fragancia"
+  required?: boolean;
+  values: ProductOptionValue[];
 }
 
 export interface Product {
@@ -44,14 +66,24 @@ export interface Product {
   description?: string;
   price: number;
   imageUrl?: string;
-  imageUrls?: string[]; // Lista de hasta 4 imágenes (Plan Emprendedor)
-  category?: string; // Categoría asociada al producto (Plan Emprendedor)
+  imageUrls?: string[]; // Lista de hasta 4 imágenes (Emprendedor) u 8 (Negocio)
+  category?: string; // Categoría asociada al producto
+  options?: ProductOptionGroup[]; // Opciones/Variantes del producto
   inStock: boolean;
-  views?: number; // Contador de visitas acumuladas (Plan Emprendedor)
+  views?: number; // Contador de visitas acumuladas
   createdAt: number;
 }
 
+export interface SelectedOption {
+  groupTitle: string;
+  valueName: string;
+  priceDifference?: number;
+}
+
 export interface CartItem {
+  id: string; // Identificador único (ej. productId o productId + opciones seleccionadas)
   product: Product;
+  selectedOptions?: SelectedOption[];
+  calculatedPrice: number; // Precio base + diferencias de opciones
   quantity: number;
 }

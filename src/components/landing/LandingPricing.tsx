@@ -31,8 +31,8 @@ export const LandingPricing: React.FC = () => {
         </p>
       </div>
 
-      {/* 2 Main Subscription Plans */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch mb-16">
+      {/* 3 Main Subscription Plans Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto items-stretch mb-16">
         
         {/* 1. PLAN GRATIS */}
         <div className="bg-white rounded-3xl p-7 sm:p-8 border border-[#bccac0]/40 shadow-xs flex flex-col justify-between relative hover:border-[#bccac0] transition-all">
@@ -47,11 +47,11 @@ export const LandingPricing: React.FC = () => {
             </div>
 
             <div className="flex items-baseline gap-1 mb-2">
-              <span className="text-4xl sm:text-5xl font-black text-[#0b1c30]">S/ 0</span>
-              <span className="text-sm text-[#6d7a72]">/ siempre gratis</span>
+              <span className="text-4xl font-black text-[#0b1c30]">S/ 0</span>
+              <span className="text-sm text-[#6d7a72]">/ siempre</span>
             </div>
             <p className="text-xs text-[#3d4a42] mb-6">
-              Para empezar a vender sin pagar. Incluye todo lo esencial para digitalizar tu negocio.
+              Para digitalizar tu catálogo y empezar a recibir pedidos por WhatsApp sin pagar.
             </p>
 
             <div className="pt-6 border-t border-slate-100 space-y-3.5 text-sm text-[#0b1c30]">
@@ -73,14 +73,14 @@ export const LandingPricing: React.FC = () => {
                 <div className="w-5 h-5 rounded-full bg-[#059669]/10 text-[#059669] flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>Código QR</strong> de la tienda listo</span>
+                <span>Variantes simples (1 grupo)</span>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-[#059669]/10 text-[#059669] flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span>Compartir enlace de productos</span>
+                <span><strong>Código QR y link listo</strong></span>
               </div>
 
               <div className="flex items-center gap-3">
@@ -100,7 +100,7 @@ export const LandingPricing: React.FC = () => {
           </div>
 
           <div className="mt-8 pt-6">
-            <Link href="/login" className="w-full block">
+            <Link href="/register" className="w-full block">
               <Button variant="outline" fullWidth size="lg" className="font-bold text-sm bg-white hover:bg-slate-50 border-[#bccac0]">
                 Crear tienda gratis
               </Button>
@@ -109,11 +109,11 @@ export const LandingPricing: React.FC = () => {
         </div>
 
         {/* 2. PLAN EMPRENDEDOR */}
-        <div className="bg-linear-to-b from-[#f5fff7] via-white to-white rounded-3xl p-7 sm:p-8 border-2 border-[#059669] shadow-xl flex flex-col justify-between relative hover:shadow-2xl transition-all">
+        <div className="bg-linear-to-b from-[#f5fff7] via-white to-white rounded-3xl p-7 sm:p-8 border-2 border-[#059669] shadow-xl flex flex-col justify-between relative hover:shadow-2xl transition-all scale-[1.02]">
           {/* Badge Popular */}
           <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-linear-to-r from-[#059669] to-[#00855d] text-white text-xs font-extrabold px-4 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1.5">
             <Sparkles size={13} />
-            Recomendado
+            Más Popular
           </div>
 
           <div>
@@ -122,16 +122,16 @@ export const LandingPricing: React.FC = () => {
                 Emprendedor
               </span>
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#059669]/15 text-[#006c49]">
-                Para negocios en crecimiento
+                En Crecimiento
               </span>
             </div>
 
             <div className="flex items-baseline gap-1 mb-2">
-              <span className="text-4xl sm:text-5xl font-black text-[#0b1c30]">S/ 19.90</span>
+              <span className="text-4xl font-black text-[#0b1c30]">S/ 19.90</span>
               <span className="text-sm text-[#6d7a72]">/ mes</span>
             </div>
             <p className="text-xs text-[#3d4a42] mb-6">
-              Para negocios que están creciendo y necesitan mayor capacidad y control de su marca.
+              Para negocios en crecimiento que necesitan mayor capacidad y control de su marca.
             </p>
 
             <div className="pt-6 border-t border-emerald-100 space-y-3.5 text-sm text-[#0b1c30]">
@@ -139,14 +139,21 @@ export const LandingPricing: React.FC = () => {
                 <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>Hasta 250 productos</strong></span>
+                <span><strong>Hasta 150 productos</strong></span>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>Hasta 4 imágenes</strong> por producto</span>
+                <span><strong>Hasta 4 fotos</strong> por producto</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0">
+                  <Check size={13} className="stroke-[3]" />
+                </div>
+                <span><strong>Opciones con precios</strong> (2 grupos)</span>
               </div>
 
               <div className="flex items-center gap-3">
@@ -160,14 +167,7 @@ export const LandingPricing: React.FC = () => {
                 <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>Estadísticas básicas</strong> de visitas y clics</span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0">
-                  <Check size={13} className="stroke-[3]" />
-                </div>
-                <span><strong>Más personalización</strong> y temas visuales</span>
+                <span><strong>Métricas de visitas</strong> y clics</span>
               </div>
 
               <div className="flex items-center gap-3">
@@ -176,20 +176,93 @@ export const LandingPricing: React.FC = () => {
                 </div>
                 <span><strong>Sin marca "Creado por APANA"</strong></span>
               </div>
+            </div>
+          </div>
 
+          <div className="mt-8 pt-6">
+            <Link href="/register" className="w-full block">
+              <Button variant="primary" fullWidth size="lg" className="font-bold text-sm shadow-md shadow-[#059669]/20 flex items-center justify-center gap-2">
+                Elegir Plan Emprendedor
+                <ArrowRight size={16} />
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* 3. PLAN NEGOCIO (NUEVO) */}
+        <div className="bg-white rounded-3xl p-7 sm:p-8 border border-amber-300 shadow-lg flex flex-col justify-between relative hover:border-amber-400 hover:shadow-xl transition-all">
+          {/* Badge VIP */}
+          <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-linear-to-r from-amber-600 to-amber-500 text-white text-xs font-extrabold px-4 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1.5">
+            👑 Escala Total
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-sm font-bold text-amber-700 uppercase tracking-wider">
+                Negocio Pro
+              </span>
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900">
+                Catálogo Ilimitado
+              </span>
+            </div>
+
+            <div className="flex items-baseline gap-1 mb-2">
+              <span className="text-4xl font-black text-[#0b1c30]">S/ 39.90</span>
+              <span className="text-sm text-[#6d7a72]">/ mes</span>
+            </div>
+            <p className="text-xs text-[#3d4a42] mb-6">
+              Para marcas consolidadas que necesitan catálogo ilimitado y múltiples fotos por variante.
+            </p>
+
+            <div className="pt-6 border-t border-slate-100 space-y-3.5 text-sm text-[#0b1c30]">
               <div className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0">
+                <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>Pedidos por WhatsApp y QR</strong></span>
+                <span><strong>PRODUCTOS ILIMITADOS</strong></span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0">
+                  <Check size={13} className="stroke-[3]" />
+                </div>
+                <span><strong>Hasta 8 fotos</strong> por producto</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0">
+                  <Check size={13} className="stroke-[3]" />
+                </div>
+                <span><strong>Variantes ilimitadas</strong> + fotos</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0">
+                  <Check size={13} className="stroke-[3]" />
+                </div>
+                <span><strong>Métricas completas del mes</strong></span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0">
+                  <Check size={13} className="stroke-[3]" />
+                </div>
+                <span>Badge de <strong>Tienda Verificada VIP</strong></span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0">
+                  <Check size={13} className="stroke-[3]" />
+                </div>
+                <span>Soporte prioritario personalizado</span>
               </div>
             </div>
           </div>
 
           <div className="mt-8 pt-6">
-            <Link href="/login" className="w-full block">
-              <Button variant="primary" fullWidth size="lg" className="font-bold text-sm shadow-md shadow-[#059669]/20 flex items-center justify-center gap-2">
-                Elegir Plan Emprendedor
+            <Link href="/register" className="w-full block">
+              <Button variant="primary" fullWidth size="lg" className="font-bold text-sm bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20 flex items-center justify-center gap-2 border-0">
+                Elegir Plan Negocio
                 <ArrowRight size={16} />
               </Button>
             </Link>

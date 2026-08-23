@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase/config';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { tokenId, storeId, email, amount = 1990 } = body; // amount en céntimos: 1990 = S/ 19.90
+    const { tokenId, storeId, email, amount = 1990, plan = 'emprendedor' } = body;
 
     if (!tokenId || !storeId) {
       return NextResponse.json(
@@ -14,6 +14,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const targetPlan = plan === 'negocio' ? 'negocio' : 'emprendedor';
+    const planName = targetPlan === 'negocio' ? 'Plan Negocio Pro' : 'Plan Emprendedor';
     const culqiSecretKey = process.env.CULQI_SECRET_KEY || 'sk_test_demo_key';
 
     // 1. Simulación o llamada real a la API de Culqi Charges
@@ -32,7 +34,7 @@ export async function POST(request: Request) {
           currency_code: 'PEN',
           email: email || 'cliente@apana.app',
           source_id: tokenId,
-          description: 'Suscripción Mensual APANA - Plan Emprendedor',
+          description: `Suscripción Mensual APANA - ${planName}`,
         }),
       });
 
@@ -58,15 +60,15 @@ export async function POST(request: Request) {
     const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
     const nextBillingDate = now + thirtyDaysMs;
 
-    // 3. Actualizar la tienda en Firestore con Plan Emprendedor
+    // 3. Actualizar la tienda en Firestore con el Plan Seleccionado
     const storeRef = doc(db, 'stores', storeId);
     await updateDoc(storeRef, {
-      plan: 'emprendedor',
+      plan: targetPlan,
       subscriptionStatus: 'active',
       subscriptionStartDate: now,
       nextBillingDate: nextBillingDate,
       lastPaymentDate: now,
-      lastPaymentAmount: amount / 100, // S/ 19.90
+      lastPaymentAmount: amount / 100,
       lastCulqiChargeId: chargeResult.id,
       updatedAt: serverTimestamp(),
     });
@@ -80,7 +82,7 @@ export async function POST(request: Request) {
         email,
         culqiChargeId: chargeResult.id,
         status: 'approved',
-        plan: 'emprendedor',
+        plan: targetPlan,
         createdAt: now,
       });
     } catch (e) {
@@ -91,7 +93,7 @@ export async function POST(request: Request) {
       success: true,
       chargeId: chargeResult.id,
       nextBillingDate,
-      message: '¡Plan Emprendedor activado exitosamente por 30 días!',
+      message: `¡${planName} activado exitosamente por 30 días!`,
     });
   } catch (error: any) {
     console.error('Error en /api/culqi/charge:', error);

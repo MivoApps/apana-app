@@ -4,18 +4,17 @@ import React, { useState, useEffect } from 'react';
 import { 
   Smartphone, 
   ShoppingBag, 
-  Send, 
-  Check, 
-  Image as ImageIcon, 
-  QrCode, 
-  Sparkles, 
-  ExternalLink,
   ArrowLeft,
+  ArrowRight,
   Trash2,
   Phone,
   Video,
   MoreVertical,
-  CheckCheck
+  CheckCheck,
+  Smile,
+  Paperclip,
+  Camera,
+  Mic
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import Link from 'next/link';
@@ -146,13 +145,15 @@ export const LandingDevicePreview: React.FC = () => {
             {/* Phone Screen Container */}
             <div className="w-full h-full bg-[#f8f9ff] rounded-[36px] overflow-hidden flex flex-col relative text-[#0b1c30] text-xs shadow-inner">
               
-              {/* Browser Address Bar */}
-              <div className="bg-white border-b border-slate-100 pt-7 pb-2 px-3 flex items-center gap-2 shrink-0">
-                <div className="flex-1 bg-slate-100 rounded-full px-3 py-1 flex items-center gap-1.5 text-[10px] text-slate-600 truncate">
-                  <span className="text-[#059669] font-bold">🔒</span>
-                  <span className="truncate">apana.app/s/panaderia-don-jose</span>
+              {/* Browser Address Bar (Shown only on web tabs: Catalog & Cart) */}
+              {activeTab !== 'whatsapp' && (
+                <div className="bg-white border-b border-slate-100 pt-7 pb-2 px-3 flex items-center gap-2 shrink-0">
+                  <div className="flex-1 bg-slate-100 rounded-full px-3 py-1 flex items-center gap-1.5 text-[10px] text-slate-600 truncate">
+                    <span className="text-[#059669] font-bold">🔒</span>
+                    <span className="truncate">apana.app/s/panaderia-don-jose</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* ========================================================================= */}
               {/* SCREEN CONTENT: TAB 1 - CATALOG */}
@@ -379,78 +380,129 @@ export const LandingDevicePreview: React.FC = () => {
               )}
 
               {/* ========================================================================= */}
-              {/* SCREEN CONTENT: TAB 3 - WHATSAPP MESSAGE (Diseño WhatsApp de Alta Fidelidad) */}
+              {/* SCREEN CONTENT: TAB 3 - WHATSAPP MESSAGE (100% Auténtico a WhatsApp) */}
               {/* ========================================================================= */}
               {activeTab === 'whatsapp' && (
-                <div className="flex-1 bg-[#efeae2] flex flex-col justify-between overflow-hidden">
+                <div className="flex-1 bg-[#efeae2] flex flex-col justify-between overflow-hidden relative font-sans">
                   
-                  {/* WhatsApp Chat Header */}
-                  <div className="bg-[#075e54] text-white px-3 py-2.5 flex items-center justify-between shrink-0 shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <ArrowLeft size={16} className="text-white cursor-pointer" />
-                      <div className="w-8 h-8 rounded-full bg-emerald-100 text-[#075e54] font-bold flex items-center justify-center text-xs">
-                        🥖
+                  {/* WhatsApp Doodle Wallpaper Pattern */}
+                  <div 
+                    className="absolute inset-0 opacity-[0.06] pointer-events-none bg-repeat"
+                    style={{
+                      backgroundImage: `radial-gradient(#128c7e 1px, transparent 1px)`,
+                      backgroundSize: '16px 16px'
+                    }}
+                  />
+
+                  {/* Phone Native Status Bar (WhatsApp Header) */}
+                  <div className="bg-[#008069] text-white pt-6 pb-1 px-4 flex items-center justify-between text-[10px] font-semibold tracking-wide shrink-0">
+                    <span>9:41</span>
+                    <div className="flex items-center gap-1.5 text-white/90">
+                      <span className="text-[10px]">5G</span>
+                      <div className="w-4 h-2 rounded-[2px] border border-white/80 p-[1px] flex items-center">
+                        <div className="w-2.5 h-full bg-white rounded-[1px]" />
                       </div>
-                      <div className="leading-tight">
-                        <p className="font-bold text-xs text-white">Panadería Don José</p>
-                        <p className="text-[9px] text-emerald-200">en línea • cuenta de empresa</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2.5 text-white/90">
-                      <Video size={14} />
-                      <Phone size={13} />
-                      <MoreVertical size={14} />
                     </div>
                   </div>
 
-                  {/* WhatsApp Message Area */}
-                  <div className="p-3 overflow-y-auto space-y-2.5 flex-1 flex flex-col justify-end">
+                  {/* WhatsApp App Chat Header */}
+                  <div className="bg-[#008069] text-white px-2.5 py-2 flex items-center justify-between shrink-0 shadow-md relative z-10">
+                    <div className="flex items-center gap-1.5">
+                      <ArrowLeft size={16} className="text-white cursor-pointer" />
+                      <div className="w-8 h-8 rounded-full bg-white text-[#008069] font-bold flex items-center justify-center text-sm shadow-xs shrink-0 overflow-hidden border border-white/40">
+                        🥖
+                      </div>
+                      <div className="leading-tight">
+                        <p className="font-bold text-xs text-white truncate max-w-[130px]">Panadería Don José</p>
+                        <p className="text-[9.5px] text-emerald-100">en línea</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 text-white">
+                      <Video size={16} className="cursor-pointer" />
+                      <Phone size={15} className="cursor-pointer" />
+                      <MoreVertical size={16} className="cursor-pointer" />
+                    </div>
+                  </div>
+
+                  {/* WhatsApp Chat Message Scroll Area */}
+                  <div className="p-3 overflow-y-auto space-y-2 flex-1 flex flex-col justify-end relative z-10">
                     
-                    {/* Timestamp Bubble */}
-                    <div className="self-center bg-[#e1f3fb] text-[#53bdeb] px-2.5 py-0.5 rounded-md text-[9px] font-semibold shadow-2xs">
+                    {/* WhatsApp Timestamp Badge */}
+                    <div className="self-center bg-white/90 text-[#54656f] px-2.5 py-0.5 rounded-md text-[9px] font-medium shadow-2xs uppercase tracking-wider">
                       HOY
                     </div>
 
-                    {/* WhatsApp Structured Message Card */}
-                    <div className="bg-[#d9fdd3] rounded-2xl rounded-tr-xs p-3 shadow-xs border border-[#c4ebbe] max-w-[95%] self-end space-y-2 text-[11px] text-[#111b21]">
+                    {/* WhatsApp Authentic Sent Message Bubble */}
+                    <div className="bg-[#d9fdd3] text-[#111b21] rounded-2xl rounded-tr-xs p-3 shadow-xs border border-[#c4ebbe] max-w-[94%] self-end space-y-1 text-[11px] leading-[1.35] relative">
                       
-                      <p className="font-bold text-[#075e54] text-[11px] flex items-center gap-1">
-                        👋 ¡Hola Panadería Don José! Deseo realizar este pedido:
+                      {/* Header Line */}
+                      <p className="font-bold text-[#111b21]">
+                        🛒 NUEVO PEDIDO - PANADERÍA DON JOSÉ
+                      </p>
+                      <p className="text-[9px] text-[#111b21]/40 tracking-tighter select-none font-mono">
+                        ━━━━━━━━━━━━━━━━━━━━━
                       </p>
 
-                      <div className="border-y border-dashed border-[#b3deab] py-2 space-y-1.5 text-[10px]">
-                        <div className="flex justify-between">
-                          <span>• 1x Croissant Francés de Mantequilla</span>
-                          <span className="font-semibold">S/ 5.00</span>
+                      {/* Items List */}
+                      <div className="space-y-1 pt-0.5 text-[11px]">
+                        <div>
+                          <p className="font-bold text-[#111b21]">▪️ Croissant Francés de Mantequilla</p>
+                          <p className="pl-3 text-[#111b21]/80 text-[10.5px]">
+                            Cantidad: 1 x S/ 5.00 = <span className="font-bold text-[#111b21]">S/ 5.00</span>
+                          </p>
                         </div>
-                        <div className="flex justify-between">
-                          <span>• 1x Baguette Rústica Tradicional</span>
-                          <span className="font-semibold">S/ 4.50</span>
+                        <div>
+                          <p className="font-bold text-[#111b21]">▪️ Baguette Rústica Tradicional</p>
+                          <p className="pl-3 text-[#111b21]/80 text-[10.5px]">
+                            Cantidad: 1 x S/ 4.50 = <span className="font-bold text-[#111b21]">S/ 4.50</span>
+                          </p>
                         </div>
                       </div>
 
-                      <div className="flex justify-between items-center font-bold text-xs pt-0.5 text-slate-900">
-                        <span>💰 Total a pagar:</span>
-                        <span className="text-[#075e54] text-sm">S/ 9.50</span>
+                      {/* Total Line */}
+                      <p className="text-[9px] text-[#111b21]/40 tracking-tighter select-none font-mono">
+                        ━━━━━━━━━━━━━━━━━━━━━
+                      </p>
+                      <p className="font-bold text-[#111b21] text-[11.5px]">
+                        💰 TOTAL A PAGAR: S/ 9.50
+                      </p>
+
+                      {/* Customer Details */}
+                      <div className="pt-1 space-y-0.5 text-[10.5px]">
+                        <p>👤 <span className="font-bold">Cliente:</span> Carlos Mendoza</p>
+                        <p>📝 <span className="font-bold">Dirección / Notas:</span> Delivery a Av. Larco 450 (Pan calientito por favor)</p>
                       </div>
 
-                      <div className="bg-white/70 rounded-lg p-2 text-[9px] text-slate-700 space-y-0.5 border border-black/5">
-                        <p>👤 <strong>Cliente:</strong> Carlos Mendoza</p>
-                        <p>📍 <strong>Entrega:</strong> Delivery a Av. Larco 450</p>
-                        <p>📝 <strong>Nota:</strong> Pan calientito por favor</p>
-                      </div>
+                      {/* Footer Signature */}
+                      <p className="text-[10px] italic text-[#111b21]/70 pt-1">
+                        ✨ Enviado desde mi tienda APANA
+                      </p>
 
-                      <div className="flex items-center justify-end gap-1 text-[9px] text-slate-500 pt-0.5">
-                        <span>12:35 PM</span>
-                        <CheckCheck size={13} className="text-[#53bdeb]" />
+                      {/* WhatsApp Time + Double Blue Ticks */}
+                      <div className="flex items-center justify-end gap-1 text-[9px] text-[#667781] pt-0.5 font-sans">
+                        <span>12:35 p. m.</span>
+                        <CheckCheck size={13} className="text-[#53bdeb] stroke-[2.2]" />
                       </div>
                     </div>
 
-                    {/* Indicator pill */}
-                    <div className="bg-white/95 backdrop-blur-xs rounded-full px-3 py-1 text-[9px] text-center text-slate-600 font-semibold shadow-xs border border-slate-200">
-                      ⚡ El pedido llega ordenado con el total exacto listo para despachar
+                    {/* Subtle info pill under chat */}
+                    <div className="bg-white/95 backdrop-blur-xs rounded-full px-3 py-1 text-[9px] text-center text-slate-600 font-semibold shadow-xs border border-slate-200 self-center">
+                      ⚡ Recibes el pedido estructurado listo para despachar
                     </div>
 
+                  </div>
+
+                  {/* WhatsApp Bottom Native Input Bar */}
+                  <div className="p-2 bg-[#f0f2f5] border-t border-slate-200/80 flex items-center gap-1.5 shrink-0 relative z-10">
+                    <div className="bg-white rounded-full px-3 py-1.5 flex items-center gap-2 flex-1 shadow-2xs border border-slate-200">
+                      <Smile size={16} className="text-[#8696a0] cursor-pointer" />
+                      <span className="flex-1 text-[11px] text-[#8696a0]">Mensaje</span>
+                      <Paperclip size={15} className="text-[#8696a0] rotate-45 cursor-pointer" />
+                      <Camera size={15} className="text-[#8696a0] cursor-pointer" />
+                    </div>
+                    <button className="w-8 h-8 rounded-full bg-[#00a884] text-white flex items-center justify-center shadow-xs cursor-pointer shrink-0">
+                      <Mic size={15} />
+                    </button>
                   </div>
 
                 </div>
@@ -459,57 +511,128 @@ export const LandingDevicePreview: React.FC = () => {
             </div>
           </div>
 
-          {/* Feature Highlights on the Side of the Phone */}
-          <div className="flex-1 space-y-5 max-w-lg">
-            <div className="bg-white p-5 rounded-2xl border border-[#bccac0]/40 shadow-xs">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-[#059669]/10 text-[#059669] flex items-center justify-center font-bold">
-                  {activeTab === 'catalog' && <ImageIcon size={18} />}
-                  {activeTab === 'cart' && <ShoppingBag size={18} />}
-                  {activeTab === 'whatsapp' && <WhatsAppIcon size={18} />}
+          {/* Interactive 3-Step Selector Cards on the Side of the Phone */}
+          <div className="flex-1 space-y-3.5 max-w-lg w-full">
+            
+            {/* Step Card 1: Catálogo */}
+            <button
+              type="button"
+              onClick={() => handleTabChange('catalog')}
+              className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                activeTab === 'catalog'
+                  ? 'bg-white border-[#059669] shadow-md shadow-[#059669]/10 ring-2 ring-[#059669]/20'
+                  : 'bg-white/80 hover:bg-white border-[#bccac0]/40 hover:border-[#bccac0]/80 shadow-xs'
+              }`}
+            >
+              <div className="flex items-start gap-3.5">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                  activeTab === 'catalog'
+                    ? 'bg-[#059669] text-white shadow-xs'
+                    : 'bg-[#059669]/10 text-[#059669]'
+                }`}>
+                  <Smartphone size={20} />
                 </div>
-                <h3 className="font-bold text-base text-[#0b1c30]">
-                  {activeTab === 'catalog' && 'Catálogo visual y rápido'}
-                  {activeTab === 'cart' && 'Cálculo de total automatizado'}
-                  {activeTab === 'whatsapp' && 'Cero errores en la toma de pedidos'}
-                </h3>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="font-bold text-sm sm:text-base text-[#0b1c30]">
+                      1. Catálogo interactivo sin descargas
+                    </h3>
+                    {activeTab === 'catalog' && (
+                      <span className="px-2 py-0.5 rounded-full bg-[#059669]/10 text-[#00855d] text-[10px] font-bold shrink-0">
+                        Viendo ahora
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs sm:text-sm text-[#3d4a42] mt-1 leading-relaxed">
+                    Tus clientes ven fotos, precios actualizados y disponibilidad al instante desde su celular sin instalar ninguna aplicación.
+                  </p>
+                </div>
               </div>
-              <p className="text-sm text-[#3d4a42] leading-relaxed">
-                {activeTab === 'catalog' &&
-                  'Tus clientes ven fotos, precios actualizados y disponibilidad sin tener que preguntarte "¿qué sabores tienes?" o "¿cuánto cuesta?".'}
-                {activeTab === 'cart' &&
-                  'El carrito suma automáticamente los montos y prepara el pedido estructurado con los datos del comprador.'}
-                {activeTab === 'whatsapp' &&
-                  'Recibes un mensaje estructurado con el nombre del cliente, dirección y la lista exacta de productos para solo confirmar el pago.'}
-              </p>
-            </div>
+            </button>
 
-            <div className="p-4 bg-[#eff4ff] rounded-2xl border border-[#cbdbf5] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#059669] shadow-2xs">
-                  <QrCode size={22} />
+            {/* Step Card 2: Carrito */}
+            <button
+              type="button"
+              onClick={() => handleTabChange('cart')}
+              className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                activeTab === 'cart'
+                  ? 'bg-white border-[#059669] shadow-md shadow-[#059669]/10 ring-2 ring-[#059669]/20'
+                  : 'bg-white/80 hover:bg-white border-[#bccac0]/40 hover:border-[#bccac0]/80 shadow-xs'
+              }`}
+            >
+              <div className="flex items-start gap-3.5">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                  activeTab === 'cart'
+                    ? 'bg-[#059669] text-white shadow-xs'
+                    : 'bg-[#059669]/10 text-[#059669]'
+                }`}>
+                  <ShoppingBag size={20} />
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-[#0b1c30]">Código QR incluido</h4>
-                  <p className="text-[11px] text-[#3d4a42]">Colócalo en tu mostrador o mesas</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="font-bold text-sm sm:text-base text-[#0b1c30]">
+                      2. Carrito y cálculo automatizado
+                    </h3>
+                    {activeTab === 'cart' && (
+                      <span className="px-2 py-0.5 rounded-full bg-[#059669]/10 text-[#00855d] text-[10px] font-bold shrink-0">
+                        Viendo ahora
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs sm:text-sm text-[#3d4a42] mt-1 leading-relaxed">
+                    Suma automáticamente los montos, calcula envíos y recopila los datos del cliente sin errores de cálculo manual.
+                  </p>
                 </div>
               </div>
+            </button>
+
+            {/* Step Card 3: WhatsApp */}
+            <button
+              type="button"
+              onClick={() => handleTabChange('whatsapp')}
+              className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                activeTab === 'whatsapp'
+                  ? 'bg-white border-[#25d366] shadow-md shadow-[#25d366]/15 ring-2 ring-[#25d366]/30'
+                  : 'bg-white/80 hover:bg-white border-[#bccac0]/40 hover:border-[#bccac0]/80 shadow-xs'
+              }`}
+            >
+              <div className="flex items-start gap-3.5">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                  activeTab === 'whatsapp'
+                    ? 'bg-linear-to-r from-[#25d366] to-[#128c7e] text-white shadow-xs'
+                    : 'bg-[#25d366]/10 text-[#128c7e]'
+                }`}>
+                  <WhatsAppIcon size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="font-bold text-sm sm:text-base text-[#0b1c30]">
+                      3. Pedido directo a tu WhatsApp
+                    </h3>
+                    {activeTab === 'whatsapp' && (
+                      <span className="px-2 py-0.5 rounded-full bg-[#25d366]/15 text-[#075e54] text-[10px] font-bold shrink-0">
+                        Viendo ahora
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs sm:text-sm text-[#3d4a42] mt-1 leading-relaxed">
+                    Recibes un mensaje 100% ordenado con los productos, datos de entrega y el total exacto listo para cobrar y despachar.
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            {/* Bottom Call to Action */}
+            <div className="pt-2">
               <Link
-                href="/login"
-                className="text-xs font-bold text-[#059669] hover:underline flex items-center gap-1"
+                href="/register"
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#059669] hover:bg-[#00855d] text-white font-bold text-sm shadow-md shadow-[#059669]/25 transition-all hover:scale-[1.01] active:scale-[0.99]"
               >
-                Probar <ExternalLink size={12} />
+                <span>Crear mi catálogo digital gratis</span>
+                <ArrowRight size={16} />
               </Link>
             </div>
 
-            <div className="p-4 rounded-2xl border border-dashed border-[#059669]/40 bg-white/60">
-              <div className="flex items-start gap-2.5">
-                <Sparkles size={16} className="text-[#059669] shrink-0 mt-0.5" />
-                <div className="text-xs text-[#3d4a42]">
-                  <strong className="text-[#0b1c30]">Personalización de imágenes:</strong> Puedes agregar el banner de tu local y subir fotos de tus productos desde tu panel en cualquier momento.
-                </div>
-              </div>
-            </div>
           </div>
 
         </div>

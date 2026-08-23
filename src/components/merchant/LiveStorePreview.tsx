@@ -8,6 +8,7 @@ interface LiveStorePreviewProps {
   themeStyle: 'minimalist' | 'modern' | 'elegant' | 'minimalista' | 'moderna' | 'elegante';
   primaryColor: string;
   categoryName?: string;
+  logoUrl?: string | null;
 }
 
 export const LiveStorePreview: React.FC<LiveStorePreviewProps> = ({
@@ -15,6 +16,7 @@ export const LiveStorePreview: React.FC<LiveStorePreviewProps> = ({
   themeStyle,
   primaryColor,
   categoryName = 'General',
+  logoUrl,
 }) => {
   const isModern = themeStyle === 'modern' || themeStyle === 'moderna';
   const isElegant = themeStyle === 'elegant' || themeStyle === 'elegante';
@@ -45,15 +47,17 @@ export const LiveStorePreview: React.FC<LiveStorePreviewProps> = ({
         <div
           className={`w-full rounded-[1.8rem] overflow-hidden text-left flex flex-col transition-colors duration-300 min-h-[380px] ${
             isElegant
-              ? 'bg-[#FAF9F6] text-[#1a1a1a] font-playfair'
+              ? 'bg-[#FAF8F5] text-stone-900 font-playfair'
               : isModern
               ? 'bg-slate-50 text-[#0b1c30] font-space-grotesk'
               : 'bg-white text-[#0b1c30] font-plus-jakarta'
           }`}
         >
           {/* Mini Nav Bar */}
-          <div className="pt-6 px-3 pb-2 flex items-center justify-between border-b border-black/5 bg-white/80 backdrop-blur-xs">
-            <span className="text-[11px] font-bold truncate max-w-[140px]">{displayName}</span>
+          <div className={`pt-6 px-3 pb-2 flex items-center justify-between border-b ${
+            isElegant ? 'bg-[#FAF8F5]/90 border-[#E7E2D9]' : 'bg-white/80 border-black/5'
+          } backdrop-blur-xs`}>
+            <span className={`text-[11px] font-bold truncate max-w-[140px] ${isElegant ? 'font-playfair' : ''}`}>{displayName}</span>
             <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
               <ShoppingBag size={12} />
             </div>
@@ -63,24 +67,32 @@ export const LiveStorePreview: React.FC<LiveStorePreviewProps> = ({
           <div
             className={`p-3 flex flex-col items-center text-center gap-1.5 transition-all ${
               isElegant
-                ? 'bg-gradient-to-b from-[#182330] to-[#0b1c30] text-white py-4 rounded-b-2xl shadow-2xs'
+                ? 'bg-[#FAF8F5] text-stone-900 border-b border-[#E7E2D9] py-3.5'
                 : isModern
                 ? 'bg-white text-[#0b1c30] border-b border-slate-200/80 py-3'
                 : 'bg-white text-[#0b1c30] py-3'
             }`}
           >
-            <div
-              style={{ backgroundColor: primaryColor || '#059669' }}
-              className={`w-10 h-10 text-white flex items-center justify-center font-bold text-sm shadow-xs transition-all ${
-                isElegant ? 'rounded-lg' : isModern ? 'rounded-2xl' : 'rounded-lg'
-              }`}
-            >
-              {initials}
-            </div>
-            <span className={`text-xs font-bold leading-tight ${isElegant ? 'text-white' : 'text-[#0b1c30]'}`}>
+            {logoUrl ? (
+              <div className={`w-10 h-10 overflow-hidden shadow-xs transition-all ${
+                isElegant ? 'rounded-xl border border-stone-200/60' : isModern ? 'rounded-2xl' : 'rounded-full'
+              }`}>
+                <img src={logoUrl} alt={displayName} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div
+                style={{ backgroundColor: primaryColor || '#059669' }}
+                className={`w-10 h-10 text-white flex items-center justify-center font-bold text-sm shadow-xs transition-all ${
+                  isElegant ? 'rounded-xl border border-stone-200/60 font-playfair' : isModern ? 'rounded-2xl' : 'rounded-full'
+                }`}
+              >
+                {initials}
+              </div>
+            )}
+            <span className={`text-xs font-bold leading-tight ${isElegant ? 'text-stone-900 font-playfair' : 'text-[#0b1c30]'}`}>
               {displayName}
             </span>
-            <span className={`text-[9px] leading-tight line-clamp-1 ${isElegant ? 'text-amber-100/70' : 'text-slate-500'}`}>
+            <span className={`text-[9px] leading-tight line-clamp-1 ${isElegant ? 'text-stone-500 font-sans' : 'text-slate-500'}`}>
               Catálogo oficial en WhatsApp
             </span>
           </div>
@@ -127,8 +139,8 @@ export const LiveStorePreview: React.FC<LiveStorePreviewProps> = ({
                 </div>
               </div>
             ) : isElegant ? (
-              <div className="bg-white rounded-xl border border-[#e8dfd5] overflow-hidden flex flex-col text-center shadow-2xs">
-                <div className="aspect-square bg-[#FAF9F6] overflow-hidden">
+              <div className="bg-white rounded-xl border border-[#E7E2D9] overflow-hidden flex flex-col text-center shadow-2xs">
+                <div className="aspect-square bg-[#FAF8F5] overflow-hidden">
                   <img
                     src="https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=200&q=80"
                     alt="Demo 1"
@@ -136,28 +148,28 @@ export const LiveStorePreview: React.FC<LiveStorePreviewProps> = ({
                   />
                 </div>
                 <div className="p-1.5 flex flex-col">
-                  <span className="text-[9px] font-bold text-slate-900 line-clamp-1 font-playfair">
+                  <span className="text-[9px] font-bold text-stone-900 line-clamp-1 font-playfair">
                     Producto Especial
                   </span>
-                  <span className="text-[9px] font-bold italic" style={{ color: primaryColor || '#059669' }}>
+                  <span className="text-[9px] font-bold italic font-playfair" style={{ color: primaryColor || '#059669' }}>
                     S/ 45.00
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-lg border border-slate-100 overflow-hidden flex flex-col text-center shadow-2xs">
-                <div className="aspect-square bg-slate-50 overflow-hidden">
+              <div className="flex flex-col text-left gap-1 cursor-pointer">
+                <div className="aspect-square bg-neutral-100 rounded-xl overflow-hidden">
                   <img
                     src="https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=200&q=80"
                     alt="Demo 1"
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="p-1 flex flex-col">
-                  <span className="text-[8px] font-semibold text-slate-800 line-clamp-1">
-                    Producto Clean
+                <div className="flex flex-col px-0.5">
+                  <span className="text-[8px] font-semibold text-neutral-800 line-clamp-1 font-plus-jakarta">
+                    Lookbook Básico
                   </span>
-                  <span className="text-[9px] font-bold" style={{ color: primaryColor || '#059669' }}>
+                  <span className="text-[9px] font-bold text-neutral-900 font-plus-jakarta">
                     S/ 45.00
                   </span>
                 </div>
@@ -184,8 +196,8 @@ export const LiveStorePreview: React.FC<LiveStorePreviewProps> = ({
                 </div>
               </div>
             ) : isElegant ? (
-              <div className="bg-white rounded-xl border border-[#e8dfd5] overflow-hidden flex flex-col text-center shadow-2xs">
-                <div className="aspect-square bg-[#FAF9F6] overflow-hidden">
+              <div className="bg-white rounded-xl border border-[#E7E2D9] overflow-hidden flex flex-col text-center shadow-2xs">
+                <div className="aspect-square bg-[#FAF8F5] overflow-hidden">
                   <img
                     src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=200&q=80"
                     alt="Demo 2"
@@ -193,28 +205,28 @@ export const LiveStorePreview: React.FC<LiveStorePreviewProps> = ({
                   />
                 </div>
                 <div className="p-1.5 flex flex-col">
-                  <span className="text-[9px] font-bold text-slate-900 line-clamp-1 font-playfair">
+                  <span className="text-[9px] font-bold text-stone-900 line-clamp-1 font-playfair">
                     Edición Premium
                   </span>
-                  <span className="text-[9px] font-bold italic" style={{ color: primaryColor || '#059669' }}>
+                  <span className="text-[9px] font-bold italic font-playfair" style={{ color: primaryColor || '#059669' }}>
                     S/ 29.90
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-lg border border-slate-100 overflow-hidden flex flex-col text-center shadow-2xs">
-                <div className="aspect-square bg-slate-50 overflow-hidden">
+              <div className="flex flex-col text-left gap-1 cursor-pointer">
+                <div className="aspect-square bg-neutral-100 rounded-xl overflow-hidden">
                   <img
                     src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=200&q=80"
                     alt="Demo 2"
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="p-1 flex flex-col">
-                  <span className="text-[8px] font-semibold text-slate-800 line-clamp-1">
+                <div className="flex flex-col px-0.5">
+                  <span className="text-[8px] font-semibold text-neutral-800 line-clamp-1 font-plus-jakarta">
                     Pack Esencial
                   </span>
-                  <span className="text-[9px] font-bold" style={{ color: primaryColor || '#059669' }}>
+                  <span className="text-[9px] font-bold text-neutral-900 font-plus-jakarta">
                     S/ 29.90
                   </span>
                 </div>

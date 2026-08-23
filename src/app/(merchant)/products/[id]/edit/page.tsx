@@ -21,6 +21,8 @@ import { useAppStore } from '@/lib/app-store';
 import { getStoreByUserIdFromFS, getProductByIdFromFS, updateProductInFS, deleteProductFromFS } from '@/lib/firebase/firestore';
 import { uploadProductImageToStorage } from '@/lib/firebase/storage';
 import { compressAndCropImage, formatBytes } from '@/lib/image-optimizer';
+import { ProductVariantsEditor } from '@/components/merchant/ProductVariantsEditor';
+import { ProductOptionGroup } from '@/types/store';
 
 interface Props {
   params: Promise<{
@@ -38,6 +40,7 @@ export default function EditProductPage({ params }: Props) {
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState('');
   const [productDesc, setProductDesc] = useState('');
+  const [productOptions, setProductOptions] = useState<ProductOptionGroup[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [imageInfo, setImageInfo] = useState<string | null>(null);
   const [inStock, setInStock] = useState(true);
@@ -83,6 +86,7 @@ export default function EditProductPage({ params }: Props) {
           setProductName(productFromFS.title);
           setProductPrice(productFromFS.price.toString());
           setProductDesc(productFromFS.description || '');
+          setProductOptions(productFromFS.options || []);
           const imgs = productFromFS.imageUrls && productFromFS.imageUrls.length > 0
             ? productFromFS.imageUrls
             : [productFromFS.imageUrl || ''];
@@ -100,6 +104,7 @@ export default function EditProductPage({ params }: Props) {
   const handleImageAppend = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const maxImagesLimit = storePlan === 'gratis' ? 1 : storePlan === 'emprendedor' ? 4 : 8;
       try {
         const result = await compressAndCropImage(file, {
           maxWidth: 500,
@@ -109,16 +114,28 @@ export default function EditProductPage({ params }: Props) {
         });
         setImagePreviews((prev) => {
           const cleanPrev = prev.filter(Boolean);
+          if (maxImagesLimit === 1) {
+            return [result.dataUrl];
+          }
+          if (cleanPrev.length >= maxImagesLimit) {
+            return [...cleanPrev.slice(0, maxImagesLimit - 1), result.dataUrl];
+          }
           return [...cleanPrev, result.dataUrl];
         });
         setImageInfo(
-          `Imagen agregada y optimizada (${formatBytes(result.originalSize)} ➔ ${formatBytes(result.optimizedSize)})`
+          `Imagen optimizada (${formatBytes(result.originalSize)} ➔ ${formatBytes(result.optimizedSize)})`
         );
       } catch (error) {
         console.error('Error optimizando imagen:', error);
         const url = URL.createObjectURL(file);
         setImagePreviews((prev) => {
           const cleanPrev = prev.filter(Boolean);
+          if (maxImagesLimit === 1) {
+            return [url];
+          }
+          if (cleanPrev.length >= maxImagesLimit) {
+            return [...cleanPrev.slice(0, maxImagesLimit - 1), url];
+          }
           return [...cleanPrev, url];
         });
       }
@@ -169,6 +186,45 @@ export default function EditProductPage({ params }: Props) {
 
     const priceNum = parseFloat(productPrice);
 
+    // Validar opciones obligatorias si se añadieron grupos
+    if (productOptions.length > 0) {
+      const unnamedGroup = productOptions.find(g => !g.title.trim());
+      if (unnamedGroup) {
+        alert('Por favor ingresa un nombre para todos los grupos de opciones (ej: Talla, Color, Sabor, etc.).');
+        setIsSubmitting(false);
+        return;
+      }
+      const emptyValuesGroup = productOptions.find(
+        g => g.values.filter(v => v.name.trim() !== '').length === 0
+      );
+      if (emptyValuesGroup) {
+        alert(`El grupo "${emptyValuesGroup.title}" debe tener al menos una opción con nombre.`);
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    // Limpiar grupos de opciones vacíos y auto-corregir nombres con 0 accidental
+    const cleanOptions = productOptions
+      .map(group => ({
+        ...group,
+        title: group.title.trim(),
+        values: group.values
+          .map(v => {
+            let name = v.name.trim();
+            if ((!v.priceDifference || v.priceDifference === 0) && /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+\s+0$/.test(name)) {
+              name = name.replace(/\s+0$/, '');
+            }
+            return {
+              ...v,
+              name,
+              priceDifference: v.priceDifference && v.priceDifference > 0 ? v.priceDifference : 0,
+            };
+          })
+          .filter(v => v.name.trim() !== '')
+      }))
+      .filter(group => group.values.length > 0);
+
     // Actualizar en Firestore exclusivamente
     if (storeId && user) {
       try {
@@ -178,8 +234,9 @@ export default function EditProductPage({ params }: Props) {
           description: productDesc,
           imageUrl: primaryImg,
           imageUrls: allImgs,
+          options: cleanOptions.length > 0 ? cleanOptions : undefined,
           inStock,
-          category: storePlan === 'emprendedor' ? productCategory : '',
+          category: (storePlan === 'emprendedor' || storePlan === 'negocio') ? productCategory : '',
         });
         sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
       } catch (err: any) {
@@ -237,9 +294,11 @@ export default function EditProductPage({ params }: Props) {
             </button>
             <h1 className="font-bold text-lg text-[#0b1c30]">Editar Producto</h1>
           </div>
-          <div className="w-8 h-8 rounded-full bg-[#059669] flex items-center justify-center text-white">
-            <User size={18} />
-          </div>
+          <Link href="/settings" title="Ir a Ajustes" className="transition-transform active:scale-95">
+            <div className="w-8 h-8 rounded-full bg-[#059669] flex items-center justify-center text-white hover:opacity-90 cursor-pointer shadow-2xs">
+              <User size={18} />
+            </div>
+          </Link>
         </div>
       </header>
 
@@ -249,7 +308,7 @@ export default function EditProductPage({ params }: Props) {
         {/* Zona de Carga de Imágenes (Diseño escalable y dinámico) */}
         <div className="flex flex-col gap-2">
           {(() => {
-            const maxImagesLimit = storePlan === 'gratis' ? 1 : 4;
+            const maxImagesLimit = storePlan === 'gratis' ? 1 : storePlan === 'emprendedor' ? 4 : 8;
             const cleanPreviews = imagePreviews.filter(Boolean);
             
             return (
@@ -308,7 +367,11 @@ export default function EditProductPage({ params }: Props) {
                       </div>
                       <span className="text-xs font-bold text-[#059669]">Agregar Foto</span>
                       <span className="text-[9px] text-[#6d7a72] text-center px-1">
-                        {storePlan === 'gratis' ? 'Plan Gratis' : 'Plan Emprendedor'}
+                        {storePlan === 'gratis'
+                          ? 'Plan Gratis'
+                          : storePlan === 'emprendedor'
+                            ? 'Plan Emprendedor (Máx 4)'
+                            : 'Plan Negocio Pro (Hasta 8)'}
                       </span>
                     </label>
                   )}
@@ -472,6 +535,15 @@ export default function EditProductPage({ params }: Props) {
                 <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#059669]" />
               </label>
             </div>
+
+            {/* Editor de Variantes / Opciones */}
+            <ProductVariantsEditor
+              options={productOptions}
+              onChange={setProductOptions}
+              storePlan={storePlan}
+              basePrice={parseFloat(productPrice) || 0}
+              availableImages={imagePreviews.filter(Boolean)}
+            />
           </div>
 
           {/* Overlay de carga cuando isSubmitting está activo */}

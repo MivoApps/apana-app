@@ -89,7 +89,7 @@ export default function LoginPage() {
       const userEmail = userCredential.user.email?.toLowerCase().trim() || '';
 
       // Si es el SuperAdmin (Dueño de APANA) ➔ Ir directamente a la Consola de Administración
-      if (userEmail === 'angelocastellanos99@gmail.com') {
+      if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
         window.location.href = '/admin';
         return;
       }
@@ -128,7 +128,7 @@ export default function LoginPage() {
       const userEmail = userCredential.user.email?.toLowerCase().trim() || '';
 
       // Si es el SuperAdmin ➔ Ir directamente a la Consola de Administración
-      if (userEmail === 'angelocastellanos99@gmail.com') {
+      if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
         window.location.href = '/admin';
         return;
       }

@@ -17,6 +17,8 @@ import { Button } from '@/components/ui/Button';
 import { compressAndCropImage, formatBytes } from '@/lib/image-optimizer';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { addProductToFS } from '@/lib/firebase/firestore';
+import { ProductVariantsEditor } from '@/components/merchant/ProductVariantsEditor';
+import { ProductOptionGroup } from '@/types/store';
 
 const DEMO_IMAGES = [
   {
@@ -52,19 +54,14 @@ export default function CreateProductPage() {
   const isFromWizard = searchParams.get('from') === 'wizard';
 
   const handleBackClick = () => {
-    if (isFromWizard) {
-      router.push('/store/setup');
-    } else if (typeof window !== 'undefined' && document.referrer && document.referrer.includes(window.location.host)) {
-      router.back();
-    } else {
-      router.push('/products');
-    }
+    router.replace('/dashboard');
   };
 
   const { user } = useAuth();
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState('');
   const [productDesc, setProductDesc] = useState('');
+  const [productOptions, setProductOptions] = useState<ProductOptionGroup[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [imageInfo, setImageInfo] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,6 +93,10 @@ export default function CreateProductPage() {
     fetchStoreAndProducts();
   }, [user]);
 
+  const maxImagesLimit = storePlan === 'gratis' ? 1 : storePlan === 'emprendedor' ? 4 : 8;
+  const productLimit = storePlan === 'gratis' ? 25 : storePlan === 'emprendedor' ? 150 : 999999;
+  const isLimitReached = productsCount >= productLimit;
+
   const handleImageAppend = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -108,16 +109,28 @@ export default function CreateProductPage() {
         });
         setImagePreviews((prev) => {
           const cleanPrev = prev.filter(Boolean);
+          if (maxImagesLimit === 1) {
+            return [result.dataUrl];
+          }
+          if (cleanPrev.length >= maxImagesLimit) {
+            return [...cleanPrev.slice(0, maxImagesLimit - 1), result.dataUrl];
+          }
           return [...cleanPrev, result.dataUrl];
         });
         setImageInfo(
-          `Imagen agregada y optimizada (${formatBytes(result.originalSize)} ➔ ${formatBytes(result.optimizedSize)})`
+          `Imagen optimizada (${formatBytes(result.originalSize)} ➔ ${formatBytes(result.optimizedSize)})`
         );
       } catch (error) {
         console.error('Error optimizando imagen:', error);
         const url = URL.createObjectURL(file);
         setImagePreviews((prev) => {
           const cleanPrev = prev.filter(Boolean);
+          if (maxImagesLimit === 1) {
+            return [url];
+          }
+          if (cleanPrev.length >= maxImagesLimit) {
+            return [...cleanPrev.slice(0, maxImagesLimit - 1), url];
+          }
           return [...cleanPrev, url];
         });
       }
@@ -132,15 +145,17 @@ export default function CreateProductPage() {
   const handleSelectDemoImage = (url: string) => {
     setImagePreviews((prev) => {
       const cleanPrev = prev.filter(Boolean);
-      const productLimit = storePlan === 'gratis' ? 1 : 4;
-      if (cleanPrev.length >= productLimit) {
-        alert('Has alcanzado el límite de imágenes para tu plan.');
-        return prev;
+      // Si el plan permite 1 sola imagen (o ya tiene 1), reemplazarla automáticamente sin alertas
+      if (maxImagesLimit === 1) {
+        return [url];
       }
       if (cleanPrev.includes(url)) return prev;
+      if (cleanPrev.length >= maxImagesLimit) {
+        return [...cleanPrev.slice(0, maxImagesLimit - 1), url];
+      }
       return [...cleanPrev, url];
     });
-    setImageInfo('Imagen de muestra seleccionada.');
+    setImageInfo('Imagen seleccionada.');
   };
 
   const handleCreateCategoryInline = async () => {
@@ -170,9 +185,6 @@ export default function CreateProductPage() {
     }
   };
 
-  const productLimit = storePlan === 'gratis' ? 25 : 250;
-  const isLimitReached = productsCount >= productLimit;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLimitReached) {
@@ -193,6 +205,45 @@ export default function CreateProductPage() {
     const primaryImg = cleanPreviews[0] || defaultImage;
     const allImgs = cleanPreviews.length > 0 ? cleanPreviews : [defaultImage];
 
+    // Validar opciones obligatorias si se añadieron grupos
+    if (productOptions.length > 0) {
+      const unnamedGroup = productOptions.find(g => !g.title.trim());
+      if (unnamedGroup) {
+        alert('Por favor ingresa un nombre para todos los grupos de opciones (ej: Talla, Color, Sabor, etc.).');
+        setIsSubmitting(false);
+        return;
+      }
+      const emptyValuesGroup = productOptions.find(
+        g => g.values.filter(v => v.name.trim() !== '').length === 0
+      );
+      if (emptyValuesGroup) {
+        alert(`El grupo "${emptyValuesGroup.title}" debe tener al menos una opción con nombre.`);
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    // Limpiar grupos de opciones vacíos y auto-corregir nombres con 0 accidental
+    const cleanOptions = productOptions
+      .map(group => ({
+        ...group,
+        title: group.title.trim(),
+        values: group.values
+          .map(v => {
+            let name = v.name.trim();
+            if ((!v.priceDifference || v.priceDifference === 0) && /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+\s+0$/.test(name)) {
+              name = name.replace(/\s+0$/, '');
+            }
+            return {
+              ...v,
+              name,
+              priceDifference: v.priceDifference && v.priceDifference > 0 ? v.priceDifference : 0,
+            };
+          })
+          .filter(v => v.name.trim() !== '')
+      }))
+      .filter(group => group.values.length > 0);
+
     try {
       const newProduct = {
         id: `prod_${Date.now()}`,
@@ -202,7 +253,8 @@ export default function CreateProductPage() {
         description: productDesc,
         imageUrl: primaryImg,
         imageUrls: allImgs,
-        category: storePlan === 'emprendedor' ? productCategory : '',
+        category: (storePlan === 'emprendedor' || storePlan === 'negocio') ? productCategory : '',
+        options: cleanOptions.length > 0 ? cleanOptions : undefined,
         inStock: true,
         createdAt: Date.now(),
       };
@@ -227,9 +279,9 @@ export default function CreateProductPage() {
     const hasPhoneConfigured = storePhone.trim() !== '';
 
     if (!hasPhoneConfigured) {
-      router.push(`/s/${targetSlug}?firstProductCreated=true`);
+      router.replace(`/s/${targetSlug}?firstProductCreated=true`);
     } else {
-      router.push('/products');
+      router.replace('/products');
     }
   };
 
@@ -256,9 +308,11 @@ export default function CreateProductPage() {
             </button>
             <h1 className="font-bold text-lg text-[#0b1c30]">Crear Producto</h1>
           </div>
-          <div className="w-8 h-8 rounded-full bg-[#059669] flex items-center justify-center text-white">
-            <User size={18} />
-          </div>
+          <Link href="/settings" title="Ir a Ajustes" className="transition-transform active:scale-95">
+            <div className="w-8 h-8 rounded-full bg-[#059669] flex items-center justify-center text-white hover:opacity-90 cursor-pointer shadow-2xs">
+              <User size={18} />
+            </div>
+          </Link>
         </div>
       </header>
 
@@ -290,7 +344,7 @@ export default function CreateProductPage() {
             {/* Zona de Carga de Imágenes (Diseño escalable y dinámico) */}
             <div className="flex flex-col gap-2">
               {(() => {
-                const maxImagesLimit = storePlan === 'gratis' ? 1 : 4;
+                const maxImagesLimit = storePlan === 'gratis' ? 1 : storePlan === 'emprendedor' ? 4 : 8;
                 const cleanPreviews = imagePreviews.filter(Boolean);
                 
                 return (
@@ -349,7 +403,11 @@ export default function CreateProductPage() {
                           </div>
                           <span className="text-xs font-bold text-[#059669]">Agregar Foto</span>
                           <span className="text-[9px] text-[#6d7a72] text-center px-1">
-                            {storePlan === 'gratis' ? 'Plan Gratis' : 'Plan Emprendedor'}
+                            {storePlan === 'gratis'
+                              ? 'Plan Gratis'
+                              : storePlan === 'emprendedor'
+                                ? 'Plan Emprendedor (Máx 4)'
+                                : 'Plan Negocio Pro (Hasta 8)'}
                           </span>
                         </label>
                       )}
@@ -442,8 +500,8 @@ export default function CreateProductPage() {
                 </div>
               </div>
 
-              {/* Categoría del Producto (Sólo Plan Emprendedor) */}
-              {storePlan === 'emprendedor' && (
+              {/* Categoría del Producto (Sólo Plan Emprendedor y Negocio) */}
+              {storePlan !== 'gratis' && (
                 <div className="flex flex-col gap-1.5">
                   <div className="flex justify-between items-center ml-1">
                     <div className="flex items-center gap-2">
@@ -458,7 +516,9 @@ export default function CreateProductPage() {
                         {showNewCategoryInput ? 'Cancelar' : '+ Nueva'}
                       </button>
                     </div>
-                    <span className="text-xs text-slate-500">Plan Emprendedor</span>
+                    <span className="text-xs text-slate-500">
+                      {storePlan === 'negocio' ? 'Plan Negocio Pro' : 'Plan Emprendedor'}
+                    </span>
                   </div>
 
                   {showNewCategoryInput ? (
@@ -520,6 +580,15 @@ export default function CreateProductPage() {
                   className="w-full p-3 bg-white border border-[#bccac0]/50 rounded-lg text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/60 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all resize-none shadow-xs"
                 />
               </div>
+
+              {/* Editor de Variantes / Opciones */}
+              <ProductVariantsEditor
+                options={productOptions}
+                onChange={setProductOptions}
+                storePlan={storePlan}
+                basePrice={parseFloat(productPrice) || 0}
+                availableImages={imagePreviews.filter(Boolean)}
+              />
             </div>
 
             {/* Overlay de carga cuando isSubmitting está activo */}

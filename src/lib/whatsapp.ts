@@ -20,13 +20,20 @@ export function generateWhatsAppLink(store: Store, items: CartItem[], customerNa
   let message = `🛒 *NUEVO PEDIDO - ${store.name.toUpperCase()}*\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
   
-  items.forEach((item, index) => {
-    const subtotal = item.product.price * item.quantity;
+  items.forEach((item) => {
+    const itemUnitPrice = item.calculatedPrice ?? item.product.price;
+    const subtotal = itemUnitPrice * item.quantity;
     message += `▪️ *${item.product.title}*\n`;
-    message += `   Cantidad: ${item.quantity} x ${formatCurrency(item.product.price)} = *${formatCurrency(subtotal)}*\n\n`;
+    
+    if (item.selectedOptions && item.selectedOptions.length > 0) {
+      const optionsText = item.selectedOptions.map(o => `${o.groupTitle}: ${o.valueName}`).join(' / ');
+      message += `   _Opción: ${optionsText}_\n`;
+    }
+    
+    message += `   Cantidad: ${item.quantity} x ${formatCurrency(itemUnitPrice)} = *${formatCurrency(subtotal)}*\n\n`;
   });
   
-  const total = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+  const total = items.reduce((sum, item) => sum + ((item.calculatedPrice ?? item.product.price) * item.quantity), 0);
   message += `━━━━━━━━━━━━━━━━━━━━━\n`;
   message += `💰 *TOTAL A PAGAR: ${formatCurrency(total)}*\n\n`;
 

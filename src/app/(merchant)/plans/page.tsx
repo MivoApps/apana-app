@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { 
@@ -37,6 +38,7 @@ export default function PlansPage() {
   const { user } = useAuth();
   const [store, setStore] = useState<Store | null>(null);
   const [currentPlan, setCurrentPlan] = useState<string>('gratis');
+  const [checkoutTargetPlan, setCheckoutTargetPlan] = useState<'emprendedor' | 'negocio'>('emprendedor');
   const [isProcessing, setIsProcessing] = useState(false);
   const [culqiLoaded, setCulqiLoaded] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -71,6 +73,9 @@ export default function PlansPage() {
           setIsProcessing(true);
           setErrorMsg('');
 
+          const planToCharge = checkoutTargetPlan;
+          const chargeAmount = planToCharge === 'negocio' ? 3990 : 1990;
+
           try {
             const res = await fetch('/api/culqi/charge', {
               method: 'POST',
@@ -79,7 +84,8 @@ export default function PlansPage() {
                 tokenId: token.id,
                 storeId: store?.id,
                 email: user?.email || token.email,
-                amount: 1990, // S/ 19.90 en céntimos
+                amount: chargeAmount,
+                plan: planToCharge,
               }),
             });
 
@@ -110,13 +116,17 @@ export default function PlansPage() {
         }
       };
     }
-  }, [store, user]);
+  }, [store, user, checkoutTargetPlan]);
 
-  const handleOpenCulqiCheckout = () => {
+  const handleOpenCulqiCheckout = (targetPlan: 'emprendedor' | 'negocio' = 'emprendedor') => {
     if (!store) {
       alert('Debes tener una tienda creada para suscribirte.');
       return;
     }
+
+    setCheckoutTargetPlan(targetPlan);
+    const amountInCents = targetPlan === 'negocio' ? 3990 : 1990;
+    const planName = targetPlan === 'negocio' ? 'Plan Negocio Pro' : 'Plan Emprendedor';
 
     if (typeof window !== 'undefined' && window.Culqi) {
       const publicKey = process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY || 'pk_test_demo12345';
@@ -124,8 +134,8 @@ export default function PlansPage() {
       window.Culqi.settings({
         title: 'APANA SaaS',
         currency: 'PEN',
-        amount: 1990, // S/ 19.90
-        description: 'Suscripción Mensual - Plan Emprendedor',
+        amount: amountInCents,
+        description: `Suscripción Mensual - ${planName}`,
       });
       window.Culqi.options({
         lang: 'es',
@@ -139,7 +149,7 @@ export default function PlansPage() {
       window.Culqi.open();
     } else {
       // Fallback de desarrollo
-      const fakeConfirm = confirm('Simulación de Culqi Checkout: ¿Deseas autorizar el cobro de S/ 19.90 para activar el Plan Emprendedor?');
+      const fakeConfirm = confirm(`Simulación de Culqi Checkout: ¿Deseas autorizar el cobro de S/ ${(amountInCents / 100).toFixed(2)} para activar el ${planName}?`);
       if (fakeConfirm) {
         if (window.culqi) {
           window.Culqi = { token: { id: `tkn_test_${Date.now()}`, email: user?.email } };
@@ -241,24 +251,51 @@ export default function PlansPage() {
   const isPaidPlan = currentPlan !== 'gratis';
   const isCancelled = store?.cancelAtPeriodEnd || store?.subscriptionStatus === 'cancelled';
   const planDisplayName = currentPlan === 'emprendedor' ? 'Plan Emprendedor' : `Plan ${currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}`;
+  const isSuperAdminOrDev = process.env.NODE_ENV === 'development' || user?.email === 'angelo@mivo.pe' || user?.email === 'angelocastellanos99@gmail.com';
+
+  const handleDirectPlanSwitchForTesting = async (targetPlan: 'gratis' | 'emprendedor' | 'negocio') => {
+    if (!user || !store) return;
+    setIsProcessing(true);
+    setErrorMsg('');
+    try {
+      const { createOrUpdateStoreInFS } = await import('@/lib/firebase/firestore');
+      const updated = await createOrUpdateStoreInFS(user.uid, {
+        plan: targetPlan,
+        subscriptionStatus: targetPlan === 'gratis' ? 'free' : 'active',
+        cancelAtPeriodEnd: false,
+      });
+      setStore(updated);
+      setCurrentPlan(targetPlan);
+      sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(updated));
+      sessionStorage.removeItem(`apana_public_store_${updated.slug}`);
+      setSuccessMsg(`🧪 [MODO PRUEBAS] Has cambiado instantáneamente al Plan ${targetPlan.toUpperCase()}.`);
+      setTimeout(() => setSuccessMsg(''), 5000);
+    } catch (err: any) {
+      setErrorMsg(`Error al cambiar de plan: ${err?.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col font-sans relative pb-16">
       {/* Header Fijo */}
-      <header className="fixed top-0 w-full z-50 bg-[#f8f9ff]/80 backdrop-blur-xl border-b border-[#bccac0]/20">
+      <header className="fixed top-0 w-full z-40 bg-[#f8f9ff]/80 backdrop-blur-xl border-b border-[#bccac0]/20">
         <div className="h-16 px-4 max-w-[640px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={handleBack}
-              className="w-10 h-10 flex items-center justify-center text-[#0b1c30] hover:bg-gray-100 transition-colors rounded-full"
+              className="w-10 h-10 flex items-center justify-center text-[#0b1c30] hover:bg-gray-100 transition-colors rounded-full cursor-pointer"
             >
               <ArrowLeft size={20} />
             </button>
             <h1 className="font-bold text-lg text-[#0b1c30]">Planes y Suscripción</h1>
           </div>
-          <div className="w-8 h-8 rounded-full bg-[#059669] text-white flex items-center justify-center">
-            <User size={18} />
-          </div>
+          <Link href="/settings" title="Ir a Ajustes" className="transition-transform active:scale-95">
+            <div className="w-8 h-8 rounded-full bg-[#059669] text-white flex items-center justify-center shadow-2xs hover:opacity-90 cursor-pointer">
+              <User size={18} />
+            </div>
+          </Link>
         </div>
       </header>
 
@@ -276,6 +313,62 @@ export default function PlansPage() {
             Desbloquea herramientas profesionales para hacer crecer tus ventas.
           </p>
         </div>
+
+        {/* WIDGET MODO DE PRUEBAS (Solo visible para SuperAdmin o en Desarrollo) */}
+        {isSuperAdminOrDev && (
+          <div className="bg-linear-to-r from-blue-50 via-indigo-50 to-blue-50 border-2 border-blue-300/80 rounded-2xl p-4 shadow-sm flex flex-col gap-2.5 animate-in fade-in">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-blue-900 font-extrabold text-xs">
+                <span className="text-base">🧪</span>
+                <span>Selector de Planes para Pruebas (Dev Mode)</span>
+              </div>
+              <span className="text-[10px] font-extrabold bg-blue-200/90 text-blue-950 px-2 py-0.5 rounded-full">
+                Admin Dev
+              </span>
+            </div>
+            <p className="text-[11px] text-blue-800 leading-snug">
+              Toca cualquiera de los botones para cambiar tu tienda al instante y probar sus funciones:
+            </p>
+            <div className="grid grid-cols-3 gap-2 pt-0.5">
+              <button
+                type="button"
+                onClick={() => handleDirectPlanSwitchForTesting('gratis')}
+                disabled={isProcessing}
+                className={`py-2 px-1 text-xs font-bold rounded-xl transition-all shadow-2xs border ${
+                  currentPlan === 'gratis'
+                    ? 'bg-slate-850 text-white border-slate-900 ring-2 ring-slate-400'
+                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 cursor-pointer'
+                }`}
+              >
+                {currentPlan === 'gratis' ? '✓ ' : ''}Gratis
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDirectPlanSwitchForTesting('emprendedor')}
+                disabled={isProcessing}
+                className={`py-2 px-1 text-xs font-bold rounded-xl transition-all shadow-2xs border ${
+                  currentPlan === 'emprendedor'
+                    ? 'bg-[#059669] text-white border-[#059669] ring-2 ring-emerald-300'
+                    : 'bg-white hover:bg-emerald-50 text-emerald-800 border-emerald-200 cursor-pointer'
+                }`}
+              >
+                {currentPlan === 'emprendedor' ? '✓ ' : ''}Emprendedor
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDirectPlanSwitchForTesting('negocio')}
+                disabled={isProcessing}
+                className={`py-2 px-1 text-xs font-bold rounded-xl transition-all shadow-2xs border ${
+                  currentPlan === 'negocio'
+                    ? 'bg-amber-600 text-white border-amber-700 ring-2 ring-amber-300'
+                    : 'bg-white hover:bg-amber-50 text-amber-900 border-amber-200 cursor-pointer'
+                }`}
+              >
+                {currentPlan === 'negocio' ? '✓ ' : ''}Negocio Pro
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Notificaciones */}
         {paymentSuccess && (
@@ -364,10 +457,10 @@ export default function PlansPage() {
           </div>
         )}
 
-        {/* 2 Plans Container */}
+        {/* 3 Plans Container */}
         <div className="flex flex-col gap-5">
           
-          {/* Plan Gratis */}
+          {/* 1. Plan Gratis */}
           <div className={`flex flex-col gap-4 bg-white shadow-xs border rounded-2xl p-5 transition-all ${
             currentPlan === 'gratis' ? 'border-[#059669] ring-2 ring-[#059669]/10' : 'border-[#bccac0]/40'
           }`}>
@@ -401,11 +494,11 @@ export default function PlansPage() {
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
-                <span><strong>Código QR</strong> de la tienda</span>
+                <span>Variantes simples (1 grupo de tallas/colores)</span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
-                <span>Compartir enlace de productos</span>
+                <span><strong>Código QR y link listo</strong></span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
@@ -415,9 +508,22 @@ export default function PlansPage() {
                 <span>• Incluye marca "Creado por APANA"</span>
               </li>
             </ul>
+
+            {currentPlan !== 'gratis' && isSuperAdminOrDev && (
+              <div className="pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => handleDirectPlanSwitchForTesting('gratis')}
+                  disabled={isProcessing}
+                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>🧪 Volver a Plan Gratis (Modo Pruebas)</span>
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Plan Emprendedor (Highlighted) */}
+          {/* 2. Plan Emprendedor (Highlighted) */}
           <div className={`flex flex-col gap-4 bg-linear-to-b from-[#f5fff7] via-white to-white shadow-sm border rounded-2xl p-5 relative overflow-hidden transition-all ${
             currentPlan === 'emprendedor' ? 'border-[#059669] ring-2 ring-[#059669]/10' : 'border-slate-200'
           }`}>
@@ -428,7 +534,7 @@ export default function PlansPage() {
             <div className="flex justify-between items-start relative z-10">
               <div className="flex flex-col gap-0.5">
                 <h3 className="font-bold text-xl text-[#0b1c30]">Emprendedor</h3>
-                <p className="text-xs text-[#6d7a72]">Para negocios que están creciendo</p>
+                <p className="text-xs text-[#6d7a72]">Para negocios en crecimiento</p>
               </div>
               <div className="px-3 py-1 bg-[#059669] text-white text-xs font-semibold rounded-full shadow-xs flex items-center gap-1">
                 <Stars size={14} />
@@ -439,14 +545,14 @@ export default function PlansPage() {
             {/* Price */}
             <div className="flex items-baseline gap-1 relative z-10">
               <span className="text-3xl font-bold text-[#0b1c30]">S/ 19.90</span>
-              <span className="text-xs text-[#6d7a72]">/ mes (débito automático)</span>
+              <span className="text-xs text-[#6d7a72]">/ mes</span>
             </div>
 
             {/* Features */}
             <ul className="flex flex-col gap-2.5 pt-2 border-t border-[#bccac0]/30 relative z-10 text-sm">
               <li className="flex items-center gap-2 text-[#0b1c30] font-medium">
                 <CheckCircle size={18} className="text-[#059669]" />
-                <span>Hasta <strong>250 productos</strong></span>
+                <span>Hasta <strong>150 productos</strong></span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
@@ -454,23 +560,19 @@ export default function PlansPage() {
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
-                <span><strong>Categorías de productos</strong></span>
+                <span><strong>Variantes con precios diferenciales</strong> (2 grupos)</span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
-                <span><strong>Estadísticas básicas</strong> de visitas y clics</span>
+                <span><strong>Categorías de productos</strong> ilimitadas</span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
-                <span><strong>Más personalización</strong> y temas</span>
+                <span><strong>Métricas de visitas</strong> y clics</span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
                 <span><strong>Sin marca "Creado por APANA"</strong></span>
-              </li>
-              <li className="flex items-center gap-2 text-[#0b1c30]">
-                <CheckCircle size={18} className="text-[#059669]" />
-                <span><strong>Pedidos por WhatsApp y QR</strong></span>
               </li>
             </ul>
 
@@ -493,19 +595,125 @@ export default function PlansPage() {
                   )}
                 </div>
               ) : (
-                <button
-                  type="button"
-                  disabled={isProcessing}
-                  onClick={handleOpenCulqiCheckout}
-                  className="w-full h-12 bg-[#059669] hover:bg-[#00855d] text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
-                >
-                  <Lock size={16} />
-                  <span>{isProcessing ? 'Procesando suscripción...' : 'Suscribirme con Tarjeta o Yape (S/ 19.90)'}</span>
-                </button>
+                <>
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={() => handleOpenCulqiCheckout('emprendedor')}
+                    className="w-full h-12 bg-[#059669] hover:bg-[#00855d] text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Lock size={16} />
+                    <span>{isProcessing && checkoutTargetPlan === 'emprendedor' ? 'Procesando...' : 'Elegir Plan Emprendedor (S/ 19.90)'}</span>
+                  </button>
+                  {isSuperAdminOrDev && (
+                    <button
+                      type="button"
+                      onClick={() => handleDirectPlanSwitchForTesting('emprendedor')}
+                      disabled={isProcessing}
+                      className="w-full py-2 bg-emerald-50 hover:bg-emerald-100 text-[#006c49] border border-emerald-200 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <span>🧪 Activar Emprendedor (1-Clic Pruebas)</span>
+                    </button>
+                  )}
+                </>
               )}
-              <span className="text-[11px] text-slate-400 text-center flex items-center justify-center gap-1">
-                🔒 Pagos procesados de forma 100% segura por Culqi (BCP)
-              </span>
+            </div>
+          </div>
+
+          {/* 3. Plan Negocio Pro (VIP) */}
+          <div className={`flex flex-col gap-4 bg-white shadow-md border-2 rounded-2xl p-5 relative overflow-hidden transition-all ${
+            currentPlan === 'negocio' ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-amber-200'
+          }`}>
+            {/* Subtle Decorative Background */}
+            <div className="absolute -top-16 -right-16 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Header */}
+            <div className="flex justify-between items-start relative z-10">
+              <div className="flex flex-col gap-0.5">
+                <h3 className="font-bold text-xl text-[#0b1c30]">Negocio Pro</h3>
+                <p className="text-xs text-[#6d7a72]">Para marcas consolidadas y escala total</p>
+              </div>
+              <div className="px-3 py-1 bg-amber-600 text-white text-xs font-semibold rounded-full shadow-xs flex items-center gap-1">
+                <Sparkles size={14} />
+                Escala Total
+              </div>
+            </div>
+
+            {/* Price */}
+            <div className="flex items-baseline gap-1 relative z-10">
+              <span className="text-3xl font-bold text-[#0b1c30]">S/ 39.90</span>
+              <span className="text-xs text-[#6d7a72]">/ mes</span>
+            </div>
+
+            {/* Features */}
+            <ul className="flex flex-col gap-2.5 pt-2 border-t border-amber-100 relative z-10 text-sm">
+              <li className="flex items-center gap-2 text-[#0b1c30] font-medium">
+                <CheckCircle size={18} className="text-amber-600" />
+                <span><strong>PRODUCTOS ILIMITADOS</strong></span>
+              </li>
+              <li className="flex items-center gap-2 text-[#0b1c30]">
+                <CheckCircle size={18} className="text-amber-600" />
+                <span>Hasta <strong>8 fotos</strong> por producto</span>
+              </li>
+              <li className="flex items-center gap-2 text-[#0b1c30]">
+                <CheckCircle size={18} className="text-amber-600" />
+                <span><strong>Variantes ilimitadas</strong> + foto por variante</span>
+              </li>
+              <li className="flex items-center gap-2 text-[#0b1c30]">
+                <CheckCircle size={18} className="text-amber-600" />
+                <span><strong>Métricas completas del mes</strong> y analíticas</span>
+              </li>
+              <li className="flex items-center gap-2 text-[#0b1c30]">
+                <CheckCircle size={18} className="text-amber-600" />
+                <span>Badge de <strong>Tienda Verificada VIP</strong></span>
+              </li>
+              <li className="flex items-center gap-2 text-[#0b1c30]">
+                <CheckCircle size={18} className="text-amber-600" />
+                <span>Soporte prioritario personalizado</span>
+              </li>
+            </ul>
+
+            {/* Botón de Suscripción con Culqi Checkout */}
+            <div className="pt-3 border-t border-gray-100 flex flex-col gap-2 relative z-10">
+              {currentPlan === 'negocio' ? (
+                <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 font-bold text-xs">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck size={16} className="text-amber-600" />
+                    <span>Tu Plan Negocio Pro está Activo</span>
+                  </div>
+                  {!isCancelled && (
+                    <button
+                      type="button"
+                      onClick={() => setIsCancelModalOpen(true)}
+                      className="text-xs text-slate-500 hover:text-red-600 font-medium underline"
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={() => handleOpenCulqiCheckout('negocio')}
+                    className="w-full h-12 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Lock size={16} />
+                    <span>{isProcessing && checkoutTargetPlan === 'negocio' ? 'Procesando...' : 'Elegir Plan Negocio (S/ 39.90)'}</span>
+                  </button>
+                  {isSuperAdminOrDev && (
+                    <button
+                      type="button"
+                      onClick={() => handleDirectPlanSwitchForTesting('negocio')}
+                      disabled={isProcessing}
+                      className="w-full py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <span>🧪 Activar Negocio Pro (1-Clic Pruebas)</span>
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

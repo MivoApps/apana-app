@@ -92,9 +92,13 @@ export default function ProductGalleryPage() {
 
   const activeStore = fsStore;
   const products = fsProducts;
-  const isFreePlan = fsStore?.plan !== 'emprendedor';
-  const maxProducts = isFreePlan ? 25 : 250;
-  const isLimitReached = products.length >= maxProducts;
+  const currentPlan = fsStore?.plan || 'gratis';
+  const isProPlan = currentPlan === 'negocio';
+  const isFreePlan = !fsStore?.plan || currentPlan === 'gratis';
+  const maxProducts = isFreePlan ? 25 : 150;
+  const inStockCount = products.filter((p) => p.inStock).length;
+  const pausedCount = products.length - inStockCount;
+  const isLimitReached = !isProPlan && products.length >= maxProducts;
   const capacityPercentage = Math.min((products.length / maxProducts) * 100, 100);
 
   // Lista de categorías únicas para filtrar
@@ -190,56 +194,81 @@ export default function ProductGalleryPage() {
           <h1 className="font-bold text-lg text-[#0b1c30]">
             {activeStore ? activeStore.name : 'Mis Productos'}
           </h1>
-          <div
-            style={{ backgroundColor: activeStore?.primaryColor || '#059669' }}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-2xs"
-          >
-            {activeStore ? activeStore.name.substring(0, 2).toUpperCase() : 'MI'}
-          </div>
+          <Link href="/settings" title="Ir a Ajustes" className="transition-transform active:scale-95">
+            <div
+              style={{ backgroundColor: activeStore?.primaryColor || '#059669' }}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-2xs hover:opacity-90 cursor-pointer"
+            >
+              {activeStore ? activeStore.name.substring(0, 2).toUpperCase() : 'MI'}
+            </div>
+          </Link>
         </div>
       </header>
 
       {/* Main Content Area */}
       <main className="pt-16 px-4 max-w-[640px] w-full mx-auto flex flex-col gap-4">
         
-        {/* Barra de Capacidad de Productos */}
-        <div className="bg-white p-4 rounded-2xl border border-[#bccac0]/40 shadow-xs flex flex-col gap-2.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Package size={18} className="text-[#059669]" />
-              <span className="text-xs font-bold text-[#0b1c30]">
-                {products.length} / {maxProducts} productos en tu catálogo
+        {/* Barra / Tarjeta de Capacidad de Productos o Estatus Pro */}
+        {isProPlan ? (
+          <div className="bg-white p-4 rounded-2xl border border-amber-200/80 shadow-xs flex flex-col gap-2 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center font-bold text-sm shadow-2xs border border-amber-200/60">
+                  ♾️
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-[#0b1c30]">
+                    Catálogo Ilimitado Activo
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    {products.length} {products.length === 1 ? 'producto' : 'productos'} en total ({inStockCount} activos, {pausedCount} pausados)
+                  </span>
+                </div>
+              </div>
+              <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-full bg-amber-100/90 text-amber-900 border border-amber-300 shadow-2xs">
+                Plan Negocio Pro ✨
               </span>
             </div>
-            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-              isFreePlan ? 'bg-slate-100 text-slate-700' : 'bg-emerald-100 text-[#059669]'
-            }`}>
-              {isFreePlan ? 'Plan Gratis' : 'Plan Emprendedor'}
-            </span>
           </div>
+        ) : (
+          <div className="bg-white p-4 rounded-2xl border border-[#bccac0]/40 shadow-xs flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package size={18} className="text-[#059669]" />
+                <span className="text-xs font-bold text-[#0b1c30]">
+                  {products.length} / {maxProducts} productos en tu catálogo
+                </span>
+              </div>
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                isFreePlan ? 'bg-slate-100 text-slate-700' : 'bg-emerald-100 text-[#059669]'
+              }`}>
+                {isFreePlan ? 'Plan Gratis' : 'Plan Emprendedor'}
+              </span>
+            </div>
 
-          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              className={`h-full transition-all duration-500 rounded-full ${
-                isLimitReached ? 'bg-amber-500' : 'bg-[#059669]'
-              }`}
-              style={{ width: `${capacityPercentage}%` }}
-            />
-          </div>
+            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all duration-500 rounded-full ${
+                  isLimitReached ? 'bg-amber-500' : 'bg-[#059669]'
+                }`}
+                style={{ width: `${capacityPercentage}%` }}
+              />
+            </div>
 
-          <div className="flex justify-between items-center text-[11px] text-[#6d7a72]">
-            <span>
-              {isLimitReached
-                ? 'Has alcanzado el límite máximo de tu plan.'
-                : `Te quedan ${maxProducts - products.length} espacios disponibles.`}
-            </span>
-            {isFreePlan && isLimitReached && (
-              <Link href="/plans" className="font-bold text-amber-700 hover:underline">
-                Mejorar plan ↗
-              </Link>
-            )}
+            <div className="flex justify-between items-center text-[11px] text-[#6d7a72]">
+              <span>
+                {isLimitReached
+                  ? 'Has alcanzado el límite máximo de tu plan.'
+                  : `Te quedan ${Math.max(0, maxProducts - products.length)} espacios disponibles.`}
+              </span>
+              {isLimitReached && (
+                <Link href="/plans" className="font-bold text-amber-700 hover:underline">
+                  Mejorar plan ↗
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Buscador de Productos */}
         <div className="relative w-full">

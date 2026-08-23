@@ -27,6 +27,7 @@ import { useAuth } from '@/lib/firebase/auth-context';
 import { useAppStore } from '@/lib/app-store';
 import { getStoreByUserIdFromFS, getProductsByStoreIdFromFS, createOrUpdateStoreInFS } from '@/lib/firebase/firestore';
 import { StorePreviewModal } from '@/components/ui/StorePreviewModal';
+import { WhatsAppVerifyModal } from '@/components/merchant/WhatsAppVerifyModal';
 import { Store, Product } from '@/types/store';
 
 export default function DashboardPage() {
@@ -35,6 +36,7 @@ export default function DashboardPage() {
   const { stores, activeStoreSlug } = useAppStore();
   const [isLoading, setIsLoading] = React.useState(true);
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = React.useState(false);
   const [fsStore, setFsStore] = React.useState<Store | null>(null);
   const [fsProducts, setFsProducts] = React.useState<Product[]>([]);
   const [analyticsData, setAnalyticsData] = React.useState<{ label: string; visits: number; clicks: number }[]>([]);
@@ -52,7 +54,8 @@ export default function DashboardPage() {
       }
 
       // Si es el SuperAdmin (Dueño de APANA) ➔ Redirigir automáticamente a la consola de administración
-      if (user.email?.toLowerCase().trim() === 'angelocastellanos99@gmail.com') {
+      const userEmail = user.email?.toLowerCase().trim() || '';
+      if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
         router.push('/admin');
         return;
       }
@@ -72,7 +75,7 @@ export default function DashboardPage() {
       setFsProducts(productsFromFS);
 
       // Cargar analíticas de los últimos 7 días si es Plan Emprendedor
-      if (storeFromFS.plan === 'emprendedor') {
+      if (storeFromFS.plan === 'emprendedor' || storeFromFS.plan === 'negocio') {
         const { getStoreAnalyticsLast7Days } = await import('@/lib/firebase/firestore');
         const data = await getStoreAnalyticsLast7Days(storeFromFS.id);
         setAnalyticsData(data);
@@ -97,10 +100,13 @@ export default function DashboardPage() {
   const storeName = activeStore?.name || '';
   const storeSlug = activeStore?.slug || '';
   const isStoreActive = activeStore?.status !== 'pausada';
-  const activeProductsCount = fsProducts.length;
-  const isFreePlan = fsStore?.plan !== 'emprendedor';
-  const maxProducts = isFreePlan ? 25 : 250;
-  const productsPercentage = Math.min((activeProductsCount / maxProducts) * 100, 100);
+  const totalProductsCount = fsProducts.length;
+  const inStockProductsCount = fsProducts.filter((p) => p.inStock).length;
+  const pausedProductsCount = totalProductsCount - inStockProductsCount;
+  const currentPlan = fsStore?.plan || 'gratis';
+  const isProPlan = currentPlan === 'negocio';
+  const maxProducts = currentPlan === 'gratis' ? 25 : 150;
+  const productsPercentage = Math.min((totalProductsCount / maxProducts) * 100, 100);
 
   const publicUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/s/${storeSlug}`
@@ -153,7 +159,7 @@ export default function DashboardPage() {
           <h1 className="font-bold text-lg text-[#0b1c30]">Inicio</h1>
           <div className="flex items-center gap-1">
             {/* Solo visible para el Propietario SuperAdmin */}
-            {user?.email?.toLowerCase().trim() === 'angelocastellanos99@gmail.com' && (
+            {(user?.email?.toLowerCase().trim() === 'angelo@mivo.pe' || user?.email?.toLowerCase().trim() === 'angelocastellanos99@gmail.com') && (
               <Link
                 href="/admin"
                 title="Panel SuperAdmin (Propietario)"
@@ -180,6 +186,60 @@ export default function DashboardPage() {
 
       {/* Main Container */}
       <main className="pt-16 px-4 max-w-[640px] w-full mx-auto flex flex-col gap-5">
+        {/* Banner de Onboarding de Bienvenida para Tiendas con 0 productos */}
+        {totalProductsCount === 0 && (
+          <div className="bg-linear-to-br from-[#059669] to-[#006c49] text-white p-5 sm:p-6 rounded-3xl shadow-md flex flex-col gap-3.5 relative overflow-hidden animate-in fade-in">
+            <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+            
+            <div className="flex items-center gap-3.5 relative z-10">
+              <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0 shadow-xs">
+                <Sparkles size={22} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-extrabold text-base leading-tight">¡Tu tienda está lista para comenzar!</h3>
+                <p className="text-xs text-emerald-100 mt-0.5 leading-relaxed">
+                  Agrega tu primer artículo para que tus clientes puedan ver tu catálogo y enviarte pedidos por WhatsApp.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-1 flex flex-col sm:flex-row items-center gap-2 relative z-10">
+              <Link href="/products/new" className="w-full sm:w-auto flex-1">
+                <button
+                  type="button"
+                  className="w-full h-11 bg-white hover:bg-emerald-50 text-[#006c49] font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+                >
+                  <Plus size={16} />
+                  <span>Publicar Mi Primer Producto</span>
+                </button>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Banner de Validación Anti-Fraude de WhatsApp */}
+        {fsStore && !fsStore.isWhatsappVerified && fsStore.whatsappPhone && (
+          <div className="bg-amber-50/90 border border-amber-300/80 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-xs animate-in fade-in">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <ShieldCheck size={18} />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="font-bold text-xs text-amber-950 truncate">WhatsApp pendiente de validación</span>
+                <span className="text-[11px] text-amber-900/80">Valida la titularidad de tu número para evitar suplantaciones.</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsVerifyModalOpen(true)}
+              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all shrink-0 cursor-pointer"
+            >
+              Validar titularidad
+            </button>
+          </div>
+        )}
+
         {/* Card Principal de la Tienda */}
         <div className="bg-white p-5 rounded-2xl border border-[#bccac0]/40 shadow-xs flex flex-col gap-4">
           <div className="flex items-start justify-between">
@@ -259,13 +319,26 @@ export default function DashboardPage() {
         <div className="bg-white p-5 rounded-2xl border border-[#bccac0]/40 shadow-xs flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#e5eeff] text-[#059669] rounded-xl flex items-center justify-center">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                isProPlan ? 'bg-amber-50 text-amber-700' : 'bg-[#e5eeff] text-[#059669]'
+              }`}>
                 <Package size={20} />
               </div>
               <div>
-                <span className="text-xs font-medium text-[#6d7a72]">Productos en Catálogo</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-[#6d7a72]">Productos en Catálogo</span>
+                  {isProPlan && (
+                    <span className="text-[10px] font-extrabold bg-amber-100/80 border border-amber-300 text-amber-900 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                      <span>♾️ Ilimitado</span>
+                    </span>
+                  )}
+                </div>
                 <p className="text-lg font-bold text-[#0b1c30]">
-                  {activeProductsCount} / {maxProducts} disponibles
+                  {isProPlan ? (
+                    <span>{totalProductsCount} {totalProductsCount === 1 ? 'producto' : 'productos'}</span>
+                  ) : (
+                    <span>{totalProductsCount} / {maxProducts} disponibles</span>
+                  )}
                 </p>
               </div>
             </div>
@@ -276,27 +349,52 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {/* Barra de Progreso de Capacidad */}
-          <div className="flex flex-col gap-1.5 pt-1">
-            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-500 rounded-full ${
-                  activeProductsCount >= maxProducts ? 'bg-amber-500' : 'bg-[#059669]'
-                }`}
-                style={{ width: `${productsPercentage}%` }}
-              />
+          {isProPlan ? (
+            /* Detalle Pro: Resumen de inventario y estatus ilimitado */
+            <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-xs">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1.5 text-emerald-700 font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  {inStockProductsCount} Activos
+                </span>
+                {pausedProductsCount > 0 && (
+                  <span className="flex items-center gap-1.5 text-amber-700 font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    {pausedProductsCount} Pausados
+                  </span>
+                )}
+              </div>
+              <span className="text-[11px] text-amber-900/80 font-bold">
+                Plan Negocio Pro ✨
+              </span>
             </div>
-            <div className="flex justify-between items-center text-[11px] text-[#6d7a72]">
-              <span>{isFreePlan ? 'Plan Gratis (Hasta 25 productos)' : 'Plan Emprendedor (Hasta 250 productos)'}</span>
-              {activeProductsCount >= maxProducts ? (
-                <Link href="/plans" className="font-bold text-amber-700 hover:underline">
-                  Límite alcanzado • Mejorar plan ↗
-                </Link>
-              ) : (
-                <span>Quedan {Math.max(maxProducts - activeProductsCount, 0)} espacios</span>
-              )}
+          ) : (
+            /* Barra de Progreso de Capacidad para Plan Gratis y Emprendedor */
+            <div className="flex flex-col gap-1.5 pt-1">
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 rounded-full ${
+                    totalProductsCount >= maxProducts ? 'bg-amber-500' : 'bg-[#059669]'
+                  }`}
+                  style={{ width: `${productsPercentage}%` }}
+                />
+              </div>
+              <div className="flex justify-between items-center text-[11px] text-[#6d7a72]">
+                <span>
+                  {currentPlan === 'gratis'
+                    ? 'Plan Gratis (Hasta 25 productos)'
+                    : 'Plan Emprendedor (Hasta 150 productos)'}
+                </span>
+                {totalProductsCount >= maxProducts ? (
+                  <Link href="/plans" className="font-bold text-amber-700 hover:underline">
+                    Límite alcanzado • Mejorar plan ↗
+                  </Link>
+                ) : (
+                  <span>Te quedan {Math.max(0, maxProducts - totalProductsCount)} espacios</span>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Sección de Estadísticas (Últimos 7 días) */}
@@ -310,12 +408,12 @@ export default function DashboardPage() {
               </div>
               <h3 className="font-bold text-base text-[#0b1c30]">Estadísticas de la Tienda</h3>
             </div>
-            {fsStore?.plan !== 'emprendedor' ? (
+            {currentPlan === 'gratis' ? (
               <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-100 text-amber-800 flex items-center gap-1">
                 <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                 </svg>
-                Top
+                Pro
               </span>
             ) : (
               <Link href="/analytics" className="text-xs font-semibold text-[#059669] hover:underline">
@@ -324,7 +422,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {fsStore?.plan !== 'emprendedor' ? (
+          {currentPlan === 'gratis' ? (
             /* ESTADO BLOQUEADO (Plan Gratis) */
             <div className="relative py-4 flex flex-col items-center text-center">
               {/* Gráfico difuminado de fondo */}
@@ -490,6 +588,23 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* Modal de Validación de WhatsApp */}
+      {fsStore && (
+        <WhatsAppVerifyModal
+          isOpen={isVerifyModalOpen}
+          onClose={() => setIsVerifyModalOpen(false)}
+          storeId={fsStore.id}
+          storeName={fsStore.name}
+          phone={fsStore.whatsappPhone || ''}
+          onSuccess={async () => {
+            if (user) {
+              const updated = await getStoreByUserIdFromFS(user.uid);
+              if (updated) setFsStore(updated);
+            }
+          }}
+        />
+      )}
 
       {/* Bottom Nav Fija (Inicio, Productos, Ajustes) */}
       <nav className="fixed bottom-0 w-full z-50 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)]">

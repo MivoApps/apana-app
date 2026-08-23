@@ -13,29 +13,34 @@ export const LandingFAQ: React.FC = () => {
 
   const faqs: FAQItem[] = [
     {
+      question: '¿Cuáles son los planes disponibles en APANA?',
+      answer:
+        'Contamos con 3 planes diseñados para cada etapa: 1) Plan Gratis (S/ 0 para siempre, hasta 25 productos, 1 foto, QR y pedidos por WhatsApp), 2) Plan Emprendedor (S/ 19.90/mes con hasta 150 productos, 4 fotos, variantes con precios diferenciales de hasta 2 grupos, categorías, métricas y sin marca APANA), y 3) Plan Negocio Pro (S/ 39.90/mes con productos ilimitados, hasta 8 fotos, variantes ilimitadas con foto por opción, métricas completas del mes y Badge de Tienda Verificada VIP).',
+    },
+    {
+      question: '¿Cómo funcionan las opciones y variantes de producto en cada plan?',
+      answer:
+        'Las variantes permiten que un mismo producto tenga diferentes presentaciones (como Tallas, Colores, Sabores o Tamaños). En el Plan Gratis puedes crear 1 grupo de opciones (ej. Tallas: S, M, L) con hasta 4 valores manteniendo el mismo precio base. En el Plan Emprendedor puedes combinar hasta 2 grupos simultáneos (ej. Talla + Color) y asignar precios diferenciales individuales (ej. Talla XL + S/ 4.00). En el Plan Negocio Pro cuentas con grupos ilimitados, fotos individuales por variante y total libertad de precios.',
+    },
+    {
       question: '¿Cómo cobro las ventas de mis productos?',
       answer:
-        'El pedido llega directamente a tu WhatsApp con el total calculado y los datos del cliente. Tú recibes el 100% de tu dinero a través de Yape, Plin, transferencia bancaria o pago contra entrega, sin intermediarios. Próximamente habilitaremos la funcionalidad adicional de APANA Pagos para quienes deseen cobrar con tarjeta de crédito/débito online.',
+        'El cliente arma su carrito en tu catálogo web y te envía el pedido detallado a tu WhatsApp. Tú cobras el 100% de tus ventas directamente a través de Yape, Plin, transferencia bancaria o contra entrega, sin ninguna comisión por venta.',
     },
     {
       question: '¿Cuánto tiempo toma tener mi tienda online lista?',
       answer:
-        'Tu tienda online está lista en solo 1 minuto. Solo ingresas el nombre de tu negocio, tu número de WhatsApp y subes tus primeros productos con fotos y precios. Inmediatamente obtienes tu enlace público y tu código QR listo para exhibir.',
-    },
-    {
-      question: '¿Cuáles son los planes actuales disponibles?',
-      answer:
-        'Actualmente contamos con dos planes únicos: el Plan Gratis (S/ 0 para siempre, hasta 25 productos, QR y pedidos por WhatsApp) y el Plan Emprendedor (S/ 19.90/mes con hasta 250 productos, 4 imágenes por producto, categorías, estadísticas de visitas y sin marca APANA). Puedes comenzar gratis hoy mismo y subir de plan cuando tu negocio lo necesite.',
+        'Tu tienda online está lista en solo 1 minuto. Solo ingresas el nombre de tu negocio, tu número de WhatsApp y subes tus primeros productos con fotos y precios. Inmediatamente obtienes tu enlace público personalizado y tu código QR listo para imprimir y exhibir.',
     },
     {
       question: '¿Qué es APANA Pagos y cuándo estará activo?',
       answer:
-        'APANA Pagos es una funcionalidad de cobro con tarjeta que se lanzará próximamente. Estará disponible tanto para conectar tu propia cuenta como en modalidad gestionada sin trámites. Hoy en día todas las tiendas operan al 100% recibiendo pedidos por WhatsApp.',
+        'APANA Pagos es una funcionalidad complementaria de cobros online con tarjeta que se habilitará próximamente para quienes deseen procesar pagos con tarjeta dentro del catálogo. Mientras tanto, el 100% de pedidos se atiende de forma rápida y directa por WhatsApp.',
     },
     {
-      question: '¿Mis clientes necesitan instalar alguna aplicación?',
+      question: '¿Mis clientes necesitan instalar alguna aplicación para ver mi catálogo?',
       answer:
-        'No. Tu tienda funciona como una página web ultrarrápida desde el navegador del celular de tus clientes (Chrome, Safari, etc.). Solo deben hacer clic en tu enlace o escanear tu código QR para ver tu catálogo.',
+        'No. Tu catálogo funciona como una página web ultrarrápida que abre directamente en el navegador del celular de tus clientes (Chrome, Safari, etc.). Solo deben tocar tu enlace o escanear tu código QR.',
     },
   ];
 

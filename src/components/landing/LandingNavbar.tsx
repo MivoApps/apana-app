@@ -34,7 +34,16 @@ export const LandingNavbar: React.FC = () => {
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
         {/* Brand Logo Lockup */}
-        <Link href="/" className="flex items-center group transition-transform hover:opacity-90">
+        <Link
+          href="/"
+          onClick={(e) => {
+            if (typeof window !== 'undefined' && window.location.pathname === '/') {
+              e.preventDefault();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+          className="flex items-center group transition-transform hover:opacity-90 cursor-pointer"
+        >
           <Image
             src="/logo_lockup.svg"
             alt="APANA"
@@ -48,27 +57,27 @@ export const LandingNavbar: React.FC = () => {
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#3d4a42]">
           <a
-            href="#como-funciona"
-            className="hover:text-[#059669] transition-colors"
+            href="/#como-funciona"
+            className="hover:text-[#059669] transition-colors cursor-pointer"
           >
             Cómo funciona
           </a>
           <a
-            href="#funciones"
-            className="hover:text-[#059669] transition-colors"
+            href="/#funciones"
+            className="hover:text-[#059669] transition-colors cursor-pointer"
           >
             Funcionalidades
           </a>
           <a
-            href="#planes"
-            className="hover:text-[#059669] transition-colors flex items-center gap-1"
+            href="/#planes"
+            className="hover:text-[#059669] transition-colors flex items-center gap-1 cursor-pointer"
           >
             Planes y Precios
             <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
           </a>
           <a
-            href="#preguntas"
-            className="hover:text-[#059669] transition-colors"
+            href="/#preguntas"
+            className="hover:text-[#059669] transition-colors cursor-pointer"
           >
             Preguntas
           </a>
@@ -121,21 +130,21 @@ export const LandingNavbar: React.FC = () => {
         <div className="md:hidden bg-white/98 backdrop-blur-xl border-b border-[#bccac0]/30 px-6 py-6 shadow-xl animate-in slide-in-from-top-2 duration-200">
           <nav className="flex flex-col gap-4 text-base font-medium text-[#0b1c30]">
             <a
-              href="#como-funciona"
+              href="/#como-funciona"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1.5 hover:text-[#059669] transition-colors"
             >
               Cómo funciona
             </a>
             <a
-              href="#funciones"
+              href="/#funciones"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1.5 hover:text-[#059669] transition-colors"
             >
               Funcionalidades
             </a>
             <a
-              href="#planes"
+              href="/#planes"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1.5 hover:text-[#059669] transition-colors flex items-center justify-between"
             >
@@ -145,7 +154,7 @@ export const LandingNavbar: React.FC = () => {
               </span>
             </a>
             <a
-              href="#preguntas"
+              href="/#preguntas"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1.5 hover:text-[#059669] transition-colors"
             >
