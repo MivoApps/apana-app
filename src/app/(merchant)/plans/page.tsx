@@ -314,62 +314,6 @@ export default function PlansPage() {
           </p>
         </div>
 
-        {/* WIDGET MODO DE PRUEBAS (Solo visible para SuperAdmin o en Desarrollo) */}
-        {isSuperAdminOrDev && (
-          <div className="bg-linear-to-r from-blue-50 via-indigo-50 to-blue-50 border-2 border-blue-300/80 rounded-2xl p-4 shadow-sm flex flex-col gap-2.5 animate-in fade-in">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-blue-900 font-extrabold text-xs">
-                <span className="text-base">🧪</span>
-                <span>Selector de Planes para Pruebas (Dev Mode)</span>
-              </div>
-              <span className="text-[10px] font-extrabold bg-blue-200/90 text-blue-950 px-2 py-0.5 rounded-full">
-                Admin Dev
-              </span>
-            </div>
-            <p className="text-[11px] text-blue-800 leading-snug">
-              Toca cualquiera de los botones para cambiar tu tienda al instante y probar sus funciones:
-            </p>
-            <div className="grid grid-cols-3 gap-2 pt-0.5">
-              <button
-                type="button"
-                onClick={() => handleDirectPlanSwitchForTesting('gratis')}
-                disabled={isProcessing}
-                className={`py-2 px-1 text-xs font-bold rounded-xl transition-all shadow-2xs border ${
-                  currentPlan === 'gratis'
-                    ? 'bg-slate-850 text-white border-slate-900 ring-2 ring-slate-400'
-                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 cursor-pointer'
-                }`}
-              >
-                {currentPlan === 'gratis' ? '✓ ' : ''}Gratis
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDirectPlanSwitchForTesting('emprendedor')}
-                disabled={isProcessing}
-                className={`py-2 px-1 text-xs font-bold rounded-xl transition-all shadow-2xs border ${
-                  currentPlan === 'emprendedor'
-                    ? 'bg-[#059669] text-white border-[#059669] ring-2 ring-emerald-300'
-                    : 'bg-white hover:bg-emerald-50 text-emerald-800 border-emerald-200 cursor-pointer'
-                }`}
-              >
-                {currentPlan === 'emprendedor' ? '✓ ' : ''}Emprendedor
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDirectPlanSwitchForTesting('negocio')}
-                disabled={isProcessing}
-                className={`py-2 px-1 text-xs font-bold rounded-xl transition-all shadow-2xs border ${
-                  currentPlan === 'negocio'
-                    ? 'bg-amber-600 text-white border-amber-700 ring-2 ring-amber-300'
-                    : 'bg-white hover:bg-amber-50 text-amber-900 border-amber-200 cursor-pointer'
-                }`}
-              >
-                {currentPlan === 'negocio' ? '✓ ' : ''}Negocio Pro
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Notificaciones */}
         {paymentSuccess && (
           <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-2xl flex items-center gap-3 shadow-xs animate-in fade-in">
