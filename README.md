@@ -145,16 +145,14 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
 ---
 
-## ☁️ Despliegue en Producción (Vercel + Spaceship)
+## ☁️ Despliegue en Producción (Vercel)
 
 El proyecto cuenta con integración continua (**CI/CD**) en **Vercel**:
 
 1. Importa el repositorio desde GitHub en [Vercel](https://vercel.com).
-2. Añade las variables de entorno de Firebase en **Settings > Environment Variables**.
-3. En **Settings > Domains**, añade `beapana.com`.
-4. En el panel de **Spaceship (Advanced DNS)**, configura:
-   - **Registro A:** `@` ➔ `76.76.21.21`
-   - **Registro CNAME:** `www` ➔ `cname.vercel-dns.com`
+2. Configura las variables de entorno de producción en **Project Settings > Environment Variables**.
+3. Asocia tu dominio personalizado en **Project Settings > Domains** y configura los registros DNS correspondientes (`A` y `CNAME`) en tu proveedor de dominio.
+4. Cada `git push` a la rama `main` generará un despliegue optimizado y seguro automáticamente.
 
 ---
 
