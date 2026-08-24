@@ -236,6 +236,14 @@ export default function PublicStorePage({ params }: Props) {
           </div>
         )}
 
+        {/* Banner Informativo si la tienda no tiene WhatsApp validado */}
+        {(!store.whatsappPhone || !store.isWhatsappVerified) && (
+          <div className="w-full bg-amber-50/95 border-b border-amber-200/90 text-amber-950 px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2 sticky top-0 z-30 shadow-2xs backdrop-blur-xs">
+            <span className="text-sm">🛠️</span>
+            <span>Esta tienda está configurando sus canales de atención. Muy pronto disponible para pedidos por WhatsApp.</span>
+          </div>
+        )}
+
         <div className="flex flex-col w-full max-w-[640px] mx-auto">
           {/* Header Tienda Info Dinámico según Tema */}
           <div className={`px-4 py-6 flex flex-col items-center gap-2 text-center transition-all ${store.themeStyle === 'elegante'

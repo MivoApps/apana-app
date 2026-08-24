@@ -258,19 +258,36 @@ export default function PublicCartPage({ params }: Props) {
         <div className={`fixed bottom-0 left-0 right-0 max-w-[640px] mx-auto backdrop-blur-md p-4 pb-safe border-t shadow-[0_-4px_16px_rgba(0,0,0,0.05)] z-40 ${
           isElegant ? 'bg-[#FAF8F5]/95 border-[#E7E2D9]' : 'bg-white/95 border-[#bccac0]/30'
         }`}>
-          <button
-            onClick={handleSendWhatsAppOrder}
-            style={{ backgroundColor: brandColor }}
-            className={`w-full h-12 text-white font-bold text-base shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer ${
-              isElegant ? 'rounded-2xl font-playfair tracking-wide' : isModern ? 'rounded-2xl uppercase font-space-grotesk' : 'rounded-xl font-plus-jakarta'
-            }`}
-          >
-            <WhatsAppIcon size={20} />
-            Completar por WhatsApp
-          </button>
-          <p className="text-center text-xs text-[#6d7a72] mt-2">
-            Serás redirigido a WhatsApp de forma segura.
-          </p>
+          {(!store?.whatsappPhone || !store?.isWhatsappVerified) ? (
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                disabled
+                className="w-full h-12 bg-slate-200 text-slate-500 font-bold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 cursor-not-allowed shadow-none select-none"
+              >
+                <span>⏳ Pedidos no disponibles temporalmente</span>
+              </button>
+              <p className="text-[11px] text-amber-950 bg-amber-50 border border-amber-200/80 rounded-xl p-2.5 text-center leading-tight">
+                Esta tienda aún está configurando su línea de atención. Vuelve a visitarnos pronto para enviar tu pedido por WhatsApp.
+              </p>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={handleSendWhatsAppOrder}
+                style={{ backgroundColor: brandColor }}
+                className={`w-full h-12 text-white font-bold text-base shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  isElegant ? 'rounded-2xl font-playfair tracking-wide' : isModern ? 'rounded-2xl uppercase font-space-grotesk' : 'rounded-xl font-plus-jakarta'
+                }`}
+              >
+                <WhatsAppIcon size={20} />
+                Completar por WhatsApp
+              </button>
+              <p className="text-center text-xs text-[#6d7a72] mt-2">
+                Serás redirigido a WhatsApp de forma segura.
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>
