@@ -2,7 +2,11 @@
   <img src="public/logo_lockup.svg" alt="APANA" width="220" />
   <br /><br />
   <p align="center">
-    <strong>La plataforma más rápida para crear tu catálogo digital, generar tu código QR y recibir pedidos directos a WhatsApp en Perú.</strong>
+    <strong>La plataforma más rápida y completa para crear catálogos móviles, generar códigos QR y recibir pedidos estructurados directos a WhatsApp en Perú.</strong>
+  </p>
+
+  <p align="center">
+    <a href="https://beapana.com"><strong>🌐 beapana.com</strong></a>
   </p>
 
   <p align="center">
@@ -18,31 +22,37 @@
 
 ## 🌟 Descripción General
 
-**APANA** es una solución web moderna y ligera diseñada para emprendedores, comerciantes y negocios gastronómicos o de retail en Perú y Latinoamérica. Permite crear una tienda online en 1 minuto, compartir un catálogo interactivo con código QR y recibir pedidos con cálculo exacto listos para despachar por WhatsApp, cobrando el 100% de las ventas directamente por Yape, Plin o transferencia bancaria.
+**APANA** (`beapana.com`) es una plataforma SaaS móvil de comercio conversacional de alto rendimiento, diseñada específicamente para emprendedores, marcas de moda, restaurantes, cafeterías, bodegas y negocios de retail.
+
+Permite a los comerciantes crear su catálogo digital en menos de 2 minutos, personalizar su identidad visual, exhibir variantes complejas de producto y recibir pedidos directos a su **WhatsApp** con cálculo automático de totales y entrega, cobrando el **100% de las ventas sin comisiones por intermediación** (vía Yape, Plin, Efectivo o Transferencia).
 
 ---
 
 ## ✨ Características Principales
 
 ### 🛍️ Para los Clientes (Experiencia de Compra)
-- **Cero descargas**: Los clientes no instalan apps pesadas; compran directamente desde Safari, Chrome o cualquier navegador móvil.
-- **Catálogo interactivo**: Búsqueda en tiempo real, filtros por categorías, fotos de alta resolución y precios claros.
-- **Carrito inteligente y cálculo automático**: Suma de subtotales, envío y cantidades con un solo toque.
-- **Checkout directo a WhatsApp**: Redirige al cliente con un mensaje estructurado con el desglose del pedido, total a pagar y datos de entrega.
+- **Cero descargas**: Experiencia web ultrarrápida sin requerir instalar aplicaciones móviles pesadas.
+- **Catálogo interactivo con selector de estilos**: Lookbook Minimalista, Vista Moderna dinámica o Estilo Elegante según el rubro.
+- **Variantes y opciones de producto**: Selección intuitiva de tallas, colores, sabores, toppings y extras con ajuste de precio en tiempo real.
+- **Carrito inteligente y cálculo automático**: Desglose transparente de subtotales y opciones de envío.
+- **Checkout conversacional a WhatsApp**: Genera un mensaje formateado con la lista de productos, total exacto y datos de despacho.
 
-### 💼 Para los Comerciantes (Panel de Control)
-- **Onboarding express**: Configuración completa de la tienda en 4 sencillos pasos.
-- **Personalización de marca**: Selección de estilos (Minimalista, Moderna, Elegante) y paletas de color con vista previa en vivo.
-- **Gestión de productos**: Carga optimizada de imágenes con compresión automática en el navegador, control de stock y precios en Soles (PEN).
-- **Generador de Código QR**: Código QR único listo para descargar e imprimir en vitrinas, cartas o redes sociales.
-- **Métricas e historial de pedidos**: Seguimiento de visitas y conversión.
-- **Planes dinámicos**: Plan Gratis (hasta 25 productos) y Plan Emprendedor (hasta 250 productos, 4 fotos por producto, estadísticas y soporte).
+### 💼 Para los Comerciantes (Panel de Gestión)
+- **Onboarding asistido**: Creación y personalización de la tienda en 4 sencillos pasos con previsualizador móvil interactivo.
+- **Editor de variantes de producto**: Soporte para hasta 4 imágenes optimizadas por producto, control de inventario y opciones personalizables.
+- **Validación Anti-Fraude de WhatsApp**: Sistema de verificación asistida y autenticación de titularidad enlazado a la línea oficial (`+51 920030074`).
+- **Analíticas y Embudo de Conversión Comercial**: Métricas en tiempo real con gráfico de embudo (Vistas de Catálogo ➔ Productos Explorados ➔ Carritos ➔ Pedidos WhatsApp) y exportación de reportes a **Excel (.xlsx)**.
+- **Generador y Descarga de Código QR**: QR exclusivo de alta resolución listo para imprimir en vitrinas, mesas o compartir en redes sociales.
+- **Suscripciones y Planes**: Plan Gratis, Plan Emprendedor y Plan Negocio Pro con pasarela de pago Culqi integrada.
 
-### 📱 Experiencia Móvil & PWA
-- **Soporte PWA nativo**: Opción de *"Agregar a la pantalla de inicio"* en iOS y Android.
-- **Anti-Zoom en iOS**: Formularios optimizados para evitar el auto-zoom brusco de Safari.
-- **Teclados inteligentes**: Detección automática de teclado numérico (`inputMode="tel"`, `inputMode="decimal"`) en teléfonos y precios.
-- **Safe Area Insets**: Respeto total a la barra de gestos inferior de iPhone y dispositivos modernos.
+### 🛡️ Panel de Control SuperAdmin (`/admin`)
+- **Gestión centralizada de comercios**: Búsqueda global, cambio inmediato de planes, pausa o eliminación de tiendas.
+- **Directorio de usuarios y audit de pagos**: Monitoreo de ingresos recurrentes, historial de transacciones y estados de suscripción.
+
+### 📱 Optimización Móvil & PWA
+- **Soporte PWA nativo**: Instalable como app en pantalla de inicio de iOS y Android (`manifest.webmanifest`).
+- **Anti-Zoom en iOS**: Formularios calibrados para prevenir el zoom brusco en navegadores WebKit/Safari.
+- **Safe Area Insets**: Adaptación total a pantallas notch y barras de gestos modernas de iPhone y Android.
 
 ---
 
@@ -50,53 +60,56 @@
 
 | Capa | Tecnología |
 | :--- | :--- |
-| **Framework** | [Next.js 16 (App Router)](https://nextjs.org/) con Turbopack |
+| **Framework Web** | [Next.js 16 (App Router)](https://nextjs.org/) con motor Turbopack |
 | **Librería UI** | [React 19](https://react.dev/) |
-| **Lenguaje** | [TypeScript](https://www.typescriptlang.org/) |
-| **Estilos** | [Tailwind CSS v4](https://tailwindcss.com/) + Stitch Design Tokens |
-| **Autenticación** | Firebase Auth (Email/Password + Google Sign-In) |
-| **Base de Datos** | Cloud Firestore (Reglas de seguridad granulares) |
-| **Almacenamiento** | Firebase Cloud Storage |
+| **Tipado** | [TypeScript 5](https://www.typescriptlang.org/) |
+| **Estilos & Diseño** | [Tailwind CSS v4](https://tailwindcss.com/) + Tokens de Diseño Stitch |
+| **Autenticación** | Firebase Authentication (Email/Contraseña + Google Auth) |
+| **Base de Datos** | Cloud Firestore (Reglas de seguridad granulares desplegadas) |
+| **Almacenamiento** | Cloud Firestore / WebP Base64 y Firebase Storage |
 | **Estado Global** | Zustand |
-| **Iconografía** | Lucide React + SVGs personalizados |
-| **Pagos / Suscripciones** | Integración preparada con Culqi API |
+| **Iconografía** | Lucide React + SVGs a medida |
+| **Exportación** | SheetJS (`xlsx`) para reportes ejecutivos |
+| **Pasarela de Pago** | Integración nativa con Culqi Checkout v4 |
 
 ---
 
-## 📂 Estructura del Proyecto
+## 📂 Estructura del Código
 
 ```text
 apana-app/
-├── public/                     # Activos estáticos (Logos SVG, iconos, favicon)
+├── public/                     # Activos estáticos (Logos SVG, previews, manifiestos)
 │   ├── icon.svg
 │   ├── logo.svg
-│   └── logo_lockup.svg
+│   ├── logo_lockup.svg
+│   └── apana-real-preview.png
 ├── src/
 │   ├── app/                    # Rutas de Next.js App Router
 │   │   ├── (auth)/             # Login, Registro y Recuperación de Contraseña
-│   │   ├── (merchant)/         # Panel privado (Dashboard, Productos, QR, Planes, Ajustes)
-│   │   ├── (public)/           # Tienda pública del cliente (/s/[storeSlug]) y Legales
-│   │   ├── api/                # API Routes (Culqi charges, cancelación de suscripciones)
+│   │   ├── (merchant)/         # Panel privado (Dashboard, Productos, Analíticas, Admin, QR, Planes, Ajustes)
+│   │   ├── (public)/           # Catálogo del cliente (/s/[storeSlug]), Carrito y Términos Legales
+│   │   ├── api/                # API Routes (Culqi charges, cancelación y webhooks)
 │   │   ├── globals.css         # Tokens de diseño y utilidades CSS móviles
 │   │   ├── layout.tsx          # Layout raíz con AuthProvider y Metadata SEO
 │   │   ├── manifest.ts         # Manifiesto PWA para instalación móvil
-│   │   └── page.tsx            # Landing Page de conversión
+│   │   └── page.tsx            # Landing Page comercial de alta conversión
 │   ├── components/             # Componentes modulares
-│   │   ├── landing/            # Secciones de la Landing (Hero, DevicePreview, FAQ, etc.)
-│   │   ├── merchant/           # Componentes de gestión (AuthGuard, LiveStorePreview)
-│   │   └── ui/                 # Botones, Cards, Modales y Primitivas accesibles
-│   ├── lib/                    # Lógica de negocio y clientes externos
-│   │   ├── firebase/           # Configuración Singleton, Auth Context y Firestore helpers
-│   │   ├── image-optimizer.ts  # Compresión de imágenes WebP/JPEG en el navegador
-│   │   └── whatsapp.ts         # Generador de enlaces estructurados para WhatsApp
-│   └── types/                  # Definiciones de tipos TypeScript (Store, Product, Order)
+│   │   ├── landing/            # Secciones de la Landing (Hero, DevicePreview, FAQ, Pricing, Matrix)
+│   │   ├── merchant/           # Componentes de gestión (ProductVariantsEditor, LiveStorePreview, WhatsAppVerifyModal)
+│   │   ├── public/             # Modales de opciones de producto y vistas públicas
+│   │   └── ui/                 # Botones, Cards, Tabs y Primitivas accesibles
+│   ├── lib/                    # Lógica de negocio y utilidades
+│   │   ├── firebase/           # Configuración Singleton, Auth Context y Métodos de Firestore
+│   │   ├── image-optimizer.ts  # Compresión de imágenes WebP en el navegador
+│   │   └── whatsapp.ts         # Formateador de mensajes estructurados para WhatsApp
+│   └── types/                  # Modelos TypeScript (Store, Product, Order, Analytics, User)
 ├── firestore.rules             # Reglas de seguridad de Cloud Firestore
 └── next.config.ts              # Configuración de Next.js
 ```
 
 ---
 
-## 🚀 Inicio Rápido en Desarrollo Local
+## 🚀 Instalación y Desarrollo Local
 
 ### 1. Clonar el repositorio
 ```bash
@@ -113,18 +126,18 @@ npm install
 Crea un archivo `.env.local` en la raíz del proyecto:
 ```env
 NEXT_PUBLIC_FIREBASE_API_KEY=tu_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=tu_auth_domain.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=tu_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=tu_storage_bucket.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=apana-app-edf1a.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=apana-app-edf1a
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=apana-app-edf1a.firebasestorage.app
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=tu_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=tu_app_id
 
-# Opcional (Pasarela de pagos Culqi)
+# Pasarela de pagos Culqi (Opcional en desarrollo)
 NEXT_PUBLIC_CULQI_PUBLIC_KEY=pk_test_...
 CULQI_SECRET_KEY=sk_test_...
 ```
 
-### 4. Ejecutar el servidor de desarrollo
+### 4. Iniciar el servidor
 ```bash
 npm run dev
 ```
@@ -132,25 +145,28 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
 ---
 
-## ☁️ Despliegue en Producción (Vercel)
+## ☁️ Despliegue en Producción (Vercel + Spaceship)
 
-El proyecto está 100% optimizado para desplegarse en **Vercel** con integración continua (CI/CD):
+El proyecto cuenta con integración continua (**CI/CD**) en **Vercel**:
 
-1. Conecta tu repositorio de GitHub en [Vercel](https://vercel.com).
-2. Agrega las variables de entorno de Firebase en la sección **Environment Variables**.
-3. Haz clic en **Deploy**. Cada vez que hagas `git push origin main`, Vercel compilará y actualizará el sitio automáticamente.
+1. Importa el repositorio desde GitHub en [Vercel](https://vercel.com).
+2. Añade las variables de entorno de Firebase en **Settings > Environment Variables**.
+3. En **Settings > Domains**, añade `beapana.com`.
+4. En el panel de **Spaceship (Advanced DNS)**, configura:
+   - **Registro A:** `@` ➔ `76.76.21.21`
+   - **Registro CNAME:** `www` ➔ `cname.vercel-dns.com`
 
 ---
 
-## 🔒 Seguridad y Privacidad
+## 🔒 Seguridad y Cumplimiento
 
-- **Declaración Jurada y Verificación**: Cumplimiento normativo para la verificación y titularidad de líneas telefónicas comerciales en Perú.
-- **Reglas de Firestore**: Restricciones de lectura pública para catálogos activos y permisos estrictos de escritura autenticada por `ownerId`.
-- **Protección de Datos**: Las contraseñas y credenciales sensibles nunca tocan los servidores de frontend.
+- **Reglas Granulares en Firestore**: Acceso público exclusivamente de lectura a tiendas y productos activos; modificaciones restringidas estrictamente por token de autenticación (`request.auth.uid == ownerId`).
+- **Verificación de Titularidad de WhatsApp**: Protección anti-suplantación con tokens OTP temporales de 6 dígitos.
+- **Declaración Jurada Digital**: Registro de aceptación de titularidad y términos de servicio para comercio electrónico en Perú.
 
 ---
 
 ## 📄 Licencia y Créditos
 
-Desarrollado por **[Mivo Apps](https://github.com/MivoApps)**.  
-Todos los derechos reservados © 2026 APANA.
+Desarrollado por **[MIVO](https://mivo.pe)**.  
+Todos los derechos reservados © 2026 **APANA** (`beapana.com`).
