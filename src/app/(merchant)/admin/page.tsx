@@ -33,8 +33,14 @@ import {
   CreditCard,
   Clock,
   MessageCircle,
-  PlusCircle
+  PlusCircle,
+  QrCode,
+  Printer,
+  Download,
+  Copy,
+  Check
 } from 'lucide-react';
+import QRCode from 'qrcode';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { 
   getAllStoresForAdminFromFS, 
@@ -94,6 +100,29 @@ export default function SuperAdminPage() {
 
   const [deletingUser, setDeletingUser] = useState<AdminUserItem | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
+
+  // Estados para Modal de Sticker QR (5x5 cm)
+  const [stickerStore, setStickerStore] = useState<AdminStoreItem | null>(null);
+  const [stickerQrUrl, setStickerQrUrl] = useState<string>('');
+  const [stickerCopied, setStickerCopied] = useState(false);
+
+  const handleOpenSticker = async (store: AdminStoreItem) => {
+    setStickerStore(store);
+    const storeUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}/s/${store.slug}`
+      : `https://bealiados.com/s/${store.slug}`;
+    try {
+      const url = await QRCode.toDataURL(storeUrl, {
+        width: 1024,
+        margin: 2,
+        errorCorrectionLevel: 'H',
+        color: { dark: '#0b1c30', light: '#ffffff' }
+      });
+      setStickerQrUrl(url);
+    } catch (e) {
+      console.error('Error generating admin sticker QR:', e);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -682,11 +711,21 @@ export default function SuperAdminPage() {
                           {/* Acciones */}
                           <td className="py-3.5 px-4 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
+                              {/* Sticker QR (5x5 cm) */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenSticker(store)}
+                                className="p-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 border border-emerald-800/60 transition-all cursor-pointer"
+                                title="Ver, Descargar e Imprimir Sticker QR (5x5 cm)"
+                              >
+                                <QrCode size={15} />
+                              </button>
+
                               {/* Editar Datos */}
                               <button
                                 type="button"
                                 onClick={() => handleOpenEdit(store)}
-                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all"
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer"
                                 title="Editar Datos de la Tienda"
                               >
                                 <Edit2 size={15} />
@@ -1077,10 +1116,138 @@ export default function SuperAdminPage() {
                 type="button"
                 disabled={isDeletingUser}
                 onClick={handleConfirmDeleteUser}
-                className="flex-1 h-10 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+                className="flex-1 h-10 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
               >
                 {isDeletingUser ? 'Eliminando...' : 'Sí, Eliminar'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🏷️ Modal de Sticker QR (5x5 cm) para SuperAdmin */}
+      {stickerStore && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          {/* Estilo para Impresión Aislada */}
+          <style jsx global>{`
+            @media print {
+              body * {
+                visibility: hidden;
+              }
+              #admin-sticker-print-area, #admin-sticker-print-area * {
+                visibility: visible;
+              }
+              #admin-sticker-print-area {
+                position: fixed;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                width: 5cm !important;
+                height: 5cm !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: 1px dashed #ccc !important;
+                box-shadow: none !important;
+              }
+            }
+          `}</style>
+
+          <div className="bg-[#0e1e33] border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl flex flex-col gap-4 text-center animate-in zoom-in-95 relative">
+            <button
+              type="button"
+              onClick={() => setStickerStore(null)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-2 justify-center text-xs font-bold text-emerald-400">
+              <QrCode size={18} />
+              <span>Plantilla de Sticker Físico (5x5 cm)</span>
+            </div>
+
+            {/* PLANTILLA DE STICKER (5x5 cm / Troquel 4x4 cm) */}
+            <div
+              id="admin-sticker-print-area"
+              className="w-64 h-64 bg-white rounded-3xl p-4 border-2 border-dashed border-slate-300 flex flex-col items-center justify-between shadow-xs mx-auto text-slate-900"
+            >
+              {/* Cabecera */}
+              <div className="flex flex-col items-center gap-0.5">
+                <h2 className="font-extrabold text-sm text-[#0b1c30] tracking-tight truncate max-w-[190px]">
+                  {stickerStore.name}
+                </h2>
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                  Catálogo Digital
+                </span>
+              </div>
+
+              {/* Imagen QR HD */}
+              {stickerQrUrl ? (
+                <div className="p-1.5 bg-white rounded-xl border border-slate-100 shadow-2xs">
+                  <img src={stickerQrUrl} alt={`QR ${stickerStore.name}`} className="w-36 h-36 object-contain" />
+                </div>
+              ) : (
+                <div className="w-36 h-36 bg-slate-100 rounded-xl flex items-center justify-center animate-pulse">
+                  <QrCode size={32} className="text-slate-400" />
+                </div>
+              )}
+
+              {/* Pie */}
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] font-extrabold text-[#059669]">
+                  📲 Escanea y Pide por WhatsApp
+                </span>
+                <span className="text-[8px] text-slate-400 font-mono">
+                  /s/{stickerStore.slug}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-400 leading-tight">
+              Diseño cuadrado para impresión en papel sticker <strong>5x5 cm</strong> (área troquelada <strong>4x4 cm</strong>).
+            </p>
+
+            {/* Enlace y Copiar */}
+            <div className="w-full bg-[#071220] p-2.5 rounded-xl border border-slate-800 flex items-center justify-between gap-2 text-left">
+              <span className="text-xs text-slate-300 font-mono truncate">
+                {typeof window !== 'undefined' ? `${window.location.origin}/s/${stickerStore.slug}` : `/s/${stickerStore.slug}`}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `${window.location.origin}/s/${stickerStore.slug}`;
+                  navigator.clipboard.writeText(url);
+                  setStickerCopied(true);
+                  setTimeout(() => setStickerCopied(false), 2000);
+                }}
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
+                title="Copiar enlace"
+              >
+                {stickerCopied ? <Check size={15} className="text-emerald-400" /> : <Copy size={15} />}
+              </button>
+            </div>
+
+            {/* Botones de Acción */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="h-10 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs"
+              >
+                <Printer size={15} />
+                <span>Imprimir Sticker</span>
+              </button>
+
+              {stickerQrUrl && (
+                <a
+                  href={stickerQrUrl}
+                  download={`sticker-qr-${stickerStore.slug}-1024px.png`}
+                  className="h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                >
+                  <Download size={15} />
+                  <span>Descargar HD</span>
+                </a>
+              )}
             </div>
           </div>
         </div>
