@@ -11,7 +11,8 @@ import {
   serverTimestamp,
   increment,
   orderBy,
-  limit
+  limit,
+  Timestamp
 } from 'firebase/firestore';
 import { db } from './config';
 import { Store, Product } from '@/types/store';
@@ -700,6 +701,7 @@ export const createOtpRequestInFS = async (
 
     const otpDocRef = doc(db, 'otp_requests', cleanPhone);
     const now = Date.now();
+    const expiryMillis = now + 15 * 60 * 1000; // 15 minutos de validez
 
     await setDoc(otpDocRef, {
       phone: cleanPhone,
@@ -708,8 +710,8 @@ export const createOtpRequestInFS = async (
       storeName,
       userId,
       status: 'pending',
-      createdAt: now,
-      expiresAt: now + 15 * 60 * 1000, // 15 minutos de validez
+      createdAt: Timestamp.fromMillis(now),
+      expiresAt: Timestamp.fromMillis(expiryMillis),
     }, { merge: true });
 
     return true;
@@ -736,13 +738,14 @@ export const verifyOtpCodeInFS = async (
       return { success: false, error: 'No se encontró una solicitud pendiente para este número.' };
     }
 
-    const data = snap.data() as OtpRequest;
+    const data = snap.data();
 
     if (data.code !== inputCode.trim()) {
       return { success: false, error: 'El código ingresado es incorrecto.' };
     }
 
-    if (Date.now() > data.expiresAt) {
+    const expiresAtMillis = data.expiresAt?.toMillis ? data.expiresAt.toMillis() : Number(data.expiresAt || 0);
+    if (Date.now() > expiresAtMillis) {
       return { success: false, error: 'El código ha expirado. Solicita uno nuevo por WhatsApp.' };
     }
 
