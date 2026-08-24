@@ -68,9 +68,17 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
   const messageText = `Hola equipo de APANA 👋, solicito mi código de activación para mi tienda *${storeName || 'Mi Tienda'}*.`;
   const whatsappUrl = `https://wa.me/${APANA_OFFICIAL_WHATSAPP}?text=${encodeURIComponent(messageText)}`;
 
-  const handleOpenWhatsApp = () => {
+  const handleOpenWhatsApp = async () => {
     setHasOpenedWhatsApp(true);
     setErrorMessage('');
+    
+    // Regenerar un código fresco y renovar la ventana de 15 minutos en Firestore al hacer clic
+    if (user && fullPhone) {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedCode(code);
+      await createOtpRequestInFS(fullPhone, code, storeId, storeName, user.uid);
+    }
+
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   };
 
