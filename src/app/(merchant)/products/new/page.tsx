@@ -254,7 +254,7 @@ export default function CreateProductPage() {
         imageUrl: primaryImg,
         imageUrls: allImgs,
         category: (storePlan === 'emprendedor' || storePlan === 'negocio') ? productCategory : '',
-        options: cleanOptions.length > 0 ? cleanOptions : undefined,
+        options: cleanOptions.length > 0 ? cleanOptions : [],
         inStock: true,
         createdAt: Date.now(),
       };

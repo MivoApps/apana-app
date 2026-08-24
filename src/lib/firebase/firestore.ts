@@ -173,7 +173,7 @@ export const createOrUpdateStoreInFS = async (
     subscriptionStatus: storeData.subscriptionStatus || (existingData?.subscriptionStatus ?? 'free'),
     cancelAtPeriodEnd: storeData.cancelAtPeriodEnd !== undefined ? storeData.cancelAtPeriodEnd : (existingData?.cancelAtPeriodEnd ?? false),
     categories: storeData.categories !== undefined ? storeData.categories : (existingData?.categories ?? []),
-    createdAt: existingData?.createdAt ?? undefined,
+    createdAt: existingData?.createdAt ?? null,
   };
 
   const payload: any = {

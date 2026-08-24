@@ -234,7 +234,7 @@ export default function EditProductPage({ params }: Props) {
           description: productDesc,
           imageUrl: primaryImg,
           imageUrls: allImgs,
-          options: cleanOptions.length > 0 ? cleanOptions : undefined,
+          options: cleanOptions.length > 0 ? cleanOptions : [],
           inStock,
           category: (storePlan === 'emprendedor' || storePlan === 'negocio') ? productCategory : '',
         });
