@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, User } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
-import { createUserWithEmailAndPassword, updateProfile, signInWithPopup } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, sendEmailVerification } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { TermsModal } from '@/components/ui/TermsModal';
@@ -99,6 +99,13 @@ export default function RegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       if (name.trim()) {
         await updateProfile(userCredential.user, { displayName: name });
+      }
+
+      // Enviar correo de verificación automático al usuario
+      try {
+        await sendEmailVerification(userCredential.user);
+      } catch (emailErr) {
+        console.warn('No se pudo enviar correo de verificación inicial:', emailErr);
       }
 
       // Guardar perfil de usuario en la colección 'users' de Firestore

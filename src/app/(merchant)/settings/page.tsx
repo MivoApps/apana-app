@@ -20,8 +20,10 @@ import {
   X,
   LogOut,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Mail
 } from 'lucide-react';
+import { sendEmailVerification } from 'firebase/auth';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/lib/app-store';
 import { Store, StoreStyle } from '@/types/store';
@@ -104,6 +106,23 @@ export default function SettingsPage() {
   const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
   const [acceptTermsChecked, setAcceptTermsChecked] = useState(false);
   const [phoneChangeError, setPhoneChangeError] = useState('');
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
+  const [emailSentToast, setEmailSentToast] = useState(false);
+
+  const handleResendEmail = async () => {
+    if (!user) return;
+    setIsResendingEmail(true);
+    try {
+      await sendEmailVerification(user);
+      setEmailSentToast(true);
+      setTimeout(() => setEmailSentToast(false), 5000);
+    } catch (err: any) {
+      console.warn('Error reenviando verificación:', err);
+      alert('Ya enviamos un correo recientemente. Por favor revisa tu bandeja de entrada o spam.');
+    } finally {
+      setIsResendingEmail(false);
+    }
+  };
 
   // Manejo de Subida y Optimización de Logo
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -925,22 +944,53 @@ export default function SettingsPage() {
           </section>
 
           {/* Card 4: Sesión y Cuenta */}
-          <section className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-4">
+          <section className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex flex-col min-w-0">
               <span className="text-xs text-[#6d7a72]">Sesión Iniciada</span>
-              <span className="text-sm font-bold text-[#0b1c30] truncate">
-                {user?.email || 'Comerciante'}
-              </span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-sm font-bold text-[#0b1c30] truncate">
+                  {user?.email || 'Comerciante'}
+                </span>
+                {user?.emailVerified ? (
+                  <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0">
+                    <ShieldCheck size={11} className="text-emerald-700" />
+                    <span>Verificado</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0">
+                    <Mail size={11} className="text-amber-700" />
+                    <span>No verificado</span>
+                  </span>
+                )}
+              </div>
+              {!user?.emailVerified && (
+                <button
+                  type="button"
+                  onClick={handleResendEmail}
+                  disabled={isResendingEmail}
+                  className="text-left text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline mt-1 cursor-pointer disabled:opacity-50"
+                >
+                  {isResendingEmail ? 'Enviando correo...' : 'Reenviar enlace de verificación ➔'}
+                </button>
+              )}
             </div>
             <button
               type="button"
               onClick={handleLogout}
-              className="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200/60 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-2xs"
+              className="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200/60 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-2xs"
             >
               <LogOut size={14} />
               <span>Cerrar Sesión</span>
             </button>
           </section>
+
+          {/* Toast Flotante de Correo Enviado */}
+          {emailSentToast && (
+            <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3">
+              <ShieldCheck size={16} className="text-emerald-400 shrink-0" />
+              <span>Enlace de verificación enviado. Revisa tu bandeja de entrada o spam.</span>
+            </div>
+          )}
 
           {/* Botón Guardar Cambios */}
           <div className="pt-1">

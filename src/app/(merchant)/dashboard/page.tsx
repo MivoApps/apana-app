@@ -18,8 +18,12 @@ import {
   Power,
   TrendingUp,
   Crown,
-  ShieldCheck
+  ShieldCheck,
+  ShieldAlert,
+  Mail,
+  CheckCircle2
 } from 'lucide-react';
+import { sendEmailVerification } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { LogOut } from 'lucide-react';
@@ -42,6 +46,23 @@ export default function DashboardPage() {
   const [analyticsData, setAnalyticsData] = React.useState<{ label: string; visits: number; clicks: number }[]>([]);
   const [copiedLink, setCopiedLink] = React.useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = React.useState(false);
+  const [isResendingEmail, setIsResendingEmail] = React.useState(false);
+  const [emailSentToast, setEmailSentToast] = React.useState(false);
+
+  const handleResendEmail = async () => {
+    if (!user) return;
+    setIsResendingEmail(true);
+    try {
+      await sendEmailVerification(user);
+      setEmailSentToast(true);
+      setTimeout(() => setEmailSentToast(false), 5000);
+    } catch (err: any) {
+      console.warn('Error reenviando verificación de email:', err);
+      alert('Ya enviamos un correo recientemente. Por favor revisa tu bandeja de entrada o la carpeta de spam.');
+    } finally {
+      setIsResendingEmail(false);
+    }
+  };
 
   React.useEffect(() => {
     const checkAuthAndSync = async () => {
@@ -217,26 +238,110 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Banner de Validación Anti-Fraude de WhatsApp */}
-        {fsStore && !fsStore.isWhatsappVerified && fsStore.whatsappPhone && (
-          <div className="bg-amber-50/90 border border-amber-300/80 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-xs animate-in fade-in">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                <ShieldCheck size={18} />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="font-bold text-xs text-amber-950 truncate">WhatsApp pendiente de validación</span>
-                <span className="text-[11px] text-amber-900/80">Valida la titularidad de tu número para evitar suplantaciones.</span>
-              </div>
-            </div>
+        {/* Banner Unificado de Seguridad Inteligente (Email + WhatsApp) */}
+        {(() => {
+          const needsEmail = user && !user.emailVerified;
+          const needsWhatsapp = fsStore && !fsStore.isWhatsappVerified && fsStore.whatsappPhone;
 
-            <button
-              type="button"
-              onClick={() => setIsVerifyModalOpen(true)}
-              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all shrink-0 cursor-pointer"
-            >
-              Validar titularidad
-            </button>
+          if (!needsEmail && !needsWhatsapp) return null;
+
+          // CASO 1: Faltan AMBOS (Consolidado en 1 solo banner)
+          if (needsEmail && needsWhatsapp) {
+            return (
+              <div className="bg-linear-to-r from-amber-50 via-orange-50/70 to-blue-50/70 border border-amber-300/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <ShieldAlert size={20} />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-xs text-amber-950">Protege tu cuenta: 2 pasos pendientes</span>
+                      <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">Seguridad</span>
+                    </div>
+                    <span className="text-[11px] text-amber-900/80 mt-0.5 leading-snug">
+                      Valida tu correo y tu línea de WhatsApp para blindar tu tienda y recibir pedidos.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 pt-1 sm:pt-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsVerifyModalOpen(true)}
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <ShieldCheck size={14} />
+                    <span>Validar WhatsApp</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResendEmail}
+                    disabled={isResendingEmail}
+                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Mail size={14} />
+                    <span>{isResendingEmail ? 'Enviando...' : 'Reenviar Email'}</span>
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          // CASO 2: Solo falta Email
+          if (needsEmail) {
+            return (
+              <div className="bg-blue-50/90 border border-blue-200 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-xs animate-in fade-in">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <Mail size={16} />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-bold text-xs text-blue-950 truncate">Confirma tu correo ({user?.email})</span>
+                    <span className="text-[11px] text-blue-800/80">Revisa tu bandeja de entrada o spam para activar tu cuenta.</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleResendEmail}
+                  disabled={isResendingEmail}
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                >
+                  {isResendingEmail ? 'Enviando...' : 'Reenviar enlace'}
+                </button>
+              </div>
+            );
+          }
+
+          // CASO 3: Solo falta WhatsApp
+          return (
+            <div className="bg-amber-50/90 border border-amber-300/80 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-xs animate-in fade-in">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <ShieldCheck size={18} />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-bold text-xs text-amber-950 truncate">WhatsApp pendiente de validación</span>
+                  <span className="text-[11px] text-amber-900/80">Valida la titularidad de tu número para evitar suplantaciones.</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsVerifyModalOpen(true)}
+                className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all shrink-0 cursor-pointer"
+              >
+                Validar titularidad
+              </button>
+            </div>
+          );
+        })()}
+
+        {/* Toast Flotante de Correo Enviado */}
+        {emailSentToast && (
+          <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3">
+            <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+            <span>Enlace de verificación enviado. Revisa tu bandeja de entrada o spam.</span>
           </div>
         )}
 
