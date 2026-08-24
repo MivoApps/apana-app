@@ -746,11 +746,8 @@ export const verifyOtpCodeInFS = async (
       return { success: false, error: 'El código ha expirado. Solicita uno nuevo por WhatsApp.' };
     }
 
-    // Marcar como verificado en otp_requests
-    await updateDoc(otpDocRef, {
-      status: 'verified',
-      verifiedAt: Date.now(),
-    });
+    // Eliminar la solicitud de OTP inmediatamente tras su uso exitoso para mantener Firestore 100% limpio
+    await deleteDoc(otpDocRef);
 
     // Actualizar la tienda a verificada
     const storeRef = doc(db, 'stores', storeId);
