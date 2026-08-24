@@ -143,15 +143,12 @@ export default function OnboardingWizardPage() {
     let createdFsStore = null;
     if (user) {
       try {
-        const digitsOnly = whatsappPhone.replace(/\D/g, '');
-        const fullWhatsapp = digitsOnly.startsWith('51') ? digitsOnly : `51${digitsOnly}`;
-
         createdFsStore = await createOrUpdateStoreInFS(user.uid, {
           name: businessName,
           category,
           themeStyle: targetStyle,
           primaryColor: selectedColorHex,
-          whatsappPhone: fullWhatsapp,
+          whatsappPhone: '',
           isWhatsappVerified: false,
           ownerEmail: user.email || '',
           ownerName: user.displayName || businessName,
@@ -278,15 +275,15 @@ export default function OnboardingWizardPage() {
             </div>
           )}
 
-          {/* PASO 2: Nombre de Tienda y WhatsApp */}
+          {/* PASO 2: Nombre de Tienda */}
           {step === 2 && (
             <div className="flex flex-col gap-5 bg-white p-6 rounded-2xl border border-[#bccac0]/40 shadow-xs">
               <div className="flex flex-col gap-1">
                 <h1 className="text-2xl font-bold text-[#0b1c30] tracking-tight">
-                  Datos de tu Negocio
+                  Nombre de tu Tienda
                 </h1>
                 <p className="text-xs text-[#3d4a42]">
-                  Nombre comercial y el número donde recibirás los pedidos de tus clientes.
+                  Elige el nombre comercial con el que tus clientes te reconocerán.
                 </p>
               </div>
 
@@ -311,47 +308,15 @@ export default function OnboardingWizardPage() {
                 </div>
               </div>
 
-              {/* Campo Celular WhatsApp */}
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="whatsapp-phone" className="text-xs font-bold text-slate-700">
-                    Número de WhatsApp para pedidos *
-                  </label>
-                  <span className="text-[10px] text-slate-400 font-medium">9 dígitos</span>
-                </div>
-                <div className="relative flex items-center bg-gray-50 border border-[#bccac0] rounded-xl overflow-hidden shadow-xs focus-within:border-[#059669] focus-within:ring-2 focus-within:ring-[#059669]/10 transition-all">
-                  <div className="flex items-center gap-1.5 px-3.5 py-3 bg-gray-100 border-r border-gray-200 select-none shrink-0">
-                    <span className="text-base leading-none">🇵🇪</span>
-                    <span className="text-xs font-bold text-[#0b1c30]">+51</span>
-                  </div>
-                  <input
-                    id="whatsapp-phone"
-                    type="tel"
-                    maxLength={9}
-                    placeholder="987 654 321"
-                    value={whatsappPhone}
-                    onChange={(e) => setWhatsappPhone(e.target.value.replace(/\D/g, ''))}
-                    required
-                    className="h-12 w-full bg-transparent px-3.5 text-sm font-semibold text-[#0b1c30] tracking-wider focus:outline-none"
-                  />
-                  {whatsappPhone.length === 9 && (
-                    <CheckCircle2 size={18} className="mr-3.5 text-[#059669] shrink-0" />
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-400 leading-tight">
-                  Tus clientes te enviarán sus pedidos directamente a este número.
-                </p>
-              </div>
-
               <Button
                 onClick={nextStep}
                 variant="primary"
                 fullWidth
-                disabled={!businessName.trim() || whatsappPhone.length < 9}
-                className="h-12 flex items-center justify-center gap-2 mt-2 font-bold cursor-pointer"
+                disabled={!businessName.trim()}
+                className="h-12 text-base mt-2"
               >
                 Siguiente
-                <ArrowRight size={18} />
+                <ArrowRight size={18} className="ml-2" />
               </Button>
             </div>
           )}

@@ -37,18 +37,31 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
   const { user } = useAuth();
   const [generatedCode, setGeneratedCode] = useState('');
   const [inputCode, setInputCode] = useState('');
+  const [customPhone, setCustomPhone] = useState('');
+  const [isEditingPhone, setIsEditingPhone] = useState(!phone);
   const [hasOpenedWhatsApp, setHasOpenedWhatsApp] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const cleanPhone = phone.replace(/\D/g, '');
-  const displayPhone = cleanPhone.length > 9 ? cleanPhone.slice(-9) : cleanPhone;
-  const fullPhone = cleanPhone.startsWith('51') ? cleanPhone : `51${cleanPhone}`;
+  const activePhoneDigits = (phone || customPhone).replace(/\D/g, '');
+  const displayPhone = activePhoneDigits.length > 9 ? activePhoneDigits.slice(-9) : activePhoneDigits;
+  const fullPhone = activePhoneDigits.startsWith('51') ? activePhoneDigits : `51${activePhoneDigits}`;
 
-  // Al abrir el modal, generar código de 6 dígitos y registrar la solicitud en Firestore
+  // Sincronizar teléfono inicial
   useEffect(() => {
-    if (isOpen && user && fullPhone) {
+    if (phone) {
+      const clean = phone.replace(/\D/g, '');
+      setCustomPhone(clean.length > 9 ? clean.slice(-9) : clean);
+      setIsEditingPhone(false);
+    } else {
+      setIsEditingPhone(true);
+    }
+  }, [phone]);
+
+  // Al abrir el modal, generar código de 6 dígitos y registrar la solicitud en Firestore si hay teléfono válido
+  useEffect(() => {
+    if (isOpen && user && displayPhone.length === 9) {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       setGeneratedCode(code);
       setInputCode('');
@@ -60,7 +73,7 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
       // Registrar solicitud pendiente en Firestore
       createOtpRequestInFS(fullPhone, code, storeId, storeName, user.uid);
     }
-  }, [isOpen, user, fullPhone, storeId, storeName]);
+  }, [isOpen, user, fullPhone, displayPhone, storeId, storeName]);
 
   if (!isOpen) return null;
 
@@ -69,6 +82,11 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
   const whatsappUrl = `https://wa.me/${APANA_OFFICIAL_WHATSAPP}?text=${encodeURIComponent(messageText)}`;
 
   const handleOpenWhatsApp = async () => {
+    if (displayPhone.length !== 9) {
+      setErrorMessage('Por favor ingresa un número de WhatsApp válido de 9 dígitos.');
+      return;
+    }
+
     setHasOpenedWhatsApp(true);
     setErrorMessage('');
     
@@ -84,6 +102,10 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
 
   const handleValidateCode = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (displayPhone.length !== 9) {
+      setErrorMessage('Por favor ingresa un número de WhatsApp de 9 dígitos.');
+      return;
+    }
     if (!inputCode.trim() || inputCode.trim().length !== 6) {
       setErrorMessage('Ingresa el código de 6 dígitos que te respondió el bot de APANA.');
       return;
@@ -167,16 +189,61 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Tarjeta Informativa */}
-            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 text-xs text-slate-600 leading-relaxed flex flex-col gap-1.5">
-              <div className="flex items-center justify-between font-bold text-slate-700">
-                <span>Tu número de tienda:</span>
-                <span className="text-[#059669] font-extrabold font-mono text-sm">+51 {displayPhone}</span>
+            {/* Tarjeta Informativa / Input de Teléfono */}
+            {!phone || isEditingPhone ? (
+              <div className="flex flex-col gap-1.5 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700">
+                    Ingresa tu número de WhatsApp para pedidos:
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-medium">9 dígitos</span>
+                </div>
+                <div className="relative flex items-center bg-white border border-[#bccac0] rounded-xl overflow-hidden shadow-2xs focus-within:border-[#059669] focus-within:ring-2 focus-within:ring-[#059669]/10 transition-all">
+                  <div className="flex items-center gap-1.5 px-3 py-2.5 bg-gray-100 border-r border-gray-200 select-none shrink-0">
+                    <span className="text-sm">🇵🇪</span>
+                    <span className="text-xs font-bold text-[#0b1c30]">+51</span>
+                  </div>
+                  <input
+                    type="tel"
+                    maxLength={9}
+                    placeholder="987 654 321"
+                    value={customPhone}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 9);
+                      setCustomPhone(val);
+                      if (errorMessage) setErrorMessage('');
+                    }}
+                    autoFocus={!phone}
+                    className="h-10 w-full bg-transparent px-3 text-sm font-bold text-[#0b1c30] tracking-wider focus:outline-none placeholder:text-slate-400 font-mono"
+                  />
+                  {displayPhone.length === 9 && (
+                    <CheckCircle2 size={16} className="mr-3 text-[#059669] shrink-0" />
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                  Tus clientes te enviarán sus pedidos directamente a este número.
+                </p>
               </div>
-              <p className="text-[11px] text-slate-500 pt-1 border-t border-slate-200/60 leading-normal">
-                Para evitar fraudes, solicita tu código de activación por WhatsApp. Nuestro bot te responderá tu código de 6 dígitos al instante.
-              </p>
-            </div>
+            ) : (
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 text-xs text-slate-600 leading-relaxed flex flex-col gap-1.5">
+                <div className="flex items-center justify-between font-bold text-slate-700">
+                  <span>Tu número de tienda:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#059669] font-extrabold font-mono text-sm">+51 {displayPhone}</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingPhone(true)}
+                      className="text-[10px] text-slate-500 hover:text-slate-800 underline font-normal cursor-pointer"
+                    >
+                      Cambiar
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 pt-1 border-t border-slate-200/60 leading-normal">
+                  Para evitar fraudes, solicita tu código de activación por WhatsApp. Nuestro bot te responderá tu código de 6 dígitos al instante.
+                </p>
+              </div>
+            )}
 
             {/* PASO 1: Solicitar Código */}
             <div className="flex flex-col gap-1.5 pt-1">
