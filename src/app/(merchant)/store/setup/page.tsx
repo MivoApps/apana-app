@@ -154,6 +154,9 @@ export default function OnboardingWizardPage() {
     };
   }, [user, authLoading]);
 
+  const [isNavigatingStep, setIsNavigatingStep] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
+
   // Guardar el paso actual cada vez que cambia
   const updateStep = (newStep: number) => {
     setStep(newStep);
@@ -194,14 +197,24 @@ export default function OnboardingWizardPage() {
     updateStep(5);
   };
 
-  const nextStep = () => {
+  const nextStep = async () => {
+    if (isNavigatingStep || isSubmitting) return;
+    setIsNavigatingStep(true);
+
     if (step === 4) {
-      handleFinishSetup();
+      await handleFinishSetup();
+      setIsNavigatingStep(false);
     } else {
       updateStep(Math.min(step + 1, 5));
+      setTimeout(() => {
+        setIsNavigatingStep(false);
+      }, 350);
     }
   };
-  const prevStep = () => updateStep(Math.max(step - 1, 1));
+  const prevStep = () => {
+    if (isNavigatingStep || isSubmitting) return;
+    updateStep(Math.max(step - 1, 1));
+  };
 
   if (authLoading || isVerifyingStore) {
     return (
@@ -286,9 +299,24 @@ export default function OnboardingWizardPage() {
                 </p>
               </div>
 
-              <Button onClick={nextStep} variant="primary" fullWidth className="h-12 text-base mt-2">
-                Comenzar ahora
-                <ArrowRight size={18} className="ml-2" />
+              <Button
+                onClick={nextStep}
+                variant="primary"
+                fullWidth
+                disabled={isNavigatingStep}
+                className="h-12 text-base mt-2"
+              >
+                {isNavigatingStep ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Iniciando...
+                  </span>
+                ) : (
+                  <>
+                    Comenzar ahora
+                    <ArrowRight size={18} className="ml-2" />
+                  </>
+                )}
               </Button>
 
               <p className="text-[11px] text-slate-400 text-center leading-tight">
@@ -342,11 +370,20 @@ export default function OnboardingWizardPage() {
                 onClick={nextStep}
                 variant="primary"
                 fullWidth
-                disabled={!businessName.trim()}
+                disabled={!businessName.trim() || isNavigatingStep}
                 className="h-12 text-base mt-2"
               >
-                Siguiente
-                <ArrowRight size={18} className="ml-2" />
+                {isNavigatingStep ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Cargando...
+                  </span>
+                ) : (
+                  <>
+                    Siguiente
+                    <ArrowRight size={18} className="ml-2" />
+                  </>
+                )}
               </Button>
             </div>
           )}
@@ -387,11 +424,20 @@ export default function OnboardingWizardPage() {
                 onClick={nextStep}
                 variant="primary"
                 fullWidth
-                disabled={!category}
+                disabled={!category || isNavigatingStep}
                 className="h-12 flex items-center justify-center gap-2 mt-2"
               >
-                Siguiente
-                <ArrowRight size={18} />
+                {isNavigatingStep ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Cargando...
+                  </span>
+                ) : (
+                  <>
+                    Siguiente
+                    <ArrowRight size={18} />
+                  </>
+                )}
               </Button>
             </div>
           )}
@@ -534,9 +580,17 @@ export default function OnboardingWizardPage() {
                 onClick={nextStep}
                 variant="primary"
                 fullWidth
+                disabled={isSubmitting || isNavigatingStep}
                 className="h-14 rounded-full text-base font-bold bg-[#006948] hover:bg-[#005137] mt-2 shadow-xs"
               >
-                Crear mi tienda
+                {isSubmitting || isNavigatingStep ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Creando tu tienda...
+                  </span>
+                ) : (
+                  'Crear mi tienda'
+                )}
               </Button>
             </div>
           )}
@@ -558,15 +612,26 @@ export default function OnboardingWizardPage() {
               <div className="w-full flex flex-col gap-3 mt-2">
                 <Button
                   onClick={() => {
+                    setIsFinishing(true);
                     localStorage.removeItem('apana_wizard_step');
-                    router.replace('/products/new');
+                    window.location.href = '/products/new';
                   }}
                   variant="primary"
                   fullWidth
+                  disabled={isFinishing}
                   className="h-12 flex items-center justify-center gap-2 bg-[#059669] hover:bg-[#00855d] cursor-pointer"
                 >
-                  <PackagePlus size={18} />
-                  Publicar Mi Primer Producto
+                  {isFinishing ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Abriendo catálogo...
+                    </span>
+                  ) : (
+                    <>
+                      <PackagePlus size={18} />
+                      Publicar Mi Primer Producto
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
