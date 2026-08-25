@@ -264,14 +264,14 @@ export default function PublicStorePage({ params }: Props) {
                 : 'bg-white text-neutral-900 border-b border-neutral-100 py-6'
             }`}>
             {store.logoUrl ? (
-              <div className={`w-20 h-20 overflow-hidden shadow-sm transition-all ${
+              <div className={`w-20 h-20 overflow-hidden shadow-sm transition-all bg-white flex items-center justify-center p-1 ${
                 store.themeStyle === 'elegante'
                   ? 'rounded-2xl border border-stone-200/60'
                   : store.themeStyle === 'moderna'
-                  ? 'rounded-3xl shadow-md'
-                  : 'rounded-full w-16 h-16 shadow-xs'
+                  ? 'rounded-3xl shadow-md border border-slate-200/80'
+                  : 'rounded-full w-16 h-16 shadow-xs border border-slate-100'
               }`}>
-                <img src={store.logoUrl} alt={store.name} className="w-full h-full object-cover" />
+                <img src={store.logoUrl} alt={store.name} className="w-full h-full object-contain" />
               </div>
             ) : (
               <div

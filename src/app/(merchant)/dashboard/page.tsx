@@ -350,14 +350,16 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div
-                style={{ backgroundColor: activeStore?.primaryColor || '#059669' }}
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold shadow-xs shrink-0 overflow-hidden"
+                style={activeStore?.logoUrl ? undefined : { backgroundColor: activeStore?.primaryColor || '#059669' }}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold shadow-xs shrink-0 overflow-hidden ${
+                  activeStore?.logoUrl ? 'bg-white border border-slate-200/80 p-0.5' : 'text-white'
+                }`}
               >
                 {activeStore?.logoUrl ? (
                   <img
                     src={activeStore.logoUrl}
                     alt={storeName}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain rounded-xl"
                   />
                 ) : (
                   <StoreIcon size={24} />
