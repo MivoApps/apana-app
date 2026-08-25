@@ -7,30 +7,68 @@ import {
   Sparkles, 
   ArrowRight, 
   Store as StoreIcon, 
-  Palette, 
   QrCode as QrIcon, 
   Check, 
-  Eye, 
   Copy,
-  ExternalLink,
   Smartphone
 } from 'lucide-react';
 import { slugify } from '@/lib/firebase/firestore';
 import { Button } from '@/components/ui/Button';
 
+const SAMPLE_STORES = [
+  'Panadería Don José',
+  'Decoraciones Julita',
+  'Café & Postres Aroma',
+  'Moda Urbana Chic',
+  'Burgers & Alitas Criollas'
+];
+
 export const LandingStoreSimulator: React.FC = () => {
-  const [storeName, setStoreName] = useState('Panadería Don José');
-  const [selectedStyle, setSelectedStyle] = useState<'minimalista' | 'moderna' | 'elegante'>('moderna');
-  const [selectedColor, setSelectedColor] = useState('#059669');
+  const [storeIndex, setStoreIndex] = useState(0);
+  const [displayText, setDisplayText] = useState(SAMPLE_STORES[0]);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
 
-  const cleanSlug = slugify(storeName || 'mi-tienda') || 'mi-tienda';
+  // Efecto Máquina de Escribir (Typewriter)
+  useEffect(() => {
+    const currentFullText = SAMPLE_STORES[storeIndex];
+    let timer: NodeJS.Timeout;
+
+    if (!isDeleting && displayText === currentFullText) {
+      // Pausar 2.5 segundos cuando la palabra está completa
+      timer = setTimeout(() => {
+        setIsDeleting(true);
+      }, 2500);
+    } else if (isDeleting && displayText === '') {
+      // Pasar a la siguiente palabra cuando se termina de borrar
+      setIsDeleting(false);
+      setStoreIndex((prev) => (prev + 1) % SAMPLE_STORES.length);
+    } else {
+      // Escribir o borrar letra por letra
+      const speed = isDeleting ? 45 : 90;
+      timer = setTimeout(() => {
+        setDisplayText((prev) => {
+          if (isDeleting) {
+            return currentFullText.substring(0, prev.length - 1);
+          } else {
+            return currentFullText.substring(0, prev.length + 1);
+          }
+        });
+      }, speed);
+    }
+
+    return () => clearTimeout(timer);
+  }, [displayText, isDeleting, storeIndex]);
+
+  // Generar código QR dinámicamente según el negocio actual
+  const currentBusinessName = displayText || SAMPLE_STORES[storeIndex];
+  const cleanSlug = slugify(currentBusinessName) || 'mi-tienda';
   const fullUrl = `https://beapana.com/s/${cleanSlug}`;
 
   useEffect(() => {
     QRCode.toDataURL(fullUrl, {
-      width: 320,
+      width: 250,
       margin: 1,
       color: {
         dark: '#0b1c30',
@@ -40,14 +78,6 @@ export const LandingStoreSimulator: React.FC = () => {
       .then((url) => setQrDataUrl(url))
       .catch((err) => console.error('Error generando QR:', err));
   }, [fullUrl]);
-
-  const colors = [
-    { name: 'Esmeralda', hex: '#059669' },
-    { name: 'Índigo', hex: '#4f46e5' },
-    { name: 'Borgoña / Vino', hex: '#9f1239' },
-    { name: 'Ámbar / Dorado', hex: '#d97706' },
-    { name: 'Azul Marino', hex: '#0284c7' },
-  ];
 
   const handleCopy = () => {
     if (typeof navigator !== 'undefined') {
@@ -60,200 +90,92 @@ export const LandingStoreSimulator: React.FC = () => {
   return (
     <section className="py-16 md:py-24 relative overflow-hidden bg-linear-to-b from-[#f8f9ff] via-[#eff4ff]/80 to-[#f8f9ff]">
       {/* Background Glows */}
-      <div className="absolute top-1/2 left-0 w-96 h-96 bg-[#85f8c4]/15 blur-3xl rounded-full pointer-events-none -translate-y-1/2 -z-10" />
-      <div className="absolute top-1/2 right-0 w-96 h-96 bg-[#3b82f6]/10 blur-3xl rounded-full pointer-events-none -translate-y-1/2 -z-10" />
+      <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-[#85f8c4]/15 blur-3xl rounded-full pointer-events-none -translate-y-1/2 -z-10" />
+      <div className="absolute top-1/2 right-1/4 w-96 h-96 bg-[#3b82f6]/10 blur-3xl rounded-full pointer-events-none -translate-y-1/2 -z-10" />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
         {/* Section Header */}
-        <div className="text-center max-w-2xl mx-auto mb-12">
+        <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#059669]/10 text-[#00855d] text-xs font-bold mb-3 border border-[#059669]/20 shadow-2xs">
             <Sparkles size={13} className="text-[#059669]" />
-            <span>Simulador en Tiempo Real</span>
+            <span>Generación Instantánea</span>
           </div>
           <h2 className="text-2xl sm:text-4xl font-extrabold text-[#0b1c30] tracking-tight">
-            Prueba cómo se verá tu tienda antes de crearla
+            Tu tienda y tu código QR listos al instante
           </h2>
           <p className="mt-3 text-sm sm:text-base text-[#3d4a42]">
-            Escribe el nombre de tu negocio y mira cómo generamos al instante tu enlace y tu código QR listos para compartir.
+            Creamos tu enlace personalizado y tu código QR automáticamente para que empieces a compartir tu catálogo.
           </p>
         </div>
 
-        {/* Simulator Interactive Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center max-w-5xl mx-auto">
-          {/* Controls Panel */}
-          <div className="lg:col-span-6 bg-white/80 backdrop-blur-xl p-5 sm:p-8 rounded-3xl border border-white shadow-xl shadow-slate-200/50 flex flex-col gap-5">
+        {/* Simulator Central Card */}
+        <div className="max-w-md mx-auto bg-white/85 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border border-white shadow-2xl shadow-slate-200/60 flex flex-col gap-5">
+          
+          {/* Input Nombre de Tienda + Mini QR integrado lado a lado */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-extrabold text-[#0b1c30] uppercase tracking-wider flex items-center gap-1.5">
+              <StoreIcon size={14} className="text-[#059669]" />
+              <span>Nombre de tu negocio</span>
+            </label>
             
-            {/* Input Nombre de Tienda + Mini QR integrado lado a lado */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-[#0b1c30] uppercase tracking-wider flex items-center gap-1.5">
-                <StoreIcon size={14} className="text-[#059669]" />
-                <span>Nombre de tu negocio</span>
-              </label>
-              
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={storeName}
-                    onChange={(e) => setStoreName(e.target.value)}
-                    placeholder="ej. Pastelería Dolce Vita"
-                    maxLength={40}
-                    className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-200 text-sm font-semibold text-[#0b1c30] focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] transition-all shadow-2xs"
-                  />
-                </div>
-
-                {/* Compact QR Thumbnail (Visible en Mobile y Desktop) */}
-                <div 
-                  className="w-12 h-12 rounded-xl p-1 bg-white border border-slate-200 shadow-xs shrink-0 flex items-center justify-center relative group cursor-pointer"
-                  title="Código QR generado en vivo"
-                >
-                  {qrDataUrl ? (
-                    <img
-                      src={qrDataUrl}
-                      alt="Mini QR"
-                      className="w-full h-full object-contain rounded-md"
-                    />
-                  ) : (
-                    <QrIcon size={18} className="text-slate-400" />
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Generated URL Preview Pill with Copy */}
-            <div className="w-full bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-inner">
-              <div className="flex items-center gap-1.5 overflow-hidden">
-                <Smartphone size={13} className="text-[#059669] shrink-0" />
-                <span className="text-xs font-mono text-slate-600 truncate select-all">
-                  beapana.com/s/<strong className="text-emerald-700 font-bold">{cleanSlug}</strong>
+            <div className="flex items-center gap-3">
+              {/* Display de Escritura Automática */}
+              <div className="flex-1 h-13 px-4 rounded-2xl bg-slate-50 border border-slate-200/90 flex items-center shadow-inner overflow-hidden">
+                <span className="text-sm sm:text-base font-bold text-[#0b1c30] tracking-tight truncate">
+                  {displayText}
                 </span>
+                <span className="inline-block w-0.5 h-5 bg-[#059669] ml-1 animate-pulse" />
               </div>
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="p-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200/60 text-slate-700 transition-colors cursor-pointer shrink-0 shadow-2xs flex items-center gap-1 text-[11px] font-bold"
-                title="Copiar enlace"
+
+              {/* QR Generado Automáticamente */}
+              <div 
+                className="w-13 h-13 rounded-2xl p-1.5 bg-white border border-slate-200 shadow-sm shrink-0 flex items-center justify-center relative transition-transform hover:scale-105"
+                title="Código QR generado automáticamente"
               >
-                {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-                <span>{copied ? 'Copiado' : 'Copiar'}</span>
-              </button>
-            </div>
-
-            {/* Selector de Estilo Visual */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-[#0b1c30] uppercase tracking-wider flex items-center gap-1.5">
-                <Palette size={14} className="text-[#059669]" />
-                <span>Elige tu estilo visual</span>
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: 'minimalista', label: 'Minimalista', desc: 'Limpio y claro' },
-                  { id: 'moderna', label: 'Moderna', desc: 'Vibrante y fresco' },
-                  { id: 'elegante', label: 'Elegante', desc: 'Tonos cálidos' },
-                ].map((st) => (
-                  <button
-                    key={st.id}
-                    type="button"
-                    onClick={() => setSelectedStyle(st.id as any)}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      selectedStyle === st.id
-                        ? 'bg-emerald-50 border-[#059669] ring-2 ring-[#059669]/20 shadow-2xs'
-                        : 'bg-slate-50/70 border-slate-200 hover:bg-slate-100/80'
-                    }`}
-                  >
-                    <p className="text-xs font-bold text-[#0b1c30]">{st.label}</p>
-                    <p className="text-[10px] text-slate-500">{st.desc}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Selector de Color de Marca */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-[#0b1c30] uppercase tracking-wider">
-                Color de Acento
-              </label>
-              <div className="flex items-center gap-3">
-                {colors.map((c) => (
-                  <button
-                    key={c.hex}
-                    type="button"
-                    onClick={() => setSelectedColor(c.hex)}
-                    title={c.name}
-                    className={`w-8 h-8 rounded-full transition-transform cursor-pointer flex items-center justify-center ${
-                      selectedColor === c.hex ? 'scale-110 ring-3 ring-offset-2 ring-[#059669]' : 'hover:scale-105'
-                    }`}
-                    style={{ backgroundColor: c.hex }}
-                  >
-                    {selectedColor === c.hex && <Check size={14} className="text-white" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* CTA Registro */}
-            <div className="pt-2 border-t border-slate-100">
-              <Link href="/register">
-                <Button
-                  variant="primary"
-                  fullWidth
-                  className="h-12 text-sm font-bold shadow-md shadow-[#059669]/20 hover:shadow-lg hover:shadow-[#059669]/30 flex items-center justify-center gap-2 rounded-xl"
-                >
-                  <span>Reclamar mi tienda gratis</span>
-                  <ArrowRight size={16} />
-                </Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* Desktop Full Card & QR Preview (Solo en Desktop) */}
-          <div className="hidden lg:flex lg:col-span-6 flex-col items-center">
-            <div className="w-full max-w-sm bg-white rounded-3xl p-6 border border-slate-200 shadow-2xl shadow-slate-300/40 relative overflow-hidden flex flex-col items-center text-center">
-              {/* Decorative Header Bar */}
-              <div
-                className="w-full h-3 rounded-full mb-6 transition-colors duration-300"
-                style={{ backgroundColor: selectedColor }}
-              />
-
-              {/* Dynamic QR Code */}
-              <div className="p-3 bg-white rounded-2xl border border-slate-100 shadow-inner relative group mb-4">
                 {qrDataUrl ? (
                   <img
                     src={qrDataUrl}
-                    alt={`QR de ${storeName}`}
-                    className="w-44 h-44 object-contain rounded-xl"
+                    alt="QR generado"
+                    className="w-full h-full object-contain rounded-lg"
                   />
                 ) : (
-                  <div className="w-44 h-44 flex items-center justify-center bg-slate-50 text-slate-400 text-xs">
-                    Generando QR...
-                  </div>
+                  <QrIcon size={20} className="text-slate-400" />
                 )}
-                <div className="absolute inset-0 bg-white/90 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <QrIcon size={28} style={{ color: selectedColor }} />
-                  <span className="text-xs font-bold text-slate-800">Escanear para abrir</span>
-                </div>
               </div>
-
-              {/* Store Identity */}
-              <h3 className="font-extrabold text-lg text-[#0b1c30] line-clamp-1 mb-1">
-                {storeName || 'Tu Tienda'}
-              </h3>
-              <p className="text-xs text-slate-500 mb-4">
-                Estilo <span className="font-semibold text-slate-700 capitalize">{selectedStyle}</span> • Catálogo Web Activo
-              </p>
-
-              {/* Interactive Demo Link */}
-              <Link
-                href={`/s/panaderia-don-jose`}
-                target="_blank"
-                className="text-xs font-bold flex items-center gap-1.5 hover:underline transition-colors"
-                style={{ color: selectedColor }}
-              >
-                <Eye size={14} />
-                <span>Ver catálogo en vivo de muestra</span>
-                <ExternalLink size={12} />
-              </Link>
             </div>
+          </div>
+
+          {/* Generated URL Preview Pill with Copy Button */}
+          <div className="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex items-center justify-between gap-2 shadow-inner">
+            <div className="flex items-center gap-2 overflow-hidden">
+              <Smartphone size={15} className="text-[#059669] shrink-0" />
+              <span className="text-xs sm:text-sm font-mono text-slate-600 truncate select-all">
+                beapana.com/s/<strong className="text-emerald-700 font-bold">{cleanSlug}</strong>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors cursor-pointer shrink-0 shadow-2xs flex items-center gap-1.5 text-xs font-bold active:scale-95"
+              title="Copiar enlace"
+            >
+              {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+              <span>{copied ? 'Copiado' : 'Copiar'}</span>
+            </button>
+          </div>
+
+          {/* CTA Registro Directo */}
+          <div className="pt-2">
+            <Link href="/register">
+              <Button
+                variant="primary"
+                fullWidth
+                className="h-13 text-sm sm:text-base font-bold bg-[#059669] hover:bg-[#00855d] text-white shadow-xl shadow-[#059669]/25 hover:shadow-2xl hover:shadow-[#059669]/35 flex items-center justify-center gap-2 rounded-2xl transition-all"
+              >
+                <span>Reclamar mi tienda gratis</span>
+                <ArrowRight size={18} />
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
