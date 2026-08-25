@@ -318,6 +318,22 @@ export default function SettingsPage() {
 
     if (user) {
       try {
+        let finalLogoUrl = logoUrl;
+
+        // Subir logo a Firebase Cloud Storage si es una nueva imagen en base64
+        if (logoUrl && logoUrl.startsWith('data:')) {
+          try {
+            const { uploadImageToStorage, dataURLtoBlob } = await import('@/lib/firebase/storage');
+            const blob = dataURLtoBlob(logoUrl);
+            const storeId = fsStore?.id || `store_${user.uid}`;
+            const storagePath = `stores/${storeId}/logo_${Date.now()}.webp`;
+            finalLogoUrl = await uploadImageToStorage(blob, storagePath);
+            setLogoUrl(finalLogoUrl);
+          } catch (uploadErr) {
+            console.error('Error subiendo logo a Storage, fallback a dataUrl:', uploadErr);
+          }
+        }
+
         const updatedStore = await createOrUpdateStoreInFS(user.uid, {
           name: storeName,
           whatsappPhone: fullPhone,
@@ -325,7 +341,7 @@ export default function SettingsPage() {
           primaryColor: selectedColorHex,
           description: storeDescription,
           categories: categories,
-          logoUrl: logoUrl,
+          logoUrl: finalLogoUrl,
           city: city,
           schedule: schedule,
           shippingType: shippingType,

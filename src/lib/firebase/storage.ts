@@ -1,23 +1,51 @@
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { storage } from './config';
+
 /**
- * Procesa la imagen recortada 1:1 de producto y la retorna como DataURL WebP ultra ligera.
- * Esto permite almacenamiento 100% gratuito en Firestore sin requerir tarjeta ni facturación en Firebase.
- * @param storeId ID de la tienda
- * @param fileOrBlob Archivo o Blob de imagen
- * @returns Promise<string> Clic de imagen optimizada WebP
+ * Sube una imagen (Blob o File) a Firebase Cloud Storage y retorna su URL pública de CDN.
+ * Configura Cache-Control agresivo para que Google Cloud CDN y el navegador almacenen la imagen
+ * y no consuman cuotas de descarga en visitas repetidas.
  */
-export const uploadProductImageToStorage = async (
-  storeId: string,
-  fileOrBlob: File | Blob
-): Promise<string> => {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      resolve(result || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80');
+export async function uploadImageToStorage(fileOrBlob: Blob | File, storagePath: string): Promise<string> {
+  try {
+    const storageRef = ref(storage, storagePath);
+    const metadata = {
+      contentType: fileOrBlob.type || 'image/webp',
+      cacheControl: 'public, max-age=31536000, immutable',
     };
-    reader.onerror = () => {
-      resolve('https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80');
-    };
-    reader.readAsDataURL(fileOrBlob);
-  });
-};
+    const snapshot = await uploadBytes(storageRef, fileOrBlob, metadata);
+    const downloadUrl = await getDownloadURL(snapshot.ref);
+    return downloadUrl;
+  } catch (error) {
+    console.error('Error al subir imagen a Firebase Storage:', error);
+    throw error;
+  }
+}
+
+/**
+ * Convierte una cadena DataURL (Base64) a un Blob binario para subida eficiente a Storage.
+ */
+export function dataURLtoBlob(dataUrl: string): Blob {
+  const arr = dataUrl.split(',');
+  const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/webp';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+}
+
+/**
+ * Elimina una imagen de Firebase Storage dado su path o URL completa.
+ */
+export async function deleteImageFromStorageByUrl(fileUrl: string): Promise<void> {
+  try {
+    if (!fileUrl || !fileUrl.includes('firebasestorage.googleapis.com')) return;
+    const storageRef = ref(storage, fileUrl);
+    await deleteObject(storageRef);
+  } catch (error) {
+    console.warn('No se pudo eliminar la imagen previa de Storage:', error);
+  }
+}

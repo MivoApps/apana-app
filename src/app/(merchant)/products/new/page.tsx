@@ -201,9 +201,31 @@ export default function CreateProductPage() {
 
     // Limpiar urls vacias
     const cleanPreviews = imagePreviews.filter(Boolean);
+    
+    // Subir imágenes a Firebase Cloud Storage si son base64 (reduce el peso de Firestore en 98%)
+    const { uploadImageToStorage, dataURLtoBlob } = await import('@/lib/firebase/storage');
+    const uploadedImages: string[] = [];
+
+    for (let i = 0; i < cleanPreviews.length; i++) {
+      const img = cleanPreviews[i];
+      if (img.startsWith('data:')) {
+        try {
+          const blob = dataURLtoBlob(img);
+          const storagePath = `stores/${storeId}/products/prod_${Date.now()}_${i}.webp`;
+          const cdnUrl = await uploadImageToStorage(blob, storagePath);
+          uploadedImages.push(cdnUrl);
+        } catch (uploadErr) {
+          console.error('Error subiendo imagen a Storage, fallback a dataUrl:', uploadErr);
+          uploadedImages.push(img);
+        }
+      } else {
+        uploadedImages.push(img);
+      }
+    }
+
     const defaultImage = 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80';
-    const primaryImg = cleanPreviews[0] || defaultImage;
-    const allImgs = cleanPreviews.length > 0 ? cleanPreviews : [defaultImage];
+    const primaryImg = uploadedImages[0] || defaultImage;
+    const allImgs = uploadedImages.length > 0 ? uploadedImages : [defaultImage];
 
     // Validar opciones obligatorias si se añadieron grupos
     if (productOptions.length > 0) {
