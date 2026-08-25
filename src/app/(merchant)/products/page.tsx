@@ -16,7 +16,10 @@ import {
   Filter,
   ExternalLink,
   LayoutGrid,
-  List
+  List,
+  FileSpreadsheet,
+  Sparkles,
+  X
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/whatsapp';
@@ -24,6 +27,7 @@ import { useAppStore } from '@/lib/app-store';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { getStoreByUserIdFromFS, getProductsByStoreIdFromFS, deleteProductFromFS, updateProductInFS } from '@/lib/firebase/firestore';
 import { Store, Product } from '@/types/store';
+import { exportProductsToCSV } from '@/lib/excel-export';
 
 export default function ProductGalleryPage() {
   const router = useRouter();
@@ -95,11 +99,22 @@ export default function ProductGalleryPage() {
   const currentPlan = fsStore?.plan || 'gratis';
   const isProPlan = currentPlan === 'negocio';
   const isFreePlan = !fsStore?.plan || currentPlan === 'gratis';
-  const maxProducts = isFreePlan ? 25 : 150;
+  const maxProducts = isFreePlan ? 25 : currentPlan === 'emprendedor' ? 150 : 99999;
   const inStockCount = products.filter((p) => p.inStock).length;
   const pausedCount = products.length - inStockCount;
   const isLimitReached = !isProPlan && products.length >= maxProducts;
   const capacityPercentage = Math.min((products.length / maxProducts) * 100, 100);
+
+  const [showProUpgradeModal, setShowProUpgradeModal] = useState(false);
+
+  const handleExportCatalog = () => {
+    const isSuperAdmin = user?.email && ['angelo@mivo.pe', 'angelocastellanos99@gmail.com'].includes(user.email.toLowerCase().trim());
+    if (isProPlan || isSuperAdmin) {
+      exportProductsToCSV(products, fsStore?.name || 'mi-tienda', fsStore?.slug || 'mi-tienda');
+    } else {
+      setShowProUpgradeModal(true);
+    }
+  };
 
   // Lista de categorías únicas para filtrar
   const availableCategories = Array.from(new Set(products.map((p) => p.category).filter(Boolean))) as string[];
@@ -384,18 +399,32 @@ export default function ProductGalleryPage() {
             </div>
           </div>
 
-          <Link href={isLimitReached ? '/plans' : '/products/new'}>
+          <div className="flex items-center gap-2">
+            {/* Botón Exportar Catálogo a Excel */}
             <button
-              className={`text-white text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors shadow-xs ${
-                isLimitReached
-                  ? 'bg-amber-600 hover:bg-amber-700'
-                  : 'bg-[#059669] hover:bg-[#00855d]'
-              }`}
+              type="button"
+              onClick={handleExportCatalog}
+              className="h-9 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200/80 text-[#0b1c30] text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Exportar inventario a Excel (.CSV)"
             >
-              {isLimitReached ? <Zap size={16} /> : <Plus size={16} />}
-              {isLimitReached ? 'Límite alcanzado' : 'Nuevo Producto'}
+              <FileSpreadsheet size={15} className="text-[#059669]" />
+              <span className="hidden sm:inline">Exportar Excel</span>
+              <span className="sm:hidden">Excel</span>
             </button>
-          </Link>
+
+            <Link href={isLimitReached ? '/plans' : '/products/new'}>
+              <button
+                className={`text-white text-xs font-semibold px-3.5 h-9 rounded-xl flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer ${
+                  isLimitReached
+                    ? 'bg-amber-600 hover:bg-amber-700'
+                    : 'bg-[#059669] hover:bg-[#00855d]'
+                }`}
+              >
+                {isLimitReached ? <Zap size={16} /> : <Plus size={16} />}
+                <span>{isLimitReached ? 'Límite alcanzado' : 'Nuevo Producto'}</span>
+              </button>
+            </Link>
+          </div>
         </div>
 
         {/* Lista o Cuadrícula de Tarjetas de Productos */}
@@ -669,6 +698,57 @@ export default function ProductGalleryPage() {
           </Link>
         </div>
       </nav>
+
+      {/* Modal de Upgrade a Plan Negocio Pro para Exportar a Excel */}
+      {showProUpgradeModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 flex flex-col gap-4 text-center animate-in zoom-in-95 relative">
+            <button
+              type="button"
+              onClick={() => setShowProUpgradeModal(false)}
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center mx-auto shadow-xs">
+              <FileSpreadsheet size={28} />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full mx-auto">
+                ⭐ Plan Negocio Pro
+              </span>
+              <h3 className="text-lg font-extrabold text-[#0b1c30]">
+                Exporta tu Catálogo a Excel
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Descarga todo tu inventario con precios, variantes, stock y enlaces en formato <strong>.CSV / Excel</strong> con 1 solo clic.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-1">
+              <Link href="/plans" className="w-full">
+                <button
+                  type="button"
+                  className="w-full h-11 bg-[#059669] hover:bg-[#00855d] active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Sparkles size={16} />
+                  <span>Ver Plan Negocio Pro (S/ 39.90)</span>
+                </button>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowProUpgradeModal(false)}
+                className="w-full h-9 text-slate-500 text-xs font-semibold hover:text-slate-800"
+              >
+                Quizás más tarde
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

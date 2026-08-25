@@ -55,6 +55,30 @@ export default function PublicCartPage({ params }: Props) {
       } catch (err) {}
     }
 
+    // Registrar pedido en la base de datos para exportación a Excel en Plan Negocio Pro
+    try {
+      const { recordStoreOrderInFS } = await import('@/lib/firebase/firestore');
+      await recordStoreOrderInFS(store.id, {
+        storeId: store.id,
+        customerName: customerName || 'Cliente WhatsApp',
+        customerAddress: '',
+        paymentMethod: 'WhatsApp',
+        items: items.map(it => ({
+          id: it.product.id,
+          title: it.product.title,
+          price: it.calculatedPrice ?? it.product.price,
+          quantity: it.quantity,
+          selectedOption: it.selectedOptions && it.selectedOptions.length > 0
+            ? it.selectedOptions.map(o => `${o.groupTitle}: ${o.valueName}`).join(', ')
+            : '',
+        })),
+        total: totalPrice,
+        status: 'enviado_whatsapp',
+      });
+    } catch (orderErr) {
+      console.warn('No se pudo registrar orden local:', orderErr);
+    }
+
     const link = generateWhatsAppLink(store, items, customerName, notes);
     window.open(link, '_blank');
   };

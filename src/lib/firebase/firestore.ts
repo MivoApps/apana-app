@@ -767,3 +767,58 @@ export const verifyOtpCodeInFS = async (
     return { success: false, error: error?.message || 'Error al validar el código.' };
   }
 };
+
+// --- SERVICIOS DE PEDIDOS (ORDERS) ---
+
+export interface StoreOrder {
+  id: string;
+  storeId: string;
+  customerName?: string;
+  customerAddress?: string;
+  paymentMethod?: string;
+  items: Array<{
+    id: string;
+    title: string;
+    price: number;
+    quantity: number;
+    selectedOption?: string;
+  }>;
+  total: number;
+  status: 'enviado_whatsapp' | 'entregado' | 'cancelado';
+  createdAt: any;
+}
+
+export const recordStoreOrderInFS = async (
+  storeId: string,
+  orderData: Omit<StoreOrder, 'id' | 'createdAt'>
+): Promise<string> => {
+  try {
+    const orderId = `ord_${Date.now()}`;
+    const orderRef = doc(db, 'stores', storeId, 'orders', orderId);
+    await setDoc(orderRef, {
+      ...orderData,
+      id: orderId,
+      createdAt: serverTimestamp(),
+    });
+    return orderId;
+  } catch (error) {
+    console.error('Error registrando pedido en Firestore:', error);
+    return '';
+  }
+};
+
+export const getStoreOrdersFromFS = async (storeId: string): Promise<StoreOrder[]> => {
+  try {
+    const ordersRef = collection(db, 'stores', storeId, 'orders');
+    const q = query(ordersRef, orderBy('createdAt', 'desc'), limit(100));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    } as StoreOrder));
+  } catch (error) {
+    console.error('Error obteniendo pedidos desde Firestore:', error);
+    return [];
+  }
+};
+
