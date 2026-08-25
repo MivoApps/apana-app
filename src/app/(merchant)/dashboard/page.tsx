@@ -351,9 +351,17 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <div
                 style={{ backgroundColor: activeStore?.primaryColor || '#059669' }}
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold shadow-xs shrink-0"
+                className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold shadow-xs shrink-0 overflow-hidden"
               >
-                <StoreIcon size={24} />
+                {activeStore?.logoUrl ? (
+                  <img
+                    src={activeStore.logoUrl}
+                    alt={storeName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <StoreIcon size={24} />
+                )}
               </div>
               <div className="min-w-0">
                 <h2 className="font-bold text-lg text-[#0b1c30] leading-tight truncate">{storeName}</h2>
