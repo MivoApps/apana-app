@@ -337,16 +337,14 @@ export default function CreateProductPage() {
       .filter(group => group.values.length > 0);
 
     try {
-      const parsedCompare = productCompareAtPrice ? parseFloat(productCompareAtPrice) : undefined;
-      const validCompare = parsedCompare && !isNaN(parsedCompare) && parsedCompare > 0 ? parsedCompare : undefined;
+      const parsedCompare = productCompareAtPrice ? parseFloat(productCompareAtPrice) : null;
+      const validCompare = parsedCompare && !isNaN(parsedCompare) && parsedCompare > 0 ? parsedCompare : null;
 
-      const newProduct = {
+      const newProduct: any = {
         id: `prod_${Date.now()}`,
         storeId,
         title: productName,
         price: parseFloat(productPrice),
-        compareAtPrice: storePlan !== 'gratis' ? validCompare : undefined,
-        badge: storePlan !== 'gratis' ? (productBadge || null) : null,
         description: productDesc,
         imageUrl: primaryImg,
         imageUrls: allImgs,
@@ -355,6 +353,14 @@ export default function CreateProductPage() {
         inStock: true,
         createdAt: Date.now(),
       };
+
+      if (storePlan !== 'gratis' && validCompare) {
+        newProduct.compareAtPrice = validCompare;
+      }
+      if (storePlan !== 'gratis' && productBadge) {
+        newProduct.badge = productBadge;
+      }
+
       await addProductToFS(storeId, newProduct);
 
       const rawCached = sessionStorage.getItem(`apana_cache_prods_${user.uid}`);

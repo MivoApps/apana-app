@@ -256,8 +256,15 @@ export const addProductToFS = async (
     ...productData,
   };
 
+  const cleanPayload: Record<string, any> = {};
+  for (const [key, value] of Object.entries(newProduct)) {
+    if (value !== undefined) {
+      cleanPayload[key] = value;
+    }
+  }
+
   await setDoc(productRef, {
-    ...newProduct,
+    ...cleanPayload,
     createdAt: serverTimestamp(),
   });
 
@@ -285,8 +292,15 @@ export const updateProductInFS = async (
 ): Promise<void> => {
   try {
     const productRef = doc(db, 'stores', storeId, 'products', productId);
+    const cleanUpdates: Record<string, any> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        cleanUpdates[key] = value;
+      }
+    }
+
     await updateDoc(productRef, {
-      ...updates,
+      ...cleanUpdates,
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
