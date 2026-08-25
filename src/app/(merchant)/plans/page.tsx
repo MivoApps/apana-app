@@ -426,7 +426,7 @@ export default function PlansPage() {
               <span className="text-xs text-[#6d7a72]">/ siempre gratis</span>
             </div>
 
-            {/* Features */}
+            {/* Features Plan Gratis */}
             <ul className="flex flex-col gap-2.5 pt-2 border-t border-gray-100 text-sm">
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
@@ -434,19 +434,19 @@ export default function PlansPage() {
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
-                <span><strong>1 imagen</strong> por producto</span>
+                <span><strong>1 foto</strong> por producto</span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
-                <span>Variantes simples (1 grupo de tallas/colores)</span>
+                <span><strong>Checkout inteligente:</strong> captura datos y método de pago</span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
-                <span><strong>Código QR y link listo</strong></span>
+                <span><strong>Código QR y enlaces</strong> para compartir</span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
-                <span><strong>Pedidos por WhatsApp</strong></span>
+                <span>Pedidos directos a tu <strong>WhatsApp</strong></span>
               </li>
               <li className="flex items-center gap-2 text-slate-400 text-xs">
                 <span>• Incluye marca "Creado por APANA"</span>
@@ -500,11 +500,19 @@ export default function PlansPage() {
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
-                <span>Hasta <strong>4 imágenes</strong> por producto</span>
+                <span>Hasta <strong>4 imágenes HD</strong> por producto</span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
-                <span><strong>Variantes con precios diferenciales</strong> (2 grupos)</span>
+                <span><strong>🔥 Precios de oferta tachados (% OFF)</strong></span>
+              </li>
+              <li className="flex items-center gap-2 text-[#0b1c30]">
+                <CheckCircle size={18} className="text-[#059669]" />
+                <span><strong>🏷️ Insignias</strong> (Nuevo / Top Ventas)</span>
+              </li>
+              <li className="flex items-center gap-2 text-[#0b1c30]">
+                <CheckCircle size={18} className="text-[#059669]" />
+                <span><strong>Variantes con sobreprecio</strong> (2 grupos)</span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
@@ -589,7 +597,7 @@ export default function PlansPage() {
               <span className="text-xs text-[#6d7a72]">/ mes</span>
             </div>
 
-            {/* Features */}
+            {/* Features Plan Negocio Pro */}
             <ul className="flex flex-col gap-2.5 pt-2 border-t border-amber-100 relative z-10 text-sm">
               <li className="flex items-center gap-2 text-[#0b1c30] font-medium">
                 <CheckCircle size={18} className="text-amber-600" />
@@ -597,23 +605,19 @@ export default function PlansPage() {
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-amber-600" />
-                <span>Hasta <strong>8 fotos</strong> por producto</span>
+                <span><strong>Todo lo del Plan Emprendedor</strong></span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-amber-600" />
-                <span><strong>Variantes ilimitadas</strong> + foto por variante</span>
+                <span><strong>📊 Exportación a Excel</strong> (Catálogo y Pedidos)</span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-amber-600" />
-                <span><strong>Métricas completas del mes</strong> y analíticas</span>
+                <span>Badge de <strong>Tienda Verificada Oficial</strong> 🛡️</span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-amber-600" />
-                <span>Badge de <strong>Tienda Verificada VIP</strong></span>
-              </li>
-              <li className="flex items-center gap-2 text-[#0b1c30]">
-                <CheckCircle size={18} className="text-amber-600" />
-                <span>Soporte prioritario personalizado</span>
+                <span>Soporte prioritario personalizado por WhatsApp</span>
               </li>
             </ul>
 

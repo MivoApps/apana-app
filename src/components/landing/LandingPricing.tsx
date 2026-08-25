@@ -66,28 +66,28 @@ export const LandingPricing: React.FC = () => {
                 <div className="w-5 h-5 rounded-full bg-[#059669]/10 text-[#059669] flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>1 imagen</strong> por producto</span>
+                <span><strong>1 foto</strong> por producto</span>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-[#059669]/10 text-[#059669] flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span>Variantes simples (1 grupo)</span>
+                <span><strong>Checkout inteligente:</strong> captura datos y método de pago</span>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-[#059669]/10 text-[#059669] flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>Código QR y link listo</strong></span>
+                <span><strong>Código QR y enlaces</strong> para compartir</span>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-[#059669]/10 text-[#059669] flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>Pedidos por WhatsApp</strong></span>
+                <span>Pedidos directos a tu <strong>WhatsApp</strong></span>
               </div>
 
               <div className="flex items-center gap-3 text-slate-500">
@@ -146,21 +146,28 @@ export const LandingPricing: React.FC = () => {
                 <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>Hasta 4 fotos</strong> por producto</span>
+                <span><strong>Hasta 4 fotos HD</strong> por producto</span>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>Opciones con precios</strong> (2 grupos)</span>
+                <span><strong>🔥 Precios de oferta tachados (% OFF)</strong></span>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>Categorías de productos</strong></span>
+                <span><strong>🏷️ Insignias</strong> (Nuevo / Top Ventas)</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0">
+                  <Check size={13} className="stroke-[3]" />
+                </div>
+                <span><strong>Variantes con sobreprecio</strong> (2 grupos)</span>
               </div>
 
               <div className="flex items-center gap-3">
@@ -211,7 +218,7 @@ export const LandingPricing: React.FC = () => {
               <span className="text-sm text-[#6d7a72]">/ mes</span>
             </div>
             <p className="text-xs text-[#3d4a42] mb-6">
-              Para marcas consolidadas que necesitan catálogo ilimitado y múltiples fotos por variante.
+              Para marcas consolidadas que necesitan catálogo ilimitado, exportación a Excel y atención VIP.
             </p>
 
             <div className="pt-6 border-t border-slate-100 space-y-3.5 text-sm text-[#0b1c30]">
@@ -226,35 +233,28 @@ export const LandingPricing: React.FC = () => {
                 <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>Hasta 8 fotos</strong> por producto</span>
+                <span><strong>Todo lo del Plan Emprendedor</strong></span>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>Variantes ilimitadas</strong> + fotos</span>
+                <span><strong>📊 Exportación a Excel</strong> (Catálogo y Pedidos)</span>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>Métricas completas del mes</strong></span>
+                <span>Badge de <strong>Tienda Verificada Oficial</strong> 🛡️</span>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span>Badge de <strong>Tienda Verificada VIP</strong></span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0">
-                  <Check size={13} className="stroke-[3]" />
-                </div>
-                <span>Soporte prioritario personalizado</span>
+                <span>Soporte prioritario personalizado por WhatsApp</span>
               </div>
             </div>
           </div>

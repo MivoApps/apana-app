@@ -462,7 +462,19 @@ export default function PublicStorePage({ params }: Props) {
             ) : (
               filteredProducts.map((product, pIndex) => {
                 const isOutOfStock = product.inStock === false;
-                const isNewProduct = !isOutOfStock && pIndex === 0;
+                const isNewProduct = !isOutOfStock && (product.badge === 'nuevo' || (!product.badge && pIndex === 0));
+                const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price;
+                const discountPercent = hasDiscount
+                  ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
+                  : 0;
+
+                const badgeText = product.badge === 'top'
+                  ? '🔥 Top Ventas'
+                  : product.badge === 'oferta'
+                  ? '🏷️ Oferta'
+                  : isNewProduct
+                  ? '✨ Nuevo'
+                  : null;
 
                 // MODERNA (Horizontal Cards, High Contrast)
                 if (store.themeStyle === 'moderna') {
@@ -480,9 +492,14 @@ export default function PublicStorePage({ params }: Props) {
                             className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${isOutOfStock ? 'grayscale contrast-75' : ''
                               }`}
                           />
-                          {isNewProduct && (
+                          {badgeText && !isOutOfStock && (
                             <span className="absolute top-1.5 left-1.5 bg-[#059669] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">
-                              ✨ Nuevo
+                              {badgeText}
+                            </span>
+                          )}
+                          {hasDiscount && !isOutOfStock && (
+                            <span className="absolute bottom-1.5 right-1.5 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs">
+                              -{discountPercent}%
                             </span>
                           )}
                           {isOutOfStock && (
@@ -510,13 +527,20 @@ export default function PublicStorePage({ params }: Props) {
                               {product.description}
                             </p>
                           )}
-                          <span
-                            className={`font-space-grotesk font-extrabold text-base mt-0.5 ${isOutOfStock ? 'text-slate-400' : ''
-                              }`}
-                            style={!isOutOfStock ? { color: store.primaryColor || '#059669' } : undefined}
-                          >
-                            {formatCurrency(product.price)}
-                          </span>
+                          <div className="flex items-baseline gap-2 mt-0.5">
+                            <span
+                              className={`font-space-grotesk font-extrabold text-base ${isOutOfStock ? 'text-slate-400' : ''
+                                }`}
+                              style={!isOutOfStock ? { color: store.primaryColor || '#059669' } : undefined}
+                            >
+                              {formatCurrency(product.price)}
+                            </span>
+                            {hasDiscount && (
+                              <span className="text-xs text-slate-400 line-through font-medium">
+                                {formatCurrency(product.compareAtPrice!)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </Link>
                     </article>
@@ -539,9 +563,14 @@ export default function PublicStorePage({ params }: Props) {
                             className={`w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 ${isOutOfStock ? 'grayscale contrast-75' : ''
                               }`}
                           />
-                          {isNewProduct && (
+                          {badgeText && !isOutOfStock && (
                             <span className="absolute top-2 left-2 bg-[#059669] text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-xs z-10">
-                              ✨ Nuevo
+                              {badgeText}
+                            </span>
+                          )}
+                          {hasDiscount && !isOutOfStock && (
+                            <span className="absolute top-2 right-2 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-xs z-10">
+                              -{discountPercent}%
                             </span>
                           )}
                           {isOutOfStock && (
@@ -557,13 +586,20 @@ export default function PublicStorePage({ params }: Props) {
                             }`}>
                             {product.title}
                           </h3>
-                          <span
-                            className={`font-playfair italic font-bold text-sm tracking-wide mt-0.5 ${isOutOfStock ? 'text-stone-400' : ''
-                              }`}
-                            style={!isOutOfStock ? { color: store.primaryColor || '#059669' } : undefined}
-                          >
-                            {formatCurrency(product.price)}
-                          </span>
+                          <div className="flex items-baseline justify-center gap-2 mt-0.5">
+                            <span
+                              className={`font-playfair italic font-bold text-sm tracking-wide ${isOutOfStock ? 'text-stone-400' : ''
+                                }`}
+                              style={!isOutOfStock ? { color: store.primaryColor || '#059669' } : undefined}
+                            >
+                              {formatCurrency(product.price)}
+                            </span>
+                            {hasDiscount && (
+                              <span className="text-[11px] text-stone-400 line-through font-sans">
+                                {formatCurrency(product.compareAtPrice!)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </Link>
                     </article>
@@ -584,9 +620,14 @@ export default function PublicStorePage({ params }: Props) {
                           className={`w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 ${isOutOfStock ? 'grayscale contrast-75' : ''
                             }`}
                         />
-                        {isNewProduct && (
+                        {badgeText && !isOutOfStock && (
                           <span className="absolute top-2 left-2 bg-neutral-900/80 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-md shadow-2xs z-10">
-                            Nuevo
+                            {badgeText}
+                          </span>
+                        )}
+                        {hasDiscount && !isOutOfStock && (
+                          <span className="absolute top-2 right-2 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-md shadow-2xs z-10">
+                            -{discountPercent}%
                           </span>
                         )}
                         {isOutOfStock && (
@@ -602,12 +643,19 @@ export default function PublicStorePage({ params }: Props) {
                           }`}>
                           {product.title}
                         </h3>
-                        <span
-                          className={`font-plus-jakarta font-bold text-xs ${isOutOfStock ? 'text-neutral-400' : 'text-neutral-900'
-                            }`}
-                        >
-                          {formatCurrency(product.price)}
-                        </span>
+                        <div className="flex items-baseline gap-1.5">
+                          <span
+                            className={`font-plus-jakarta font-bold text-xs ${isOutOfStock ? 'text-neutral-400' : 'text-neutral-900'
+                              }`}
+                          >
+                            {formatCurrency(product.price)}
+                          </span>
+                          {hasDiscount && (
+                            <span className="text-[10px] text-neutral-400 line-through font-normal">
+                              {formatCurrency(product.compareAtPrice!)}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </Link>
                   </article>

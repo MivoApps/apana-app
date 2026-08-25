@@ -38,6 +38,8 @@ export default function EditProductPage({ params }: Props) {
 
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState('');
+  const [productCompareAtPrice, setProductCompareAtPrice] = useState('');
+  const [productBadge, setProductBadge] = useState<'nuevo' | 'top' | 'oferta' | ''>('');
   const [productDesc, setProductDesc] = useState('');
   const [productOptions, setProductOptions] = useState<ProductOptionGroup[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -84,6 +86,8 @@ export default function EditProductPage({ params }: Props) {
         if (productFromFS) {
           setProductName(productFromFS.title);
           setProductPrice(productFromFS.price.toString());
+          setProductCompareAtPrice(productFromFS.compareAtPrice ? productFromFS.compareAtPrice.toString() : '');
+          setProductBadge((productFromFS.badge as any) || '');
           setProductDesc(productFromFS.description || '');
           setProductOptions(productFromFS.options || []);
           const imgs = productFromFS.imageUrls && productFromFS.imageUrls.length > 0
@@ -249,9 +253,14 @@ export default function EditProductPage({ params }: Props) {
     // Actualizar en Firestore exclusivamente
     if (storeId && user) {
       try {
+        const parsedCompare = productCompareAtPrice ? parseFloat(productCompareAtPrice) : undefined;
+        const validCompare = parsedCompare && !isNaN(parsedCompare) && parsedCompare > 0 ? parsedCompare : null;
+
         await updateProductInFS(storeId, productId, {
           title: productName,
           price: priceNum,
+          compareAtPrice: validCompare as any,
+          badge: productBadge || null,
           description: productDesc,
           imageUrl: primaryImg,
           imageUrls: allImgs,
@@ -487,39 +496,138 @@ export default function EditProductPage({ params }: Props) {
               </div>
             )}
 
-            {/* Precio */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="productPrice" className="text-sm font-semibold text-[#0b1c30]">
-                Precio (S/)
-              </label>
-              <input
-                id="productPrice"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0"
-                required
-                value={productPrice}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  // Evitar que se escriban más de 2 decimales
-                  if (val.includes('.')) {
-                    const parts = val.split('.');
-                    if (parts[1] && parts[1].length > 2) {
-                      setProductPrice(`${parts[0]}.${parts[1].slice(0, 2)}`);
-                      return;
-                    }
-                  }
-                  setProductPrice(val);
-                }}
-                onBlur={() => {
-                  if (productPrice && !isNaN(parseFloat(productPrice))) {
-                    setProductPrice(parseFloat(productPrice).toFixed(2));
-                  }
-                }}
-                className="h-12 w-full bg-white border border-[#bccac0]/50 rounded-lg px-4 text-base sm:text-sm text-[#0b1c30] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
-              />
-            </div>
+            {/* Precios: Actual y Oferta Tachado */}
+            {(() => {
+              const currentP = parseFloat(productPrice) || 0;
+              const compareP = parseFloat(productCompareAtPrice) || 0;
+              const discountPct = (compareP > currentP && currentP > 0)
+                ? Math.round(((compareP - currentP) / compareP) * 100)
+                : 0;
+
+              return (
+                <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Precio Actual */}
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="productPrice" className="text-sm font-semibold text-[#0b1c30] ml-1 flex items-center justify-between">
+                        <span>Precio de Venta</span>
+                        <span className="text-[10px] text-[#059669] font-bold">Principal</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[#6d7a72] font-semibold">
+                          S/
+                        </span>
+                        <input
+                          id="productPrice"
+                          type="number"
+                          inputMode="decimal"
+                          required
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={productPrice}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val.includes('.')) {
+                              const parts = val.split('.');
+                              if (parts[1] && parts[1].length > 2) {
+                                setProductPrice(`${parts[0]}.${parts[1].slice(0, 2)}`);
+                                return;
+                              }
+                            }
+                            setProductPrice(val);
+                          }}
+                          onBlur={() => {
+                            if (productPrice && !isNaN(parseFloat(productPrice))) {
+                              setProductPrice(parseFloat(productPrice).toFixed(2));
+                            }
+                          }}
+                          className="w-full h-12 pl-8 pr-4 bg-white border border-[#bccac0]/50 rounded-xl text-base sm:text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/60 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Precio Antes / Tachado (Opcional) */}
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="productCompareAtPrice" className="text-sm font-semibold text-[#0b1c30] ml-1 flex items-center justify-between">
+                        <span>Precio Antes (Tachado)</span>
+                        <span className="text-[10px] text-slate-400 font-medium">Opcional</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-semibold">
+                          S/
+                        </span>
+                        <input
+                          id="productCompareAtPrice"
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          min="0"
+                          placeholder="ej: 89.00"
+                          value={productCompareAtPrice}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val.includes('.')) {
+                              const parts = val.split('.');
+                              if (parts[1] && parts[1].length > 2) {
+                                setProductCompareAtPrice(`${parts[0]}.${parts[1].slice(0, 2)}`);
+                                return;
+                              }
+                            }
+                            setProductCompareAtPrice(val);
+                          }}
+                          onBlur={() => {
+                            if (productCompareAtPrice && !isNaN(parseFloat(productCompareAtPrice))) {
+                              setProductCompareAtPrice(parseFloat(productCompareAtPrice).toFixed(2));
+                            }
+                          }}
+                          className="w-full h-12 pl-8 pr-4 bg-white border border-[#bccac0]/50 rounded-xl text-base sm:text-sm text-slate-600 placeholder:text-slate-400 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Descuento automático calculado */}
+                  {discountPct > 0 && (
+                    <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold flex items-center justify-between">
+                      <span>🔥 Etiqueta de descuento en catálogo:</span>
+                      <span className="bg-red-600 text-white px-2.5 py-0.5 rounded-full text-xs">
+                        -{discountPct}% OFF
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Selector de Insignia de Producto */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-slate-700 ml-1">
+                      Insignia en el Catálogo (Opcional)
+                    </label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { id: '', label: 'Ninguna', icon: '⚪' },
+                        { id: 'nuevo', label: 'Nuevo', icon: '✨' },
+                        { id: 'top', label: 'Top Ventas', icon: '🔥' },
+                        { id: 'oferta', label: 'Oferta', icon: '🏷️' },
+                      ].map((b) => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => setProductBadge(b.id as any)}
+                          className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer border ${
+                            productBadge === b.id
+                              ? 'bg-[#059669]/10 border-[#059669] text-[#059669] shadow-2xs'
+                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>{b.icon}</span>
+                          <span>{b.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Descripción */}
             <div className="flex flex-col gap-1.5">

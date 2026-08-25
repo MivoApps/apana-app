@@ -28,6 +28,8 @@ export default function PublicCartPage({ params }: Props) {
   const router = useRouter();
   const { items, updateQuantity, removeItem, getTotalPrice, getTotalItems } = useCartStore();
   const [customerName, setCustomerName] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'yape' | 'transferencia' | 'efectivo' | ''>('yape');
   const [notes, setNotes] = useState('');
 
   const resolvedParams = React.use(params);
@@ -45,6 +47,13 @@ export default function PublicCartPage({ params }: Props) {
   const totalPrice = getTotalPrice();
   const totalCount = getTotalItems();
 
+  const getPaymentMethodLabel = () => {
+    if (paymentMethod === 'yape') return 'Yape / Plin';
+    if (paymentMethod === 'transferencia') return 'Transferencia Bancaria';
+    if (paymentMethod === 'efectivo') return 'Efectivo / Contra entrega';
+    return '';
+  };
+
   const handleSendWhatsAppOrder = async () => {
     if (items.length === 0 || !store) return;
 
@@ -55,14 +64,16 @@ export default function PublicCartPage({ params }: Props) {
       } catch (err) {}
     }
 
+    const paymentLabel = getPaymentMethodLabel();
+
     // Registrar pedido en la base de datos para exportación a Excel en Plan Negocio Pro
     try {
       const { recordStoreOrderInFS } = await import('@/lib/firebase/firestore');
       await recordStoreOrderInFS(store.id, {
         storeId: store.id,
-        customerName: customerName || 'Cliente WhatsApp',
-        customerAddress: '',
-        paymentMethod: 'WhatsApp',
+        customerName: customerName.trim() || 'Cliente WhatsApp',
+        customerAddress: customerAddress.trim() || '',
+        paymentMethod: paymentLabel || 'WhatsApp',
         items: items.map(it => ({
           id: it.product.id,
           title: it.product.title,
@@ -79,7 +90,12 @@ export default function PublicCartPage({ params }: Props) {
       console.warn('No se pudo registrar orden local:', orderErr);
     }
 
-    const link = generateWhatsAppLink(store, items, customerName, notes);
+    const link = generateWhatsAppLink(store, items, {
+      customerName: customerName.trim(),
+      customerAddress: customerAddress.trim(),
+      paymentMethod: paymentLabel,
+      notes: notes.trim(),
+    });
     window.open(link, '_blank');
   };
 
@@ -244,6 +260,103 @@ export default function PublicCartPage({ params }: Props) {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Tarjeta de Datos de Entrega y Pago del Cliente */}
+              <div className={`bg-white rounded-2xl p-5 border shadow-xs flex flex-col gap-4 ${
+                isElegant ? 'border-[#E7E2D9]' : isModern ? 'border-slate-200' : 'border-neutral-100'
+              }`}>
+                <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+                  <h3 className={`text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 ${
+                    isElegant ? 'font-playfair text-stone-900 font-bold' : ''
+                  }`}>
+                    <span>📍 Datos para tu Entrega y Pago</span>
+                  </h3>
+                  <span className="text-[10px] text-slate-400 font-medium">Opcional</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Nombre */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-semibold text-slate-600">Tu Nombre</label>
+                    <input
+                      type="text"
+                      placeholder="Ej: María Gómez"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
+                    />
+                  </div>
+
+                  {/* Dirección / Distrito */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-semibold text-slate-600">Distrito / Dirección</label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Miraflores, Lima"
+                      value={customerAddress}
+                      onChange={(e) => setCustomerAddress(e.target.value)}
+                      className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Selector de Método de Pago */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-semibold text-slate-600">¿Cómo prefieres pagar?</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('yape')}
+                      className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
+                        paymentMethod === 'yape'
+                          ? 'bg-[#742284]/10 border-[#742284] text-[#742284] shadow-2xs'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>🟣</span>
+                      <span>Yape / Plin</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('transferencia')}
+                      className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
+                        paymentMethod === 'transferencia'
+                          ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-2xs'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>💳</span>
+                      <span>Transferencia</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('efectivo')}
+                      className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
+                        paymentMethod === 'efectivo'
+                          ? 'bg-emerald-50 border-[#059669] text-[#059669] shadow-2xs'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>💵</span>
+                      <span>Efectivo</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Notas adicionales */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-slate-600">Notas o indicación especial</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Envolver para regalo / Timbre 201"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
+                  />
+                </div>
               </div>
 
               {/* Resumen de Total */}

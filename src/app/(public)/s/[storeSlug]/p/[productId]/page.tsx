@@ -10,7 +10,8 @@ import {
   Check, 
   MessageCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Share2
 } from 'lucide-react';
 import { useAppStore } from '@/lib/app-store';
 import { useCartStore } from '@/lib/cart-store';
@@ -29,8 +30,24 @@ export default function PublicProductDetailPage({ params }: Props) {
   const router = useRouter();
   const { addItem } = useCartStore();
   const [added, setAdded] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedValues, setSelectedValues] = useState<{ [groupId: string]: string }>({});
+
+  const handleShareProduct = () => {
+    if (typeof window === 'undefined') return;
+    if (navigator.share) {
+      navigator.share({
+        title: targetProduct?.title || 'Producto',
+        text: `Mira este producto en ${activeStore?.name || 'la tienda'}: ${targetProduct?.title}`,
+        url: window.location.href,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2000);
+    }
+  };
 
   // Unwrap params
   const resolvedParams = React.use(params);
@@ -237,7 +254,16 @@ export default function PublicProductDetailPage({ params }: Props) {
               </span>
             )}
           </Link>
-          <div className="w-10" />
+          <button
+            type="button"
+            onClick={handleShareProduct}
+            className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
+              isElegant ? 'text-stone-800 hover:bg-stone-200/50' : 'text-[#0b1c30] hover:bg-gray-100'
+            }`}
+            title="Compartir producto"
+          >
+            {copiedShare ? <Check size={18} className="text-[#059669]" /> : <Share2 size={18} />}
+          </button>
         </div>
       </header>
 
@@ -312,7 +338,7 @@ export default function PublicProductDetailPage({ params }: Props) {
           {/* Content Section */}
           <div className="px-6 py-6 flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-              {/* Badge de Categoría y Estado */}
+              {/* Badge de Categoría, Insignia y Estado */}
               <div className="flex items-center gap-2 flex-wrap">
                 {targetProduct.category && (
                   <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${
@@ -323,6 +349,15 @@ export default function PublicProductDetailPage({ params }: Props) {
                       : 'bg-neutral-100 border-neutral-200 text-neutral-700 font-medium'
                   }`}>
                     {targetProduct.category}
+                  </span>
+                )}
+                {targetProduct.badge && targetProduct.inStock !== false && (
+                  <span className="text-[11px] font-bold uppercase tracking-wider bg-[#059669] text-white px-2.5 py-0.5 rounded-md shadow-2xs">
+                    {targetProduct.badge === 'top'
+                      ? '🔥 Top Ventas'
+                      : targetProduct.badge === 'oferta'
+                      ? '🏷️ Oferta'
+                      : '✨ Nuevo'}
                   </span>
                 )}
                 {targetProduct.inStock === false && (
@@ -341,19 +376,44 @@ export default function PublicProductDetailPage({ params }: Props) {
               }`}>
                 {targetProduct.title}
               </h1>
-              <span className={`text-2xl font-bold block mt-0.5 ${
-                targetProduct.inStock === false
-                  ? 'text-slate-400'
-                  : isElegant
-                  ? 'font-playfair italic text-stone-900'
-                  : isModern
-                  ? 'font-space-grotesk font-extrabold'
-                  : 'font-plus-jakarta text-neutral-900'
-              }`}
-                style={targetProduct.inStock !== false && isModern ? { color: brandColor } : undefined}
-              >
-                {formatCurrency(unitPrice)}
-              </span>
+
+              {/* Precios con Descuento */}
+              {(() => {
+                const hasDiscount = targetProduct.compareAtPrice && targetProduct.compareAtPrice > targetProduct.price;
+                const discountPct = hasDiscount
+                  ? Math.round(((targetProduct.compareAtPrice! - targetProduct.price) / targetProduct.compareAtPrice!) * 100)
+                  : 0;
+
+                return (
+                  <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    <span className={`text-2xl sm:text-3xl font-bold block ${
+                      targetProduct.inStock === false
+                        ? 'text-slate-400'
+                        : isElegant
+                        ? 'font-playfair italic text-stone-900'
+                        : isModern
+                        ? 'font-space-grotesk font-extrabold'
+                        : 'font-plus-jakarta text-neutral-900'
+                    }`}
+                      style={targetProduct.inStock !== false && isModern ? { color: brandColor } : undefined}
+                    >
+                      {formatCurrency(unitPrice)}
+                    </span>
+
+                    {hasDiscount && (
+                      <span className="text-base sm:text-lg text-slate-400 line-through font-medium">
+                        {formatCurrency(targetProduct.compareAtPrice!)}
+                      </span>
+                    )}
+
+                    {hasDiscount && discountPct > 0 && (
+                      <span className="bg-red-600 text-white text-xs font-black px-2.5 py-0.5 rounded-full shadow-2xs">
+                        -{discountPct}% OFF
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Selector de Variantes / Opciones */}

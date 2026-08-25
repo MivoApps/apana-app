@@ -65,6 +65,8 @@ export interface Product {
   title: string;
   description?: string;
   price: number;
+  compareAtPrice?: number; // Precio anterior / de oferta tachado (ej: 89.00 vs 59.00)
+  badge?: 'nuevo' | 'top' | 'oferta' | null; // Insignia para destacar en el catálogo
   imageUrl?: string;
   imageUrls?: string[]; // Lista de hasta 4 imágenes (Emprendedor) u 8 (Negocio)
   category?: string; // Categoría asociada al producto
