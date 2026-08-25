@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Script from 'next/script';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowLeft, 
   Rocket, 
@@ -35,6 +35,8 @@ declare global {
 
 export default function PlansPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromPath = searchParams.get('from');
   const { user } = useAuth();
   const [store, setStore] = useState<Store | null>(null);
   const [currentPlan, setCurrentPlan] = useState<string>('gratis');
@@ -241,7 +243,9 @@ export default function PlansPage() {
   };
 
   const handleBack = () => {
-    if (typeof window !== 'undefined' && document.referrer && document.referrer.includes(window.location.host)) {
+    if (fromPath && fromPath.startsWith('/')) {
+      router.push(fromPath);
+    } else if (typeof window !== 'undefined' && window.history.length > 1) {
       router.back();
     } else {
       router.push('/dashboard');

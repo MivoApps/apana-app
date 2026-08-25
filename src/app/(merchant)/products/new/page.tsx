@@ -428,7 +428,7 @@ export default function CreateProductPage() {
                 Tu plan actual es **{storePlan === 'gratis' ? 'Gratis' : 'Emprendedor' }**, el cual tiene un límite de **{productLimit} productos** y actualmente tienes **{productsCount}** publicados.
               </p>
             </div>
-            <Link href="/plans" className="w-full">
+            <Link href="/plans?from=/products/new" className="w-full">
               <Button variant="primary" fullWidth className="bg-emerald-600 text-white font-bold flex items-center justify-center gap-2">
                 <Zap size={16} />
                 Mejorar mi Plan
@@ -614,7 +614,7 @@ export default function CreateProductPage() {
                         </span>
                       </div>
                     </div>
-                    <Link href="/plans">
+                    <Link href="/plans?from=/products/new">
                       <button
                         type="button"
                         className="text-xs font-bold text-[#059669] hover:text-[#00855d] bg-white border border-emerald-300 px-2.5 py-1.5 rounded-lg shadow-2xs shrink-0 cursor-pointer"

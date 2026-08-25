@@ -573,7 +573,7 @@ export default function EditProductPage({ params }: Props) {
                       </span>
                     </div>
                   </div>
-                  <Link href="/plans">
+                  <Link href={`/plans?from=/products/${productId}/edit`}>
                     <button
                       type="button"
                       className="text-xs font-bold text-[#059669] hover:text-[#00855d] bg-white border border-emerald-300 px-2.5 py-1.5 rounded-lg shadow-2xs shrink-0 cursor-pointer"
