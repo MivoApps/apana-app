@@ -75,54 +75,84 @@ export default function OnboardingWizardPage() {
 
   // Verificar Auth, Perfil y Tienda en Firestore al cargar la página
   React.useEffect(() => {
+    let isMounted = true;
+
     const verifyUser = async () => {
       if (authLoading) return;
       if (!user) {
-        router.push('/login');
+        window.location.href = '/login';
         return;
       }
 
-      setIsVerifyingStore(true);
-
-      // 1. Consultar o asegurar perfil de usuario en Firestore
-      const { getUserProfileFromFS, createUserProfileInFS, getStoreByUserIdFromFS, getProductsByStoreIdFromFS } = await import('@/lib/firebase/firestore');
-      let userProfile = await getUserProfileFromFS(user.uid);
-
-      if (!userProfile && user.email) {
+      // Si ya sabemos por caché que tiene tienda, redirigir instantáneamente
+      const cachedStore = sessionStorage.getItem(`apana_cache_store_${user.uid}`);
+      if (cachedStore) {
         try {
-          await createUserProfileInFS({
+          const parsed = JSON.parse(cachedStore);
+          if (parsed?.name) {
+            window.location.href = '/dashboard';
+            return;
+          }
+        } catch (_) {}
+      }
+
+      // Temporizador de seguridad de 1.5 segundos: desbloquear de inmediato el Wizard si Firestore tarda
+      const safetyTimeout = setTimeout(() => {
+        if (isMounted) {
+          setIsVerifyingStore(false);
+        }
+      }, 1500);
+
+      try {
+        const { getUserProfileFromFS, createUserProfileInFS, getStoreByUserIdFromFS } = await import('@/lib/firebase/firestore');
+
+        // Ejecutar consultas en paralelo
+        const [existingStore, userProfile] = await Promise.all([
+          getStoreByUserIdFromFS(user.uid),
+          getUserProfileFromFS(user.uid),
+        ]);
+
+        if (!isMounted) return;
+        clearTimeout(safetyTimeout);
+
+        if (existingStore) {
+          sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(existingStore));
+          window.location.href = '/dashboard';
+          return;
+        }
+
+        // Crear perfil en segundo plano sin frenar al usuario
+        if (!userProfile && user.email) {
+          createUserProfileInFS({
             uid: user.uid,
             name: user.displayName || 'Comerciante APANA',
             email: user.email,
             role: 'merchant',
-          });
-        } catch (err) {
-          console.error('Error auto-creando perfil:', err);
+          }).catch((e) => console.warn('Error auto-creando perfil:', e));
         }
-      }
 
-      // 2. Consultar si la tienda existe en Firestore
-      const existingStore = await getStoreByUserIdFromFS(user.uid);
-
-      if (existingStore) {
-        // La tienda YA EXISTE en Firestore ➔ El Wizard de creación inicial ya concluyó
-        localStorage.removeItem('apana_wizard_step');
-        router.replace('/dashboard');
-        return;
-      } else {
-        // Si no hay tienda creada en Firestore ➔ Resetear todos los campos a vacíos y forzar Paso 1
+        // Si no hay tienda creada ➔ Resetear todos los campos a vacíos y forzar Paso 1
         localStorage.removeItem('apana_wizard_step');
         setBusinessName('');
         setWhatsappPhone('');
         setCategory('');
         setStep(1);
+      } catch (err) {
+        console.warn('Aviso verificando tienda:', err);
+      } finally {
+        if (isMounted) {
+          clearTimeout(safetyTimeout);
+          setIsVerifyingStore(false);
+        }
       }
-
-      setIsVerifyingStore(false);
     };
 
     verifyUser();
-  }, [user, authLoading, router]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, authLoading]);
 
   // Guardar el paso actual cada vez que cambia
   const updateStep = (newStep: number) => {

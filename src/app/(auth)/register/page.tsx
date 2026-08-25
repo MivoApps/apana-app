@@ -159,26 +159,8 @@ export default function RegisterPage() {
         return;
       }
 
-      const { getUserProfileFromFS, createUserProfileInFS, getStoreByUserIdFromFS } = await import('@/lib/firebase/firestore');
-      let userProfile = await getUserProfileFromFS(userCredential.user.uid);
-      if (!userProfile) {
-        const newUserProfile = {
-          uid: userCredential.user.uid,
-          email: userCredential.user.email || '',
-          name: userCredential.user.displayName || 'Comerciante APANA',
-          role: 'merchant' as const,
-        };
-        await createUserProfileInFS(newUserProfile);
-        userProfile = newUserProfile as any;
-      }
-
-      const existingStore = await getStoreByUserIdFromFS(userCredential.user.uid);
-
-      if (existingStore) {
-        window.location.href = '/dashboard';
-      } else {
-        window.location.href = '/store/setup';
-      }
+      // Redirigir al flujo de onboarding de inmediato
+      window.location.href = '/store/setup';
     } catch (err: any) {
       console.error('Error al registrarse/iniciar sesión con Google:', err);
       let errorMsg = 'No se pudo iniciar sesión con Google. Reintenta de nuevo.';
