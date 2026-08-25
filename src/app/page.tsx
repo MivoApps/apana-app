@@ -3,7 +3,9 @@
 import React from 'react';
 import { LandingNavbar } from '@/components/landing/LandingNavbar';
 import { LandingHero } from '@/components/landing/LandingHero';
+import { LandingTicker } from '@/components/landing/LandingTicker';
 import { LandingDevicePreview } from '@/components/landing/LandingDevicePreview';
+import { LandingStoreSimulator } from '@/components/landing/LandingStoreSimulator';
 import { LandingHowItWorks } from '@/components/landing/LandingHowItWorks';
 import { LandingFeaturesMatrix } from '@/components/landing/LandingFeaturesMatrix';
 import { LandingPricing } from '@/components/landing/LandingPricing';
@@ -18,22 +20,30 @@ export default function HomePage() {
 
       {/* Main Content Area */}
       <main className="flex-1">
-        {/* 1. Hero Section */}
+        {/* 1. Hero Section with Live Badges & Ambient Orbs */}
         <LandingHero />
 
-        {/* 2. Interactive Phone Device Preview & Banner Placeholder */}
+        {/* 2. Infinite Continuous Marquee Ticker */}
+        <LandingTicker />
+
+        {/* 3. Interactive Phone Device Preview */}
         <LandingDevicePreview />
 
-        {/* 3. 3-Step Process (How It Works) */}
+        {/* 4. Live Interactive Store & QR Code Simulator */}
+        <div id="simulador">
+          <LandingStoreSimulator />
+        </div>
+
+        {/* 5. 3-Step Process (How It Works) */}
         <LandingHowItWorks />
 
-        {/* 4. Features: The Basics vs The Advanced */}
+        {/* 6. Bento Grid Platform Capabilities */}
         <LandingFeaturesMatrix />
 
-        {/* 5. Clear Pricing Plans (Plan Gratis vs Plan Emprendedor) */}
+        {/* 7. Transparent Pricing Plans */}
         <LandingPricing />
 
-        {/* 6. Frequently Asked Questions */}
+        {/* 8. Frequently Asked Questions */}
         <LandingFAQ />
       </main>
 

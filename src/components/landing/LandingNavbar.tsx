@@ -26,10 +26,10 @@ export const LandingNavbar: React.FC = () => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-200 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled || mobileMenuOpen
-          ? 'bg-white/95 backdrop-blur-md shadow-xs border-b border-[#bccac0]/30'
-          : 'bg-white/60 sm:bg-transparent backdrop-blur-xs border-b border-transparent'
+          ? 'bg-white/85 backdrop-blur-xl shadow-xs border-b border-[#bccac0]/30 py-1'
+          : 'bg-white/40 sm:bg-transparent backdrop-blur-xs border-b border-transparent py-2'
       }`}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
@@ -55,29 +55,36 @@ export const LandingNavbar: React.FC = () => {
         </Link>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#3d4a42]">
+        <nav className="hidden md:flex items-center gap-1 bg-white/70 backdrop-blur-md px-4 py-1.5 rounded-full border border-slate-200/60 shadow-2xs text-xs font-semibold text-[#3d4a42]">
           <a
             href="/#como-funciona"
-            className="hover:text-[#059669] transition-colors cursor-pointer"
+            className="px-3.5 py-1.5 rounded-full hover:text-[#059669] hover:bg-emerald-50/60 transition-all cursor-pointer"
           >
             Cómo funciona
           </a>
           <a
-            href="/#funciones"
-            className="hover:text-[#059669] transition-colors cursor-pointer"
+            href="/#simulador"
+            className="px-3.5 py-1.5 rounded-full hover:text-[#059669] hover:bg-emerald-50/60 transition-all cursor-pointer flex items-center gap-1"
           >
-            Funcionalidades
+            <Sparkles size={12} className="text-[#059669]" />
+            <span>Simulador</span>
+          </a>
+          <a
+            href="/#funciones"
+            className="px-3.5 py-1.5 rounded-full hover:text-[#059669] hover:bg-emerald-50/60 transition-all cursor-pointer"
+          >
+            Funciones
           </a>
           <a
             href="/#planes"
-            className="hover:text-[#059669] transition-colors flex items-center gap-1 cursor-pointer"
+            className="px-3.5 py-1.5 rounded-full hover:text-[#059669] hover:bg-emerald-50/60 transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            Planes y Precios
+            <span>Planes</span>
             <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
           </a>
           <a
             href="/#preguntas"
-            className="hover:text-[#059669] transition-colors cursor-pointer"
+            className="px-3.5 py-1.5 rounded-full hover:text-[#059669] hover:bg-emerald-50/60 transition-all cursor-pointer"
           >
             Preguntas
           </a>
@@ -88,26 +95,26 @@ export const LandingNavbar: React.FC = () => {
           <Link
             href="/s/panaderia-don-jose"
             target="_blank"
-            className="text-xs font-semibold text-[#059669] hover:bg-[#059669]/10 px-3.5 py-2 rounded-lg border border-[#059669]/20 transition-all flex items-center gap-1.5"
+            className="text-xs font-semibold text-[#059669] hover:bg-[#059669]/10 px-3.5 py-2 rounded-xl border border-[#059669]/25 transition-all flex items-center gap-1.5"
           >
             <Sparkles size={14} />
-            Ver Tienda Demo
+            <span>Demo en Vivo</span>
           </Link>
           <Link href={user ? '/dashboard' : '/login'}>
             <Button
               variant="primary"
               size="md"
-              className="font-bold shadow-sm shadow-[#059669]/25 hover:shadow-md hover:shadow-[#059669]/30 transition-all flex items-center gap-1.5 text-sm"
+              className="font-bold shadow-md shadow-[#059669]/20 hover:shadow-lg hover:shadow-[#059669]/30 transition-all flex items-center gap-1.5 text-xs rounded-xl px-4 py-2"
             >
               {user ? (
                 <>
-                  <LayoutDashboard size={16} />
+                  <LayoutDashboard size={15} />
                   <span>Ir a mi Panel</span>
                 </>
               ) : (
                 <>
                   <span>Ingresar como emprendedor</span>
-                  <ArrowRight size={16} />
+                  <ArrowRight size={15} />
                 </>
               )}
             </Button>
@@ -118,16 +125,16 @@ export const LandingNavbar: React.FC = () => {
         <button
           type="button"
           onClick={() => setMobileMenuOpen((prev) => !prev)}
-          className="md:hidden p-2 rounded-lg text-[#0b1c30] hover:bg-black/5 active:bg-black/10 transition-colors cursor-pointer touch-manipulation relative z-50 select-none"
+          className="md:hidden p-2 rounded-xl text-[#0b1c30] hover:bg-black/5 active:bg-black/10 transition-colors cursor-pointer touch-manipulation relative z-50 select-none"
           aria-label="Abrir menú de navegación"
         >
-          {mobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
+          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white/98 backdrop-blur-xl border-b border-[#bccac0]/30 px-6 py-6 shadow-xl animate-in slide-in-from-top-2 duration-200">
+        <div className="md:hidden bg-white/98 backdrop-blur-xl border-b border-[#bccac0]/30 px-6 py-6 shadow-2xl animate-in slide-in-from-top-2 duration-200">
           <nav className="flex flex-col gap-4 text-base font-medium text-[#0b1c30]">
             <a
               href="/#como-funciona"
@@ -135,6 +142,14 @@ export const LandingNavbar: React.FC = () => {
               className="py-1.5 hover:text-[#059669] transition-colors"
             >
               Cómo funciona
+            </a>
+            <a
+              href="/#simulador"
+              onClick={() => setMobileMenuOpen(false)}
+              className="py-1.5 hover:text-[#059669] transition-colors flex items-center gap-1.5"
+            >
+              <Sparkles size={16} className="text-[#059669]" />
+              <span>Simulador de Tienda</span>
             </a>
             <a
               href="/#funciones"
@@ -175,7 +190,7 @@ export const LandingNavbar: React.FC = () => {
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full"
               >
-                <Button variant="primary" fullWidth size="lg" className="h-12 font-bold flex items-center justify-center gap-2">
+                <Button variant="primary" fullWidth size="lg" className="h-12 font-bold flex items-center justify-center gap-2 rounded-xl">
                   {user ? (
                     <>
                       <LayoutDashboard size={18} />

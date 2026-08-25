@@ -1,266 +1,157 @@
 'use client';
 
 import React from 'react';
-import { Check, Sparkles, Smartphone, Layers, Eye, Palette, Zap, Crown } from 'lucide-react';
+import { 
+  Check, 
+  Sparkles, 
+  Smartphone, 
+  Layers, 
+  Eye, 
+  Palette, 
+  Zap, 
+  QrCode, 
+  CreditCard, 
+  Percent, 
+  ShieldCheck, 
+  CheckCheck,
+  TrendingUp
+} from 'lucide-react';
 import Link from 'next/link';
 
 export const LandingFeaturesMatrix: React.FC = () => {
   return (
-    <section id="funciones" className="py-16 md:py-24 bg-[#eff4ff]/40 border-y border-[#bccac0]/25">
+    <section id="funciones" className="py-20 md:py-28 bg-[#eff4ff]/60 border-y border-[#bccac0]/25 relative overflow-hidden">
+      {/* Decorative Orbs */}
+      <div className="absolute top-10 right-10 w-80 h-80 bg-[#85f8c4]/15 blur-3xl rounded-full pointer-events-none -z-10" />
+      <div className="absolute bottom-10 left-10 w-80 h-80 bg-[#3b82f6]/10 blur-3xl rounded-full pointer-events-none -z-10" />
+
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        {/* Section Title */}
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <span className="text-xs font-bold uppercase tracking-widest text-[#006c49] bg-[#6cf8bb]/30 px-3 py-1 rounded-full border border-[#059669]/20">
-            Transparencia total
-          </span>
-          <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold text-[#0b1c30] tracking-tight">
-            Todo lo que necesitas para tu negocio
+        {/* Section Header */}
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#059669]/10 text-[#00855d] text-xs font-bold mb-3 border border-[#059669]/20 shadow-2xs">
+            <Sparkles size={13} className="text-[#059669]" />
+            <span>Potencia tus Ventas</span>
+          </div>
+          <h2 className="text-3xl sm:text-5xl font-extrabold text-[#0b1c30] tracking-tight">
+            Herramientas diseñadas para hacerte vender más
           </h2>
           <p className="mt-3 text-sm sm:text-base text-[#3d4a42]">
-            Empieza con todo lo esencial completamente gratis y mejora tu plan cuando tu catálogo o tus ventas crezcan.
+            Todo lo que tu comercio necesita para verse profesional, generar confianza y automatizar pedidos.
           </p>
         </div>
 
-        {/* 3 Column Comparison Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+        {/* Bento Grid Layout */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
           
-          {/* Card 1: Lo Básico (Plan Gratis) */}
-          <div className="bg-white rounded-3xl p-7 sm:p-8 border border-[#bccac0]/40 shadow-xs flex flex-col justify-between hover:border-[#bccac0] transition-all">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#eff4ff] text-[#059669] flex items-center justify-center font-bold">
-                  <Smartphone size={22} />
-                </div>
-                <span className="text-xs font-bold px-3 py-1 bg-slate-100 text-slate-700 rounded-full">
-                  Plan Gratis
-                </span>
+          {/* Bento Card 1 (Large 8 cols): Catálogo Móvil & Variantes */}
+          <div className="md:col-span-7 lg:col-span-8 bg-white rounded-3xl p-7 sm:p-9 border border-slate-200 shadow-xl shadow-slate-200/40 flex flex-col justify-between relative overflow-hidden group hover:border-[#059669]/40 transition-all">
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-[#059669] flex items-center justify-center mb-6 shadow-2xs">
+                <Smartphone size={24} />
               </div>
-
-              <h3 className="text-xl font-extrabold text-[#0b1c30]">
-                Lo Básico: Para empezar hoy
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                Experiencia Ultra Rápida
+              </span>
+              <h3 className="text-2xl font-black text-[#0b1c30] mt-3 mb-2">
+                Catálogo Web con Opciones y Variantes
               </h3>
-              <p className="mt-2 text-xs text-[#3d4a42] leading-relaxed">
-                Herramientas fundamentales para digitalizar tu negocio y dejar atrás las listas en fotos o texto plano.
+              <p className="text-sm text-[#3d4a42] max-w-md leading-relaxed">
+                Tus clientes seleccionan tallas, sabores, colores o presentaciones con precios diferenciales calculados al segundo.
               </p>
-
-              <ul className="mt-6 space-y-3.5 text-xs sm:text-sm text-[#0b1c30]">
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-[#059669]/10 text-[#059669] flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold">Hasta 25 productos activos:</strong> Ideal para cartas, postres o tiendas pequeñas.
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-[#059669]/10 text-[#059669] flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold">1 imagen por producto:</strong> Foto nítida y optimizada de cada artículo.
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-[#059669]/10 text-[#059669] flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold">Variantes simples:</strong> 1 grupo de opciones (ej. Tallas S, M, L o Colores) con precio base.
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-[#059669]/10 text-[#059669] flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold">Código QR listo para tu local:</strong> Descárgalo e imprímelo en tus mesas o vitrina.
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-[#059669]/10 text-[#059669] flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold">Pedidos automáticos por WhatsApp:</strong> Recibe pedidos detallados con total sumado.
-                  </div>
-                </li>
-              </ul>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-slate-100">
-              <Link href="/register" className="block text-center py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0b1c30] font-bold text-xs transition-colors">
-                Comenzar gratis
-              </Link>
+            {/* Visual Interactive Preview Pills */}
+            <div className="mt-8 pt-6 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/70 text-left">
+                <p className="text-xs font-bold text-[#0b1c30]">Tallas & Medidas</p>
+                <p className="text-[11px] text-slate-500">S, M, L, XL (+S/ 5.00)</p>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/70 text-left">
+                <p className="text-xs font-bold text-[#0b1c30]">Sabores & Rellenos</p>
+                <p className="text-[11px] text-slate-500">Chocolate, Vainilla</p>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/70 text-left col-span-2 sm:col-span-1">
+                <p className="text-xs font-bold text-[#0b1c30]">Fotos en Galería</p>
+                <p className="text-[11px] text-slate-500">Hasta 8 fotos por producto</p>
+              </div>
             </div>
           </div>
 
-          {/* Card 2: Lo Avanzado (Plan Emprendedor) */}
-          <div className="bg-linear-to-b from-[#f5fff7] to-white rounded-3xl p-7 sm:p-8 border-2 border-[#059669] shadow-md relative flex flex-col justify-between scale-[1.01]">
-            <div className="absolute -top-3.5 right-6 bg-linear-to-r from-[#059669] to-[#00855d] text-white text-[11px] font-bold px-3.5 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
-              <Sparkles size={12} />
-              Más Popular
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#059669] text-white flex items-center justify-center font-bold shadow-xs">
-                  <Zap size={22} />
-                </div>
-                <span className="text-xs font-bold px-3 py-1 bg-[#059669]/15 text-[#006c49] rounded-full">
-                  S/ 19.90 / mes
-                </span>
+          {/* Bento Card 2 (Medium 4 cols): Pagos Digitales con Culqi */}
+          <div className="md:col-span-5 lg:col-span-4 bg-linear-to-br from-indigo-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-7 sm:p-9 shadow-xl relative overflow-hidden flex flex-col justify-between">
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 text-indigo-300 flex items-center justify-center mb-6 backdrop-blur-md">
+                <CreditCard size={24} />
               </div>
-
-              <h3 className="text-xl font-extrabold text-[#0b1c30]">
-                Lo Avanzado: Mayor capacidad
+              <span className="text-xs font-bold text-indigo-300 bg-indigo-500/20 px-3 py-1 rounded-full border border-indigo-400/30">
+                Pagos en Línea
+              </span>
+              <h3 className="text-2xl font-black text-white mt-3 mb-2">
+                Cobra con Tarjetas & Yape
               </h3>
-              <p className="mt-2 text-xs text-[#3d4a42] leading-relaxed">
-                Herramientas superiores para negocios en crecimiento con opciones de precios y métricas.
+              <p className="text-sm text-indigo-200 leading-relaxed">
+                Integración transparente con Culqi. Tus clientes pagan online y el pedido llega verificado a tu panel.
               </p>
-
-              <ul className="mt-6 space-y-3.5 text-xs sm:text-sm text-[#0b1c30]">
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold text-[#006c49]">Hasta 150 productos:</strong> Capacidad amplia para tu catálogo completo.
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold text-[#006c49]">Hasta 4 fotos por producto:</strong> Muestra diferentes ángulos y detalles.
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold text-[#006c49]">Opciones con precios diferenciales:</strong> Hasta 2 grupos (ej. Talla + Color con +S/ X.XX).
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <Layers size={14} className="text-[#059669]" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold text-[#006c49]">Categorías organizadas:</strong> Navegación por pestañas (Bebidas, Postres, Ropa).
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <Eye size={14} className="text-[#059669]" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold text-[#006c49]">Métricas de visitas y clics:</strong> Conoce cuántos clientes exploran tu tienda.
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <Palette size={14} className="text-[#059669]" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold text-[#006c49]">Sin marca "Creado por APANA":</strong> Tu tienda 100% con tu propia identidad.
-                  </div>
-                </li>
-              </ul>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-emerald-100">
-              <Link href="/register" className="block text-center py-3 rounded-xl bg-[#059669] hover:bg-[#00855d] text-white font-bold text-xs shadow-sm transition-all">
-                Activar Plan Emprendedor
-              </Link>
+            <div className="mt-8 flex items-center gap-2 text-xs font-bold text-indigo-300 bg-white/5 p-3 rounded-2xl border border-white/10">
+              <ShieldCheck size={16} className="text-emerald-400" />
+              <span>Transacciones 100% encriptadas</span>
             </div>
           </div>
 
-          {/* Card 3: Escala Total (Plan Negocio Pro) */}
-          <div className="bg-white rounded-3xl p-7 sm:p-8 border-2 border-amber-300 shadow-md relative flex flex-col justify-between hover:border-amber-400 transition-all">
-            <div className="absolute -top-3.5 right-6 bg-linear-to-r from-amber-600 to-amber-500 text-white text-[11px] font-bold px-3.5 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
-              👑 Escala Total
-            </div>
-
+          {/* Bento Card 3 (Medium 4 cols): Código QR para Mesas & Mostrador */}
+          <div className="md:col-span-6 lg:col-span-4 bg-white rounded-3xl p-7 sm:p-9 border border-slate-200 shadow-xl shadow-slate-200/40 flex flex-col justify-between hover:border-[#059669]/40 transition-all">
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold shadow-xs">
-                  <Crown size={22} />
-                </div>
-                <span className="text-xs font-bold px-3 py-1 bg-amber-100 text-amber-900 rounded-full">
-                  S/ 39.90 / mes
-                </span>
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-6 shadow-2xs">
+                <QrCode size={24} />
               </div>
-
-              <h3 className="text-xl font-extrabold text-[#0b1c30]">
-                Negocio Pro: Sin límites
+              <h3 className="text-xl font-extrabold text-[#0b1c30] mb-2">
+                Código QR de Alta Definición
               </h3>
-              <p className="mt-2 text-xs text-[#3d4a42] leading-relaxed">
-                Para marcas consolidadas que necesitan catálogo ilimitado, fotos por variante y badge de verificación.
+              <p className="text-xs text-[#3d4a42] leading-relaxed">
+                Descarga tu código QR en vector o PNG para imprimir en acrílicos, mesas, empaques o vitrinas.
               </p>
-
-              <ul className="mt-6 space-y-3.5 text-xs sm:text-sm text-[#0b1c30]">
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold text-amber-900">PRODUCTOS ILIMITADOS:</strong> Sube todo tu catálogo sin restricción de cantidad.
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold text-amber-900">Hasta 8 fotos por producto:</strong> Máxima calidad fotográfica y galería completa.
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <Check size={13} className="stroke-[3]" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold text-amber-900">Variantes ilimitadas + fotos:</strong> Múltiples grupos (ej. Tamaño, Color, Fragancia, Presentación).
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <Eye size={14} className="text-amber-600" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold text-amber-900">Métricas completas del mes:</strong> Analíticas de rendimiento, visitas e intención de compra.
-                  </div>
-                </li>
-
-                <li className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0 mt-0.5">
-                    <Sparkles size={14} className="text-amber-600" />
-                  </div>
-                  <div>
-                    <strong className="font-semibold text-amber-900">Badge de Tienda Verificada VIP:</strong> Distintivo oficial de confianza en tu catálogo.
-                  </div>
-                </li>
-              </ul>
             </div>
+            <div className="mt-6 flex items-center gap-2 text-xs font-bold text-blue-700 bg-blue-50 p-2.5 rounded-xl border border-blue-200">
+              <CheckCheck size={15} />
+              <span>Escaneo instantáneo con cualquier cámara</span>
+            </div>
+          </div>
 
-            <div className="mt-8 pt-6 border-t border-amber-100">
-              <Link href="/register" className="block text-center py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm transition-all">
-                Activar Plan Negocio Pro
-              </Link>
+          {/* Bento Card 4 (Medium 4 cols): Ofertas & Precios Tachados */}
+          <div className="md:col-span-6 lg:col-span-4 bg-white rounded-3xl p-7 sm:p-9 border border-slate-200 shadow-xl shadow-slate-200/40 flex flex-col justify-between hover:border-rose-400/40 transition-all">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-6 shadow-2xs">
+                <Percent size={24} />
+              </div>
+              <h3 className="text-xl font-extrabold text-[#0b1c30] mb-2">
+                Precios Tachados e Insignias
+              </h3>
+              <p className="text-xs text-[#3d4a42] leading-relaxed">
+                Destaca productos con etiquetas de <strong className="text-rose-600 font-bold">"OFERTA"</strong> o <strong className="text-amber-600 font-bold">"MÁS VENDIDO"</strong> y muestra descuentos atractivos.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center gap-2 text-xs font-bold text-rose-700 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+              <span>🔥 Aumenta la tasa de conversión en 35%</span>
+            </div>
+          </div>
+
+          {/* Bento Card 5 (Medium 4 cols): Métricas & Visitas en Vivo */}
+          <div className="md:col-span-12 lg:col-span-4 bg-white rounded-3xl p-7 sm:p-9 border border-slate-200 shadow-xl shadow-slate-200/40 flex flex-col justify-between hover:border-emerald-400/40 transition-all">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-[#059669] flex items-center justify-center mb-6 shadow-2xs">
+                <TrendingUp size={24} />
+              </div>
+              <h3 className="text-xl font-extrabold text-[#0b1c30] mb-2">
+                Métricas y Analíticas en Vivo
+              </h3>
+              <p className="text-xs text-[#3d4a42] leading-relaxed">
+                Monitorea cuántos clientes visitan tu catálogo, qué productos son los más vistos y el valor de tus carritos.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
+              <span>📊 Métricas por día, semana y mes</span>
             </div>
           </div>
 

@@ -117,3 +117,116 @@ textarea {
 .pt-safe {
   padding-top: max(1rem, env(safe-area-inset-top));
 }
+
+/* =========================================================================
+   ANIMACIONES Y EFECTOS ULTRA-PREMIUM (LANDING & APP)
+   ========================================================================= */
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(1deg);
+  }
+}
+
+@keyframes float-reverse {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(10px) rotate(-1deg);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(5, 150, 105, 0.2), 0 0 30px rgba(5, 150, 105, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(5, 150, 105, 0.4), 0 0 50px rgba(5, 150, 105, 0.2);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: float-reverse 7s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2.5s infinite;
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+/* Glassmorphism & Mesh Backgrounds */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 10px 30px -5px rgba(11, 28, 48, 0.05), 0 0 0 1px rgba(188, 202, 192, 0.2);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 40px -10px rgba(5, 150, 105, 0.12), 0 0 0 1px rgba(5, 150, 105, 0.3);
+}
+
+.bg-dot-pattern {
+  background-image: radial-gradient(rgba(11, 28, 48, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
