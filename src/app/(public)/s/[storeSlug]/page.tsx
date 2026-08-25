@@ -103,6 +103,12 @@ export default function PublicStorePage({ params }: Props) {
         const fetchedProducts = await getProductsByStoreIdFromFS(fetchedStore.id);
         setFsProducts(fetchedProducts);
         sessionStorage.setItem(`apana_public_prods_${targetSlug}`, JSON.stringify(fetchedProducts));
+      } else {
+        // Si la tienda fue borrada en Firestore, limpiar caché y forzar vista no encontrada
+        setFsStore(null);
+        setFsProducts([]);
+        sessionStorage.removeItem(`apana_public_store_${targetSlug}`);
+        sessionStorage.removeItem(`apana_public_prods_${targetSlug}`);
       }
       setIsFetchingFS(false);
     };
