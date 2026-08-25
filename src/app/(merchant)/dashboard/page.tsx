@@ -38,11 +38,38 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
   const { stores, activeStoreSlug } = useAppStore();
-  const [isLoading, setIsLoading] = React.useState(true);
+  
+  // Rehidratación instantánea (0ms) desde caché de sesión
+  const [fsStore, setFsStore] = React.useState<Store | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('apana_active_store');
+        if (cached) return JSON.parse(cached);
+      } catch (_) {}
+    }
+    return null;
+  });
+
+  const [fsProducts, setFsProducts] = React.useState<Product[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('apana_active_products');
+        if (cached) return JSON.parse(cached);
+      } catch (_) {}
+    }
+    return [];
+  });
+
+  // Si ya tenemos la tienda en caché, no bloqueamos la vista con un spinner
+  const [isLoading, setIsLoading] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return !sessionStorage.getItem('apana_active_store');
+    }
+    return true;
+  });
+
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isVerifyModalOpen, setIsVerifyModalOpen] = React.useState(false);
-  const [fsStore, setFsStore] = React.useState<Store | null>(null);
-  const [fsProducts, setFsProducts] = React.useState<Product[]>([]);
   const [analyticsData, setAnalyticsData] = React.useState<{ label: string; visits: number; clicks: number }[]>([]);
   const [copiedLink, setCopiedLink] = React.useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = React.useState(false);
@@ -65,50 +92,97 @@ export default function DashboardPage() {
   };
 
   React.useEffect(() => {
+    let isMounted = true;
+
     const checkAuthAndSync = async () => {
       if (authLoading) return;
 
       // 1. Si no hay usuario autenticado en Firebase ➔ Redirigir a Login
       if (!user) {
-        router.push('/login');
+        window.location.href = '/login';
         return;
       }
 
       // Si es el SuperAdmin (Dueño de APANA) ➔ Redirigir automáticamente a la consola de administración
       const userEmail = user.email?.toLowerCase().trim() || '';
       if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
-        router.push('/admin');
+        window.location.href = '/admin';
         return;
       }
 
-      setIsLoading(true);
-      // 2. Consultar si tiene tienda creada en Firestore
-      const storeFromFS = await getStoreByUserIdFromFS(user.uid);
+      // Temporizador de seguridad de 1.5s para no congelar la pantalla en conexiones lentas
+      const safetyTimer = setTimeout(() => {
+        if (isMounted) setIsLoading(false);
+      }, 1500);
 
-      if (!storeFromFS) {
-        // Si el usuario existe pero borró/no tiene tienda ➔ Redirigir al Wizard de Setup
-        router.push('/store/setup');
-        return;
+      try {
+        // Intentar leer caché específico del usuario
+        if (typeof window !== 'undefined' && !fsStore) {
+          const userCache = sessionStorage.getItem(`apana_cache_store_${user.uid}`);
+          if (userCache) {
+            try {
+              const parsed = JSON.parse(userCache);
+              if (parsed?.name) {
+                setFsStore(parsed);
+                setIsLoading(false);
+              }
+            } catch (_) {}
+          }
+        }
+
+        // Consultar tienda y productos en Firestore
+        const storeFromFS = await getStoreByUserIdFromFS(user.uid);
+
+        if (!isMounted) return;
+
+        if (!storeFromFS) {
+          clearTimeout(safetyTimer);
+          window.location.href = '/store/setup';
+          return;
+        }
+
+        setFsStore(storeFromFS);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('apana_active_store', JSON.stringify(storeFromFS));
+          sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(storeFromFS));
+        }
+
+        // Traer productos
+        const productsFromFS = await getProductsByStoreIdFromFS(storeFromFS.id);
+        if (isMounted) {
+          setFsProducts(productsFromFS);
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('apana_active_products', JSON.stringify(productsFromFS));
+          }
+        }
+
+        // Cargar analíticas de fondo si corresponde
+        if (storeFromFS.plan === 'emprendedor' || storeFromFS.plan === 'negocio') {
+          import('@/lib/firebase/firestore').then(async ({ getStoreAnalyticsLast7Days }) => {
+            try {
+              const data = await getStoreAnalyticsLast7Days(storeFromFS.id);
+              if (isMounted) setAnalyticsData(data);
+            } catch (_) {}
+          });
+        }
+      } catch (err) {
+        console.warn('Aviso sincronizando dashboard:', err);
+      } finally {
+        if (isMounted) {
+          clearTimeout(safetyTimer);
+          setIsLoading(false);
+        }
       }
-
-      setFsStore(storeFromFS);
-      const productsFromFS = await getProductsByStoreIdFromFS(storeFromFS.id);
-      setFsProducts(productsFromFS);
-
-      // Cargar analíticas de los últimos 7 días si es Plan Emprendedor
-      if (storeFromFS.plan === 'emprendedor' || storeFromFS.plan === 'negocio') {
-        const { getStoreAnalyticsLast7Days } = await import('@/lib/firebase/firestore');
-        const data = await getStoreAnalyticsLast7Days(storeFromFS.id);
-        setAnalyticsData(data);
-      }
-
-      setIsLoading(false);
     };
 
     checkAuthAndSync();
-  }, [user, authLoading, router]);
 
-  if (authLoading || isLoading) {
+    return () => {
+      isMounted = false;
+    };
+  }, [user, authLoading]);
+
+  if (authLoading || (isLoading && !fsStore)) {
     return (
       <div className="min-h-screen bg-[#f8f9ff] flex flex-col items-center justify-center text-[#0b1c30] gap-3">
         <div className="w-10 h-10 border-4 border-[#059669] border-t-transparent rounded-full animate-spin" />
