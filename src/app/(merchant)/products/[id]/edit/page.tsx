@@ -56,52 +56,72 @@ export default function EditProductPage({ params }: Props) {
   const [fsStore, setFsStore] = useState<any>(null);
 
   React.useEffect(() => {
+    let isMounted = true;
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) setIsLoading(false);
+    }, 1500);
+
     const loadProductData = async () => {
-      if (!user) return;
-      setIsLoading(true);
-
-      const activeStore = stores[activeStoreSlug];
-      let currentStoreId = activeStore?.id;
-
-      if (!currentStoreId) {
-        const storeFromFS = await getStoreByUserIdFromFS(user.uid);
-        if (storeFromFS) {
-          setFsStore(storeFromFS);
-          currentStoreId = storeFromFS.id;
-          setStorePlan(storeFromFS.plan || 'gratis');
-          setStoreCategories(storeFromFS.categories || []);
-        }
-      } else {
-        const storeFromFS = await getStoreByUserIdFromFS(user.uid);
-        if (storeFromFS) {
-          setFsStore(storeFromFS);
-          setStorePlan(storeFromFS.plan || 'gratis');
-          setStoreCategories(storeFromFS.categories || []);
-        }
+      if (!user) {
+        if (isMounted) setIsLoading(false);
+        return;
       }
 
-      if (currentStoreId) {
-        setStoreId(currentStoreId);
-        const productFromFS = await getProductByIdFromFS(currentStoreId, productId);
-        if (productFromFS) {
-          setProductName(productFromFS.title);
-          setProductPrice(productFromFS.price.toString());
-          setProductCompareAtPrice(productFromFS.compareAtPrice ? productFromFS.compareAtPrice.toString() : '');
-          setProductBadge((productFromFS.badge as any) || '');
-          setProductDesc(productFromFS.description || '');
-          setProductOptions(productFromFS.options || []);
-          const imgs = productFromFS.imageUrls && productFromFS.imageUrls.length > 0
-            ? productFromFS.imageUrls
-            : [productFromFS.imageUrl || ''];
-          setImagePreviews(imgs);
-          setInStock(productFromFS.inStock !== false);
-          setProductCategory(productFromFS.category || '');
+      try {
+        const activeStore = stores[activeStoreSlug];
+        let currentStoreId = activeStore?.id;
+
+        if (!currentStoreId) {
+          const storeFromFS = await getStoreByUserIdFromFS(user.uid);
+          if (storeFromFS && isMounted) {
+            setFsStore(storeFromFS);
+            currentStoreId = storeFromFS.id;
+            setStorePlan(storeFromFS.plan || 'gratis');
+            setStoreCategories(storeFromFS.categories || []);
+          }
+        } else {
+          const storeFromFS = await getStoreByUserIdFromFS(user.uid);
+          if (storeFromFS && isMounted) {
+            setFsStore(storeFromFS);
+            setStorePlan(storeFromFS.plan || 'gratis');
+            setStoreCategories(storeFromFS.categories || []);
+          }
+        }
+
+        if (currentStoreId && isMounted) {
+          setStoreId(currentStoreId);
+          const productFromFS = await getProductByIdFromFS(currentStoreId, productId);
+          if (productFromFS && isMounted) {
+            setProductName(productFromFS.title);
+            setProductPrice(productFromFS.price.toString());
+            setProductCompareAtPrice(productFromFS.compareAtPrice ? productFromFS.compareAtPrice.toString() : '');
+            setProductBadge((productFromFS.badge as any) || '');
+            setProductDesc(productFromFS.description || '');
+            setProductOptions(productFromFS.options || []);
+            const imgs = productFromFS.imageUrls && productFromFS.imageUrls.length > 0
+              ? productFromFS.imageUrls
+              : [productFromFS.imageUrl || ''];
+            setImagePreviews(imgs);
+            setInStock(productFromFS.inStock !== false);
+            setProductCategory(productFromFS.category || '');
+          }
+        }
+      } catch (err) {
+        console.warn('Aviso cargando producto para editar:', err);
+      } finally {
+        if (isMounted) {
+          clearTimeout(safetyTimer);
+          setIsLoading(false);
         }
       }
-      setIsLoading(false);
     };
 
     loadProductData();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
+    };
   }, [user, stores, activeStoreSlug, productId]);
 
   const handleImageAppend = async (e: React.ChangeEvent<HTMLInputElement>) => {

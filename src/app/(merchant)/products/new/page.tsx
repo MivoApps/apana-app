@@ -57,7 +57,7 @@ export default function CreateProductPage() {
     router.replace('/dashboard');
   };
 
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState('');
   const [productCompareAtPrice, setProductCompareAtPrice] = useState('');
@@ -68,32 +68,100 @@ export default function CreateProductPage() {
   const [imageInfo, setImageInfo] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [fsStore, setFsStore] = useState<any>(null);
+  // Inicialización instantánea con caché de sesión (0ms)
+  const [fsStore, setFsStore] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('apana_active_store');
+        if (cached) return JSON.parse(cached);
+      } catch (_) {}
+    }
+    return null;
+  });
+
+  const [storePlan, setStorePlan] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('apana_active_store');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return parsed?.plan || 'gratis';
+        }
+      } catch (_) {}
+    }
+    return 'gratis';
+  });
+
+  const [storeCategories, setStoreCategories] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('apana_active_store');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return parsed?.categories || [];
+        }
+      } catch (_) {}
+    }
+    return [];
+  });
+
   const [productsCount, setProductsCount] = useState<number>(0);
-  const [storePlan, setStorePlan] = useState<string>('gratis');
-  const [storeCategories, setStoreCategories] = useState<string[]>([]);
   const [productCategory, setProductCategory] = useState('');
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [checkingLimit, setCheckingLimit] = useState(true);
+
+  // Si ya tenemos datos en caché, no bloqueamos la vista con un spinner
+  const [checkingLimit, setCheckingLimit] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !sessionStorage.getItem('apana_active_store');
+    }
+    return true;
+  });
 
   React.useEffect(() => {
+    let isMounted = true;
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) setCheckingLimit(false);
+    }, 1000);
+
     const fetchStoreAndProducts = async () => {
-      if (user) {
+      if (authLoading) return;
+      if (!user) {
+        if (isMounted) setCheckingLimit(false);
+        return;
+      }
+
+      try {
         const { getStoreByUserIdFromFS, getProductsByStoreIdFromFS } = await import('@/lib/firebase/firestore');
         const storeFromFS = await getStoreByUserIdFromFS(user.uid);
-        if (storeFromFS) {
+        if (storeFromFS && isMounted) {
           setFsStore(storeFromFS);
           setStorePlan(storeFromFS.plan || 'gratis');
           setStoreCategories(storeFromFS.categories || []);
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('apana_active_store', JSON.stringify(storeFromFS));
+            sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(storeFromFS));
+          }
           const prods = await getProductsByStoreIdFromFS(storeFromFS.id);
-          setProductsCount(prods.length);
+          if (isMounted) setProductsCount(prods.length);
         }
-        setCheckingLimit(false);
+      } catch (e) {
+        console.warn('Aviso verificando límites:', e);
+      } finally {
+        if (isMounted) {
+          clearTimeout(safetyTimer);
+          setCheckingLimit(false);
+        }
       }
     };
+
     fetchStoreAndProducts();
-  }, [user]);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
+    };
+  }, [user, authLoading]);
 
   const maxImagesLimit = storePlan === 'gratis' ? 1 : storePlan === 'emprendedor' ? 4 : 8;
   const productLimit = storePlan === 'gratis' ? 25 : storePlan === 'emprendedor' ? 150 : 999999;
