@@ -283,6 +283,17 @@ export default function ProductGalleryPage() {
                 </Link>
               )}
             </div>
+
+            {products.length > maxProducts && (
+              <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex flex-col gap-1 mt-1">
+                <span className="font-bold flex items-center gap-1.5 text-amber-950">
+                  <span>⚠️ Límite de productos excedido ({products.length} de {maxProducts} permitidos)</span>
+                </span>
+                <span className="text-[11px] leading-relaxed text-amber-900">
+                  Al estar en {isFreePlan ? 'Plan Gratis' : 'Plan Emprendedor'}, tu catálogo público solo mostrará los primeros {maxProducts} productos. Mejora tu plan para que todo tu catálogo sea visible.
+                </span>
+              </div>
+            )}
           </div>
         )}
 

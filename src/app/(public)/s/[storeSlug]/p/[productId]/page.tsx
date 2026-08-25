@@ -103,9 +103,15 @@ export default function PublicProductDetailPage({ params }: Props) {
   const allProducts = fsProducts;
   const targetProduct = allProducts.find((p) => p.id === productId);
 
-  const productImages: string[] = targetProduct?.imageUrls && targetProduct.imageUrls.filter(Boolean).length > 0
+  const isPaidStore = activeStore?.plan === 'emprendedor' || activeStore?.plan === 'negocio';
+  const isProStore = activeStore?.plan === 'negocio';
+  const maxImagesAllowed = isProStore ? 8 : isPaidStore ? 4 : 1;
+
+  const rawImages: string[] = targetProduct?.imageUrls && targetProduct.imageUrls.filter(Boolean).length > 0
     ? targetProduct.imageUrls.filter(Boolean) as string[]
     : [targetProduct?.imageUrl || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80'];
+
+  const productImages: string[] = rawImages.slice(0, maxImagesAllowed);
 
   const options: ProductOptionGroup[] = targetProduct?.options || [];
   const selectedOptionsList: SelectedOption[] = options.map((group: ProductOptionGroup) => {
@@ -114,7 +120,7 @@ export default function PublicProductDetailPage({ params }: Props) {
     return {
       groupTitle: group.title,
       valueName: valObj?.name || '',
-      priceDifference: valObj?.priceDifference || 0,
+      priceDifference: isPaidStore ? (valObj?.priceDifference || 0) : 0,
     };
   }).filter(o => o.valueName.trim() !== '');
 

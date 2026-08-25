@@ -175,11 +175,16 @@ export default function PublicStorePage({ params }: Props) {
 
   const totalCartCount = getTotalItems();
 
-  const filteredProducts = storeProducts.filter((product) => {
+  const isPaidPlan = store?.plan === 'emprendedor' || store?.plan === 'negocio';
+  const maxProductsAllowed = store?.plan === 'gratis' ? 25 : store?.plan === 'emprendedor' ? 150 : 99999;
+  
+  // Limitar catálogo público estrictamente según la cuota del plan activo (útil tras downgrade)
+  const allowedProducts = storeProducts.slice(0, maxProductsAllowed);
+
+  const filteredProducts = allowedProducts.filter((product) => {
     const matchesSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const isEmprendedor = store?.plan === 'emprendedor';
     const matchesCategory =
-      !isEmprendedor ||
+      !isPaidPlan ||
       selectedCategory === 'todos' ||
       product.category === selectedCategory;
     return matchesSearch && matchesCategory;
