@@ -460,20 +460,22 @@ export default function PublicStorePage({ params }: Props) {
                 Esta tienda aún no tiene productos publicados.
               </div>
             ) : (
-              filteredProducts.map((product, pIndex) => {
+              filteredProducts.map((product) => {
+                const isPaidStore = store.plan === 'emprendedor' || store.plan === 'negocio';
                 const isOutOfStock = product.inStock === false;
-                const isNewProduct = !isOutOfStock && (product.badge === 'nuevo' || (!product.badge && pIndex === 0));
-                const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price;
+                const hasDiscount = Boolean(isPaidStore && product.compareAtPrice && product.compareAtPrice > product.price);
                 const discountPercent = hasDiscount
                   ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
                   : 0;
 
-                const badgeText = product.badge === 'top'
-                  ? '🔥 Top Ventas'
-                  : product.badge === 'oferta'
-                  ? '🏷️ Oferta'
-                  : isNewProduct
-                  ? '✨ Nuevo'
+                const badgeText = (isPaidStore && !isOutOfStock && product.badge)
+                  ? (product.badge === 'top'
+                      ? '🔥 Top Ventas'
+                      : product.badge === 'oferta'
+                      ? '🏷️ Oferta'
+                      : product.badge === 'nuevo'
+                      ? '✨ Nuevo'
+                      : null)
                   : null;
 
                 // MODERNA (Horizontal Cards, High Contrast)

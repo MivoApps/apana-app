@@ -259,8 +259,8 @@ export default function EditProductPage({ params }: Props) {
         await updateProductInFS(storeId, productId, {
           title: productName,
           price: priceNum,
-          compareAtPrice: validCompare as any,
-          badge: productBadge || null,
+          compareAtPrice: storePlan !== 'gratis' ? (validCompare as any) : null,
+          badge: storePlan !== 'gratis' ? (productBadge || null) : null,
           description: productDesc,
           imageUrl: primaryImg,
           imageUrls: allImgs,
@@ -496,138 +496,206 @@ export default function EditProductPage({ params }: Props) {
               </div>
             )}
 
-            {/* Precios: Actual y Oferta Tachado */}
-            {(() => {
-              const currentP = parseFloat(productPrice) || 0;
-              const compareP = parseFloat(productCompareAtPrice) || 0;
-              const discountPct = (compareP > currentP && currentP > 0)
-                ? Math.round(((compareP - currentP) / compareP) * 100)
-                : 0;
-
-              return (
-                <div className="flex flex-col gap-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Precio Actual */}
-                    <div className="flex flex-col gap-1.5">
-                      <label htmlFor="productPrice" className="text-sm font-semibold text-[#0b1c30] ml-1 flex items-center justify-between">
-                        <span>Precio de Venta</span>
-                        <span className="text-[10px] text-[#059669] font-bold">Principal</span>
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[#6d7a72] font-semibold">
-                          S/
-                        </span>
-                        <input
-                          id="productPrice"
-                          type="number"
-                          inputMode="decimal"
-                          required
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                          value={productPrice}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val.includes('.')) {
-                              const parts = val.split('.');
-                              if (parts[1] && parts[1].length > 2) {
-                                setProductPrice(`${parts[0]}.${parts[1].slice(0, 2)}`);
-                                return;
-                              }
-                            }
-                            setProductPrice(val);
-                          }}
-                          onBlur={() => {
-                            if (productPrice && !isNaN(parseFloat(productPrice))) {
-                              setProductPrice(parseFloat(productPrice).toFixed(2));
-                            }
-                          }}
-                          className="w-full h-12 pl-8 pr-4 bg-white border border-[#bccac0]/50 rounded-xl text-base sm:text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/60 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Precio Antes / Tachado (Opcional) */}
-                    <div className="flex flex-col gap-1.5">
-                      <label htmlFor="productCompareAtPrice" className="text-sm font-semibold text-[#0b1c30] ml-1 flex items-center justify-between">
-                        <span>Precio Antes (Tachado)</span>
-                        <span className="text-[10px] text-slate-400 font-medium">Opcional</span>
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-semibold">
-                          S/
-                        </span>
-                        <input
-                          id="productCompareAtPrice"
-                          type="number"
-                          inputMode="decimal"
-                          step="0.01"
-                          min="0"
-                          placeholder="ej: 89.00"
-                          value={productCompareAtPrice}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val.includes('.')) {
-                              const parts = val.split('.');
-                              if (parts[1] && parts[1].length > 2) {
-                                setProductCompareAtPrice(`${parts[0]}.${parts[1].slice(0, 2)}`);
-                                return;
-                              }
-                            }
-                            setProductCompareAtPrice(val);
-                          }}
-                          onBlur={() => {
-                            if (productCompareAtPrice && !isNaN(parseFloat(productCompareAtPrice))) {
-                              setProductCompareAtPrice(parseFloat(productCompareAtPrice).toFixed(2));
-                            }
-                          }}
-                          className="w-full h-12 pl-8 pr-4 bg-white border border-[#bccac0]/50 rounded-xl text-base sm:text-sm text-slate-600 placeholder:text-slate-400 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Descuento automático calculado */}
-                  {discountPct > 0 && (
-                    <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold flex items-center justify-between">
-                      <span>🔥 Etiqueta de descuento en catálogo:</span>
-                      <span className="bg-red-600 text-white px-2.5 py-0.5 rounded-full text-xs">
-                        -{discountPct}% OFF
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Selector de Insignia de Producto */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700 ml-1">
-                      Insignia en el Catálogo (Opcional)
-                    </label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {[
-                        { id: '', label: 'Ninguna', icon: '⚪' },
-                        { id: 'nuevo', label: 'Nuevo', icon: '✨' },
-                        { id: 'top', label: 'Top Ventas', icon: '🔥' },
-                        { id: 'oferta', label: 'Oferta', icon: '🏷️' },
-                      ].map((b) => (
-                        <button
-                          key={b.id}
-                          type="button"
-                          onClick={() => setProductBadge(b.id as any)}
-                          className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer border ${
-                            productBadge === b.id
-                              ? 'bg-[#059669]/10 border-[#059669] text-[#059669] shadow-2xs'
-                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                          }`}
-                        >
-                          <span>{b.icon}</span>
-                          <span>{b.label}</span>
-                        </button>
-                      ))}
-                    </div>
+            {/* Precios: Validación según Plan */}
+            {storePlan === 'gratis' ? (
+              <div className="flex flex-col gap-3">
+                {/* Precio de Venta (Único en Plan Gratis) */}
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="productPrice" className="text-sm font-semibold text-[#0b1c30] ml-1">
+                    Precio
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[#6d7a72] font-semibold">
+                      S/
+                    </span>
+                    <input
+                      id="productPrice"
+                      type="number"
+                      inputMode="decimal"
+                      required
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={productPrice}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val.includes('.')) {
+                          const parts = val.split('.');
+                          if (parts[1] && parts[1].length > 2) {
+                            setProductPrice(`${parts[0]}.${parts[1].slice(0, 2)}`);
+                            return;
+                          }
+                        }
+                        setProductPrice(val);
+                      }}
+                      onBlur={() => {
+                        if (productPrice && !isNaN(parseFloat(productPrice))) {
+                          setProductPrice(parseFloat(productPrice).toFixed(2));
+                        }
+                      }}
+                      className="w-full h-12 pl-8 pr-4 bg-white border border-[#bccac0]/50 rounded-xl text-base sm:text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/60 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                    />
                   </div>
                 </div>
-              );
-            })()}
+
+                {/* Banner Explicativo de Plan Emprendedor */}
+                <div className="p-3 bg-linear-to-r from-emerald-50/80 to-teal-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 text-[#059669] flex items-center justify-center font-bold text-xs shrink-0">
+                      🔥
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-[#0b1c30]">
+                        Precios de Oferta e Insignias
+                      </span>
+                      <span className="text-[11px] text-[#6d7a72]">
+                        Desbloquea precios tachados (-% OFF) e insignias destacadas en el Plan Emprendedor.
+                      </span>
+                    </div>
+                  </div>
+                  <Link href="/plans">
+                    <button
+                      type="button"
+                      className="text-xs font-bold text-[#059669] hover:text-[#00855d] bg-white border border-emerald-300 px-2.5 py-1.5 rounded-lg shadow-2xs shrink-0 cursor-pointer"
+                    >
+                      Mejorar ↗
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              (() => {
+                const currentP = parseFloat(productPrice) || 0;
+                const compareP = parseFloat(productCompareAtPrice) || 0;
+                const discountPct = (compareP > currentP && currentP > 0)
+                  ? Math.round(((compareP - currentP) / compareP) * 100)
+                  : 0;
+
+                return (
+                  <div className="flex flex-col gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Precio Actual */}
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="productPrice" className="text-sm font-semibold text-[#0b1c30] ml-1 flex items-center justify-between">
+                          <span>Precio de Venta</span>
+                          <span className="text-[10px] text-[#059669] font-bold">Principal</span>
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[#6d7a72] font-semibold">
+                            S/
+                          </span>
+                          <input
+                            id="productPrice"
+                            type="number"
+                            inputMode="decimal"
+                            required
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            value={productPrice}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val.includes('.')) {
+                                const parts = val.split('.');
+                                if (parts[1] && parts[1].length > 2) {
+                                  setProductPrice(`${parts[0]}.${parts[1].slice(0, 2)}`);
+                                  return;
+                                }
+                              }
+                              setProductPrice(val);
+                            }}
+                            onBlur={() => {
+                              if (productPrice && !isNaN(parseFloat(productPrice))) {
+                                setProductPrice(parseFloat(productPrice).toFixed(2));
+                              }
+                            }}
+                            className="w-full h-12 pl-8 pr-4 bg-white border border-[#bccac0]/50 rounded-xl text-base sm:text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/60 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Precio Antes / Tachado (Opcional) */}
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="productCompareAtPrice" className="text-sm font-semibold text-[#0b1c30] ml-1 flex items-center justify-between">
+                          <span>Precio Antes (Tachado)</span>
+                          <span className="text-[10px] text-slate-400 font-medium">Opcional</span>
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-semibold">
+                            S/
+                          </span>
+                          <input
+                            id="productCompareAtPrice"
+                            type="number"
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0"
+                            placeholder="ej: 89.00"
+                            value={productCompareAtPrice}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val.includes('.')) {
+                                const parts = val.split('.');
+                                if (parts[1] && parts[1].length > 2) {
+                                  setProductCompareAtPrice(`${parts[0]}.${parts[1].slice(0, 2)}`);
+                                  return;
+                                }
+                              }
+                              setProductCompareAtPrice(val);
+                            }}
+                            onBlur={() => {
+                              if (productCompareAtPrice && !isNaN(parseFloat(productCompareAtPrice))) {
+                                setProductCompareAtPrice(parseFloat(productCompareAtPrice).toFixed(2));
+                              }
+                            }}
+                            className="w-full h-12 pl-8 pr-4 bg-white border border-[#bccac0]/50 rounded-xl text-base sm:text-sm text-slate-600 placeholder:text-slate-400 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Descuento automático calculado */}
+                    {discountPct > 0 && (
+                      <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold flex items-center justify-between">
+                        <span>🔥 Etiqueta de descuento en catálogo:</span>
+                        <span className="bg-red-600 text-white px-2.5 py-0.5 rounded-full text-xs">
+                          -{discountPct}% OFF
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Selector de Insignia de Producto */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-slate-700 ml-1">
+                        Insignia en el Catálogo (Opcional)
+                      </label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[
+                          { id: '', label: 'Ninguna', icon: '⚪' },
+                          { id: 'nuevo', label: 'Nuevo', icon: '✨' },
+                          { id: 'top', label: 'Top Ventas', icon: '🔥' },
+                          { id: 'oferta', label: 'Oferta', icon: '🏷️' },
+                        ].map((b) => (
+                          <button
+                            key={b.id}
+                            type="button"
+                            onClick={() => setProductBadge(b.id as any)}
+                            className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer border ${
+                              productBadge === b.id
+                                ? 'bg-[#059669]/10 border-[#059669] text-[#059669] shadow-2xs'
+                                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span>{b.icon}</span>
+                            <span>{b.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
+            )}
 
             {/* Descripción */}
             <div className="flex flex-col gap-1.5">

@@ -97,16 +97,18 @@ export default function OrdersPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Botón Exportar Pedidos a Excel */}
-            <button
-              type="button"
-              onClick={handleExportOrders}
-              className="h-8 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200/80 text-[#0b1c30] text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
-              title="Exportar pedidos a Excel (.CSV)"
-            >
-              <FileSpreadsheet size={14} className="text-[#059669]" />
-              <span>Exportar Excel</span>
-            </button>
+            {/* Botón Exportar Pedidos a Excel (Sólo Plan Negocio Pro) */}
+            {(isProPlan || isSuperAdmin) && (
+              <button
+                type="button"
+                onClick={handleExportOrders}
+                className="h-8 px-3 rounded-xl bg-white hover:bg-slate-50 border border-amber-200/80 text-amber-900 text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Exportar pedidos a Excel (.CSV)"
+              >
+                <FileSpreadsheet size={14} className="text-amber-600" />
+                <span>Exportar Excel</span>
+              </button>
+            )}
 
             <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-[#059669]">
               WhatsApp Directo

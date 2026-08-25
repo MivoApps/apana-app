@@ -339,33 +339,39 @@ export default function PublicProductDetailPage({ params }: Props) {
           <div className="px-6 py-6 flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
               {/* Badge de Categoría, Insignia y Estado */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {targetProduct.category && (
-                  <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${
-                    isElegant
-                      ? 'bg-amber-100/70 border-amber-300 text-amber-900'
-                      : isModern
-                      ? 'bg-blue-100/70 border-blue-200 text-blue-900'
-                      : 'bg-neutral-100 border-neutral-200 text-neutral-700 font-medium'
-                  }`}>
-                    {targetProduct.category}
-                  </span>
-                )}
-                {targetProduct.badge && targetProduct.inStock !== false && (
-                  <span className="text-[11px] font-bold uppercase tracking-wider bg-[#059669] text-white px-2.5 py-0.5 rounded-md shadow-2xs">
-                    {targetProduct.badge === 'top'
-                      ? '🔥 Top Ventas'
-                      : targetProduct.badge === 'oferta'
-                      ? '🏷️ Oferta'
-                      : '✨ Nuevo'}
-                  </span>
-                )}
-                {targetProduct.inStock === false && (
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-md">
-                    Agotado temporalmente
-                  </span>
-                )}
-              </div>
+              {(() => {
+                const isPaidStore = activeStore?.plan === 'emprendedor' || activeStore?.plan === 'negocio';
+
+                return (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {targetProduct.category && (
+                      <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${
+                        isElegant
+                          ? 'bg-amber-100/70 border-amber-300 text-amber-900'
+                          : isModern
+                          ? 'bg-blue-100/70 border-blue-200 text-blue-900'
+                          : 'bg-neutral-100 border-neutral-200 text-neutral-700 font-medium'
+                      }`}>
+                        {targetProduct.category}
+                      </span>
+                    )}
+                    {isPaidStore && targetProduct.badge && targetProduct.inStock !== false && (
+                      <span className="text-[11px] font-bold uppercase tracking-wider bg-[#059669] text-white px-2.5 py-0.5 rounded-md shadow-2xs">
+                        {targetProduct.badge === 'top'
+                          ? '🔥 Top Ventas'
+                          : targetProduct.badge === 'oferta'
+                          ? '🏷️ Oferta'
+                          : '✨ Nuevo'}
+                      </span>
+                    )}
+                    {targetProduct.inStock === false && (
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-md">
+                        Agotado temporalmente
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
 
               <h1 className={`text-2xl sm:text-3xl font-bold leading-tight ${
                 isElegant
@@ -379,7 +385,8 @@ export default function PublicProductDetailPage({ params }: Props) {
 
               {/* Precios con Descuento */}
               {(() => {
-                const hasDiscount = targetProduct.compareAtPrice && targetProduct.compareAtPrice > targetProduct.price;
+                const isPaidStore = activeStore?.plan === 'emprendedor' || activeStore?.plan === 'negocio';
+                const hasDiscount = Boolean(isPaidStore && targetProduct.compareAtPrice && targetProduct.compareAtPrice > targetProduct.price);
                 const discountPct = hasDiscount
                   ? Math.round(((targetProduct.compareAtPrice! - targetProduct.price) / targetProduct.compareAtPrice!) * 100)
                   : 0;

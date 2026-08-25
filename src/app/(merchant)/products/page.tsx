@@ -98,6 +98,7 @@ export default function ProductGalleryPage() {
   const products = fsProducts;
   const currentPlan = fsStore?.plan || 'gratis';
   const isProPlan = currentPlan === 'negocio';
+  const isSuperAdmin = Boolean(user?.email && ['angelo@mivo.pe', 'angelocastellanos99@gmail.com'].includes(user.email.toLowerCase().trim()));
   const isFreePlan = !fsStore?.plan || currentPlan === 'gratis';
   const maxProducts = isFreePlan ? 25 : currentPlan === 'emprendedor' ? 150 : 99999;
   const inStockCount = products.filter((p) => p.inStock).length;
@@ -400,17 +401,19 @@ export default function ProductGalleryPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Botón Exportar Catálogo a Excel */}
-            <button
-              type="button"
-              onClick={handleExportCatalog}
-              className="h-9 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200/80 text-[#0b1c30] text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
-              title="Exportar inventario a Excel (.CSV)"
-            >
-              <FileSpreadsheet size={15} className="text-[#059669]" />
-              <span className="hidden sm:inline">Exportar Excel</span>
-              <span className="sm:hidden">Excel</span>
-            </button>
+            {/* Botón Exportar Catálogo a Excel (Sólo Plan Negocio Pro) */}
+            {(isProPlan || isSuperAdmin) && (
+              <button
+                type="button"
+                onClick={handleExportCatalog}
+                className="h-9 px-3 rounded-xl bg-white hover:bg-slate-50 border border-amber-200/80 text-amber-900 text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Exportar inventario a Excel (.CSV)"
+              >
+                <FileSpreadsheet size={15} className="text-amber-600" />
+                <span className="hidden sm:inline">Exportar Excel</span>
+                <span className="sm:hidden">Excel</span>
+              </button>
+            )}
 
             <Link href={isLimitReached ? '/plans' : '/products/new'}>
               <button
