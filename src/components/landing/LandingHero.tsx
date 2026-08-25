@@ -10,7 +10,8 @@ import {
   Smartphone, 
   CreditCard,
   QrCode,
-  CheckCheck
+  CheckCheck,
+  ChevronDown
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { Button } from '@/components/ui/Button';
@@ -99,8 +100,24 @@ export const LandingHero: React.FC = () => {
           </Link>
         </div>
 
+        {/* Scroll Indicator Down Arrow */}
+        <div
+          onClick={() => {
+            const el = document.getElementById('hero-features');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className="mt-6 sm:mt-8 flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:text-[#059669] transition-colors cursor-pointer group select-none"
+        >
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-hover:text-[#059669] transition-colors">
+            Desliza para ver más
+          </span>
+          <div className="w-8 h-8 rounded-full bg-white/90 border border-slate-200/80 shadow-xs flex items-center justify-center animate-bounce group-hover:border-[#059669]/40 group-hover:shadow-md transition-all">
+            <ChevronDown size={18} className="text-[#059669]" />
+          </div>
+        </div>
+
         {/* Value Trust Badges */}
-        <div className="mt-12 pt-8 border-t border-[#bccac0]/30 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl w-full text-left">
+        <div id="hero-features" className="mt-6 pt-6 border-t border-[#bccac0]/30 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl w-full text-left scroll-mt-24">
           <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md p-3.5 rounded-2xl border border-white/80 shadow-xs hover:border-[#059669]/40 transition-colors">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-[#059669] flex items-center justify-center shrink-0">
               <Zap size={20} />

@@ -16,7 +16,7 @@ export const LandingTicker: React.FC = () => {
   const items = [
     { icon: Zap, text: '0% Comisiones por Venta', color: 'text-amber-600 bg-amber-50 border-amber-200' },
     { icon: MessageCircle, text: 'Pedidos Directos a tu WhatsApp', color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-    { icon: CreditCard, text: 'Pagos Online con Culqi & Yape', color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
+    { icon: CreditCard, text: 'Próximamente: Pagos con Tarjetas & Yape', color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
     { icon: QrCode, text: 'Código QR Descargable en Alta Definición', color: 'text-blue-600 bg-blue-50 border-blue-200' },
     { icon: Palette, text: '3 Estilos de Tienda Personalizables', color: 'text-pink-600 bg-pink-50 border-pink-200' },
     { icon: Percent, text: 'Precios Tachados y Ofertas Flash', color: 'text-rose-600 bg-rose-50 border-rose-200' },

@@ -83,20 +83,20 @@ export const LandingFeaturesMatrix: React.FC = () => {
               <div className="w-12 h-12 rounded-2xl bg-white/10 text-indigo-300 flex items-center justify-center mb-6 backdrop-blur-md">
                 <CreditCard size={24} />
               </div>
-              <span className="text-xs font-bold text-indigo-300 bg-indigo-500/20 px-3 py-1 rounded-full border border-indigo-400/30">
-                Pagos en Línea
+              <span className="text-xs font-bold text-amber-300 bg-amber-500/20 px-3 py-1 rounded-full border border-amber-400/30">
+                ⚡ Próximamente
               </span>
               <h3 className="text-2xl font-black text-white mt-3 mb-2">
                 Cobra con Tarjetas & Yape
               </h3>
               <p className="text-sm text-indigo-200 leading-relaxed">
-                Integración transparente con Culqi. Tus clientes pagan online y el pedido llega verificado a tu panel.
+                Muy pronto: Integración nativa con Culqi para recibir pagos con tarjeta de crédito/débito y Yape directo en tu catálogo.
               </p>
             </div>
 
             <div className="mt-8 flex items-center gap-2 text-xs font-bold text-indigo-300 bg-white/5 p-3 rounded-2xl border border-white/10">
               <ShieldCheck size={16} className="text-emerald-400" />
-              <span>Transacciones 100% encriptadas</span>
+              <span>Transacciones seguras y automáticas</span>
             </div>
           </div>
 

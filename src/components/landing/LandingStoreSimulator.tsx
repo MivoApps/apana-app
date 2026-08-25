@@ -12,7 +12,8 @@ import {
   Check, 
   Eye, 
   Copy,
-  ExternalLink
+  ExternalLink,
+  Smartphone
 } from 'lucide-react';
 import { slugify } from '@/lib/firebase/firestore';
 import { Button } from '@/components/ui/Button';
@@ -30,7 +31,7 @@ export const LandingStoreSimulator: React.FC = () => {
   useEffect(() => {
     QRCode.toDataURL(fullUrl, {
       width: 320,
-      margin: 2,
+      margin: 1,
       color: {
         dark: '#0b1c30',
         light: '#ffffff',
@@ -80,23 +81,62 @@ export const LandingStoreSimulator: React.FC = () => {
         {/* Simulator Interactive Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center max-w-5xl mx-auto">
           {/* Controls Panel */}
-          <div className="lg:col-span-6 bg-white/80 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border border-white shadow-xl shadow-slate-200/50 flex flex-col gap-6">
-            {/* Input Nombre de Tienda */}
+          <div className="lg:col-span-6 bg-white/80 backdrop-blur-xl p-5 sm:p-8 rounded-3xl border border-white shadow-xl shadow-slate-200/50 flex flex-col gap-5">
+            
+            {/* Input Nombre de Tienda + Mini QR integrado lado a lado */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-bold text-[#0b1c30] uppercase tracking-wider flex items-center gap-1.5">
                 <StoreIcon size={14} className="text-[#059669]" />
                 <span>Nombre de tu negocio</span>
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
-                  placeholder="ej. Pastelería Dolce Vita"
-                  maxLength={40}
-                  className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-200 text-sm font-semibold text-[#0b1c30] focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] transition-all"
-                />
+              
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={storeName}
+                    onChange={(e) => setStoreName(e.target.value)}
+                    placeholder="ej. Pastelería Dolce Vita"
+                    maxLength={40}
+                    className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-200 text-sm font-semibold text-[#0b1c30] focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] transition-all shadow-2xs"
+                  />
+                </div>
+
+                {/* Compact QR Thumbnail (Visible en Mobile y Desktop) */}
+                <div 
+                  className="w-12 h-12 rounded-xl p-1 bg-white border border-slate-200 shadow-xs shrink-0 flex items-center justify-center relative group cursor-pointer"
+                  title="Código QR generado en vivo"
+                >
+                  {qrDataUrl ? (
+                    <img
+                      src={qrDataUrl}
+                      alt="Mini QR"
+                      className="w-full h-full object-contain rounded-md"
+                    />
+                  ) : (
+                    <QrIcon size={18} className="text-slate-400" />
+                  )}
+                </div>
               </div>
+            </div>
+
+            {/* Generated URL Preview Pill with Copy */}
+            <div className="w-full bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-inner">
+              <div className="flex items-center gap-1.5 overflow-hidden">
+                <Smartphone size={13} className="text-[#059669] shrink-0" />
+                <span className="text-xs font-mono text-slate-600 truncate select-all">
+                  beapana.com/s/<strong className="text-emerald-700 font-bold">{cleanSlug}</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="p-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200/60 text-slate-700 transition-colors cursor-pointer shrink-0 shadow-2xs flex items-center gap-1 text-[11px] font-bold"
+                title="Copiar enlace"
+              >
+                {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                <span>{copied ? 'Copiado' : 'Copiar'}</span>
+              </button>
             </div>
 
             {/* Selector de Estilo Visual */}
@@ -157,7 +197,7 @@ export const LandingStoreSimulator: React.FC = () => {
                 <Button
                   variant="primary"
                   fullWidth
-                  className="h-12 text-sm font-bold shadow-md shadow-[#059669]/20 hover:shadow-lg hover:shadow-[#059669]/30 flex items-center justify-center gap-2"
+                  className="h-12 text-sm font-bold shadow-md shadow-[#059669]/20 hover:shadow-lg hover:shadow-[#059669]/30 flex items-center justify-center gap-2 rounded-xl"
                 >
                   <span>Reclamar mi tienda gratis</span>
                   <ArrowRight size={16} />
@@ -166,8 +206,8 @@ export const LandingStoreSimulator: React.FC = () => {
             </div>
           </div>
 
-          {/* Interactive Live Card & QR Preview */}
-          <div className="lg:col-span-6 flex flex-col items-center">
+          {/* Desktop Full Card & QR Preview (Solo en Desktop) */}
+          <div className="hidden lg:flex lg:col-span-6 flex-col items-center">
             <div className="w-full max-w-sm bg-white rounded-3xl p-6 border border-slate-200 shadow-2xl shadow-slate-300/40 relative overflow-hidden flex flex-col items-center text-center">
               {/* Decorative Header Bar */}
               <div
@@ -201,21 +241,6 @@ export const LandingStoreSimulator: React.FC = () => {
               <p className="text-xs text-slate-500 mb-4">
                 Estilo <span className="font-semibold text-slate-700 capitalize">{selectedStyle}</span> • Catálogo Web Activo
               </p>
-
-              {/* Generated URL Pill with Copy */}
-              <div className="w-full bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 flex items-center justify-between gap-2 mb-4">
-                <span className="text-xs font-mono text-slate-600 truncate text-left select-all">
-                  beapana.com/s/<strong className="text-emerald-700">{cleanSlug}</strong>
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className="p-1.5 rounded-lg hover:bg-slate-200/70 text-slate-600 transition-colors cursor-pointer shrink-0"
-                  title="Copiar enlace"
-                >
-                  {copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-                </button>
-              </div>
 
               {/* Interactive Demo Link */}
               <Link
