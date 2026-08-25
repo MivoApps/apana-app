@@ -334,8 +334,12 @@ export default function SettingsPage() {
           }
         }
 
+        const fullPhone = whatsappPhone ? (whatsappPhone.startsWith('51') ? whatsappPhone : `51${whatsappPhone}`) : (fsStore?.whatsappPhone || '');
+
         const updatedStore = await createOrUpdateStoreInFS(user.uid, {
+          id: fsStore?.id,
           name: storeName,
+          slug: fsStore?.slug,
           whatsappPhone: fullPhone,
           themeStyle: selectedStyle,
           primaryColor: selectedColorHex,
@@ -345,14 +349,19 @@ export default function SettingsPage() {
           city: city,
           schedule: schedule,
           shippingType: shippingType,
+          plan: fsStore?.plan,
+          isWhatsappVerified: fsStore?.isWhatsappVerified,
           socialLinks: {
             instagram: instagram,
             tiktok: tiktok,
           },
         });
         setFsStore(updatedStore);
-        sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(updatedStore));
-        sessionStorage.removeItem(`apana_public_store_${updatedStore.slug}`);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(updatedStore));
+          sessionStorage.setItem('apana_active_store', JSON.stringify(updatedStore));
+          sessionStorage.removeItem(`apana_public_store_${updatedStore.slug}`);
+        }
       } catch (err) {
         console.error('Error guardando ajustes en Firestore:', err);
       }
