@@ -29,14 +29,20 @@ export default function RegisterPage() {
   const [redirecting, setRedirecting] = useState(false);
 
   React.useEffect(() => {
-    if (user) {
+    if (user && !authLoading) {
       setRedirecting(true);
       let isMounted = true;
 
-      // Timeout de seguridad para forzar redirección al dashboard si firestore tarda
+      const userEmail = user.email?.toLowerCase().trim() || '';
+      if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
+        window.location.href = '/admin';
+        return;
+      }
+
+      // Timeout de seguridad de 2 segundos para forzar redirección
       const fallbackTimer = setTimeout(() => {
-        if (isMounted) router.replace('/dashboard');
-      }, 2500);
+        if (isMounted) window.location.href = '/dashboard';
+      }, 2000);
 
       import('@/lib/firebase/firestore').then(async ({ getStoreByUserIdFromFS }) => {
         try {
@@ -44,15 +50,15 @@ export default function RegisterPage() {
           if (isMounted) {
             clearTimeout(fallbackTimer);
             if (store) {
-              router.replace('/dashboard');
+              window.location.href = '/dashboard';
             } else {
-              router.replace('/store/setup');
+              window.location.href = '/store/setup';
             }
           }
         } catch {
           if (isMounted) {
             clearTimeout(fallbackTimer);
-            router.replace('/dashboard');
+            window.location.href = '/dashboard';
           }
         }
       });
@@ -62,7 +68,7 @@ export default function RegisterPage() {
         clearTimeout(fallbackTimer);
       };
     }
-  }, [user, router]);
+  }, [user, authLoading]);
 
   if (redirecting) {
     return (
@@ -71,7 +77,7 @@ export default function RegisterPage() {
         <span className="text-sm font-medium text-[#6d7a72]">Ingresando a tu panel...</span>
         <button
           onClick={() => logout()}
-          className="mt-4 text-xs text-slate-400 hover:text-red-500 underline"
+          className="mt-4 text-xs text-slate-400 hover:text-red-500 underline cursor-pointer"
         >
           Cerrar sesión e ingresar con otra cuenta
         </button>
@@ -145,6 +151,14 @@ export default function RegisterPage() {
       const userCredential = await signInWithPopup(auth, googleProvider);
       localStorage.clear();
 
+      const userEmail = userCredential.user.email?.toLowerCase().trim() || '';
+
+      // Si es el SuperAdmin ➔ Ir directamente a la Consola de Administración
+      if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
+        window.location.href = '/admin';
+        return;
+      }
+
       const { getUserProfileFromFS, createUserProfileInFS, getStoreByUserIdFromFS } = await import('@/lib/firebase/firestore');
       let userProfile = await getUserProfileFromFS(userCredential.user.uid);
       if (!userProfile) {
@@ -166,10 +180,12 @@ export default function RegisterPage() {
         window.location.href = '/store/setup';
       }
     } catch (err: any) {
-      console.error('Error al iniciar sesión con Google:', err);
+      console.error('Error al registrarse/iniciar sesión con Google:', err);
       let errorMsg = 'No se pudo iniciar sesión con Google. Reintenta de nuevo.';
       if (err?.code === 'auth/popup-closed-by-user') {
         errorMsg = 'Inicio de sesión cancelado por el usuario.';
+      } else if (err?.code === 'auth/popup-blocked') {
+        errorMsg = 'Tu navegador bloqueó la ventana emergente de Google. Por favor habilita los pop-ups para continuar.';
       } else if (err?.code === 'auth/network-request-failed') {
         errorMsg = 'Error de red. Verifica tu conexión de internet.';
       }

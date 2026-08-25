@@ -27,14 +27,20 @@ export default function LoginPage() {
   const [redirecting, setRedirecting] = useState(false);
 
   React.useEffect(() => {
-    if (user) {
+    if (user && !authLoading) {
       setRedirecting(true);
       let isMounted = true;
 
-      // Timeout de seguridad para forzar redirección al dashboard si firestore tarda
+      const userEmail = user.email?.toLowerCase().trim() || '';
+      if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
+        window.location.href = '/admin';
+        return;
+      }
+
+      // Timeout de seguridad de 2 segundos para forzar redirección
       const fallbackTimer = setTimeout(() => {
-        if (isMounted) router.replace('/dashboard');
-      }, 2500);
+        if (isMounted) window.location.href = '/dashboard';
+      }, 2000);
 
       import('@/lib/firebase/firestore').then(async ({ getStoreByUserIdFromFS }) => {
         try {
@@ -42,15 +48,15 @@ export default function LoginPage() {
           if (isMounted) {
             clearTimeout(fallbackTimer);
             if (store) {
-              router.replace('/dashboard');
+              window.location.href = '/dashboard';
             } else {
-              router.replace('/store/setup');
+              window.location.href = '/store/setup';
             }
           }
         } catch {
           if (isMounted) {
             clearTimeout(fallbackTimer);
-            router.replace('/dashboard');
+            window.location.href = '/dashboard';
           }
         }
       });
@@ -60,7 +66,7 @@ export default function LoginPage() {
         clearTimeout(fallbackTimer);
       };
     }
-  }, [user, router]);
+  }, [user, authLoading]);
 
   if (redirecting) {
     return (
