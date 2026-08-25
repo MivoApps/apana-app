@@ -285,13 +285,24 @@ export default function ProductGalleryPage() {
             </div>
 
             {products.length > maxProducts && (
-              <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex flex-col gap-1 mt-1">
-                <span className="font-bold flex items-center gap-1.5 text-amber-950">
-                  <span>⚠️ Límite de productos excedido ({products.length} de {maxProducts} permitidos)</span>
-                </span>
+              <div className="p-3.5 bg-linear-to-r from-amber-50 to-orange-50/80 border border-amber-300/80 rounded-xl text-xs text-amber-950 flex flex-col gap-1.5 mt-1 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold flex items-center gap-1.5 text-amber-950">
+                    <span>🛡️ Resguardo de Catálogo (6 Meses)</span>
+                  </span>
+                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-200/90 text-amber-950">
+                    {Math.max(1, Math.ceil(((activeStore?.dataRetentionUntil || (Date.now() + 180 * 86400000)) - Date.now()) / (1000 * 60 * 60 * 24)))} días protegidos
+                  </span>
+                </div>
                 <span className="text-[11px] leading-relaxed text-amber-900">
-                  Al estar en {isFreePlan ? 'Plan Gratis' : 'Plan Emprendedor'}, tu catálogo público solo mostrará los primeros {maxProducts} productos. Mejora tu plan para que todo tu catálogo sea visible.
+                  Tienes <strong>{products.length} productos</strong> guardados (límite gratis: {maxProducts}). Tus productos, fotos y configuraciones Pro están <strong>resguardados durante 180 días (6 meses)</strong>. Reactiva tu plan para hacerlos visibles al público y no perder tu trabajo.
                 </span>
+                <div className="pt-1 flex items-center justify-end">
+                  <Link href="/plans" className="text-xs font-bold text-amber-900 hover:text-amber-950 underline underline-offset-2 flex items-center gap-1">
+                    <span>Reactivar mi plan para restaurar visibilidad total</span>
+                    <span>→</span>
+                  </Link>
+                </div>
               </div>
             )}
           </div>

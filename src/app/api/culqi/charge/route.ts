@@ -65,11 +65,14 @@ export async function POST(request: Request) {
     await updateDoc(storeRef, {
       plan: targetPlan,
       subscriptionStatus: 'active',
+      cancelAtPeriodEnd: false,
       subscriptionStartDate: now,
       nextBillingDate: nextBillingDate,
       lastPaymentDate: now,
       lastPaymentAmount: amount / 100,
       lastCulqiChargeId: chargeResult.id,
+      downgradedAt: null,
+      dataRetentionUntil: null,
       updatedAt: serverTimestamp(),
     });
 

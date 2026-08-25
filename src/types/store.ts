@@ -40,6 +40,8 @@ export interface Store {
   isWhatsappVerified?: boolean; // Validación anti-fraude del WhatsApp del comercio
   whatsappVerificationCode?: string; // Código de 6 dígitos enviado
   whatsappVerifiedAt?: number; // Timestamp de verificación
+  downgradedAt?: number; // Timestamp cuando pasó a Plan Gratis
+  dataRetentionUntil?: number; // Timestamp fin del período de gracia de 6 meses (180 días)
   createdAt?: any;
   updatedAt?: any;
 }
