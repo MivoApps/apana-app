@@ -18,15 +18,14 @@ import { Button } from '@/components/ui/Button';
 
 export const LandingHero: React.FC = () => {
   return (
-    <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden">
+    <section className="relative pt-24 pb-8 sm:pt-32 sm:pb-16 md:pt-36 md:pb-20 overflow-hidden min-h-[90svh] flex flex-col justify-between">
       {/* Background Animated Glows & Mesh Orbs */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[380px] bg-linear-to-tr from-[#85f8c4]/30 via-[#059669]/20 to-[#3b82f6]/10 blur-3xl rounded-full pointer-events-none -z-10 animate-float-slow" />
       <div className="absolute top-24 right-6 md:right-24 w-80 h-80 bg-[#6cf8bb]/20 blur-3xl rounded-full pointer-events-none -z-10 animate-float-reverse" />
       <div className="absolute top-48 left-6 md:left-24 w-72 h-72 bg-[#38bdf8]/15 blur-3xl rounded-full pointer-events-none -z-10 animate-float-slow" />
 
       {/* Floating Mockup Badges (Desktop & Tablet) */}
-      {/* Floating Badge 1 - Left: New Order */}
-      <div className="hidden lg:flex items-center gap-3 absolute top-44 left-8 xl:left-20 bg-white/85 backdrop-blur-md p-3.5 rounded-2xl border border-white/90 shadow-xl shadow-slate-200/50 z-20 animate-float-slow hover:scale-105 transition-transform select-none">
+      <div className="hidden lg:flex items-center gap-3 absolute top-40 left-8 xl:left-20 bg-white/85 backdrop-blur-md p-3.5 rounded-2xl border border-white/90 shadow-xl shadow-slate-200/50 z-20 animate-float-slow hover:scale-105 transition-transform select-none">
         <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm">
           <WhatsAppIcon size={20} className="fill-white" />
         </div>
@@ -39,8 +38,7 @@ export const LandingHero: React.FC = () => {
         </div>
       </div>
 
-      {/* Floating Badge 2 - Right: QR Scan */}
-      <div className="hidden lg:flex items-center gap-3 absolute top-64 right-8 xl:right-20 bg-white/85 backdrop-blur-md p-3.5 rounded-2xl border border-white/90 shadow-xl shadow-slate-200/50 z-20 animate-float-reverse hover:scale-105 transition-transform select-none">
+      <div className="hidden lg:flex items-center gap-3 absolute top-60 right-8 xl:right-20 bg-white/85 backdrop-blur-md p-3.5 rounded-2xl border border-white/90 shadow-xl shadow-slate-200/50 z-20 animate-float-reverse hover:scale-105 transition-transform select-none">
         <div className="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center shrink-0 shadow-sm">
           <QrCode size={20} />
         </div>
@@ -53,15 +51,25 @@ export const LandingHero: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center flex flex-col items-center relative z-10">
+      {/* Main Hero Content (Completely visible in first viewport) */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center flex-1 flex flex-col items-center justify-center relative z-10">
         {/* Transparency / Micro-tag */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[#059669]/30 shadow-xs mb-6 text-xs font-semibold text-[#006c49] animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[#059669]/30 shadow-xs mb-3 sm:mb-4 text-xs font-semibold text-[#006c49] animate-in fade-in slide-in-from-bottom-2 duration-500">
           <Sparkles size={14} className="text-[#059669] animate-spin-slow" />
           <span>La forma más rápida y moderna de vender por internet</span>
         </div>
 
+        {/* Mobile Floating Live Activity Badges (Visible en Móvil & Tablet) */}
+        <div className="flex lg:hidden items-center gap-2 px-3 py-1 rounded-full bg-white/90 backdrop-blur-md border border-emerald-300 shadow-2xs mb-3 animate-float-slow">
+          <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+            <WhatsAppIcon size={10} className="fill-white" />
+          </div>
+          <span className="text-[11px] font-bold text-[#0b1c30]">Nuevo pedido: <strong className="text-emerald-700">S/ 18.00</strong></span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
+        </div>
+
         {/* Hero Title */}
-        <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-[#0b1c30] tracking-tight leading-[1.12] max-w-4xl text-balance">
+        <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-[#0b1c30] tracking-tight leading-[1.14] max-w-4xl text-balance">
           Tu catálogo digital para vender por{' '}
           <span className="bg-linear-to-r from-[#059669] via-[#00855d] to-[#006c49] bg-clip-text text-transparent underline decoration-[#6cf8bb]/80 decoration-wavy decoration-2">
             WhatsApp
@@ -70,17 +78,17 @@ export const LandingHero: React.FC = () => {
         </h1>
 
         {/* Hero Subtitle */}
-        <p className="mt-6 text-base sm:text-lg md:text-xl text-[#3d4a42] max-w-2xl leading-relaxed text-balance">
+        <p className="mt-4 sm:mt-6 text-sm sm:text-lg md:text-xl text-[#3d4a42] max-w-2xl leading-relaxed text-balance">
           Tu tienda online <strong className="text-[#0b1c30] font-bold">lista en 1 minuto</strong>. Sube tus productos, genera tu código QR para tu local o redes, y recibe pedidos con cálculo exacto listos para despachar por WhatsApp.
         </p>
 
         {/* Action Buttons */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center gap-3.5 w-full sm:w-auto">
+        <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
           <Link href="/register" className="w-full sm:w-auto">
             <Button
               variant="primary"
               size="lg"
-              className="w-full sm:w-auto text-base font-bold px-8 py-4 bg-[#059669] hover:bg-[#00855d] text-white shadow-xl shadow-[#059669]/25 hover:shadow-2xl hover:shadow-[#059669]/35 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2.5 rounded-2xl relative overflow-hidden group"
+              className="w-full sm:w-auto text-base font-bold px-8 py-3.5 sm:py-4 bg-[#059669] hover:bg-[#00855d] text-white shadow-xl shadow-[#059669]/25 hover:shadow-2xl hover:shadow-[#059669]/35 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2.5 rounded-2xl relative overflow-hidden group"
             >
               <span className="relative z-10">Crear mi tienda gratis</span>
               <ArrowRight size={18} className="relative z-10 group-hover:translate-x-1 transition-transform" />
@@ -92,7 +100,7 @@ export const LandingHero: React.FC = () => {
             <Button
               variant="outline"
               size="lg"
-              className="w-full sm:w-auto text-base font-semibold px-6 py-4 bg-white/85 hover:bg-white text-[#0b1c30] border-[#bccac0]/60 hover:border-[#059669] shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 rounded-2xl"
+              className="w-full sm:w-auto text-base font-semibold px-6 py-3.5 sm:py-4 bg-white/85 hover:bg-white text-[#0b1c30] border-[#bccac0]/60 hover:border-[#059669] shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 rounded-2xl"
             >
               <Smartphone size={18} className="text-[#059669]" />
               <span>Ver tienda de ejemplo</span>
@@ -100,24 +108,26 @@ export const LandingHero: React.FC = () => {
           </Link>
         </div>
 
-        {/* Scroll Indicator Down Arrow */}
+        {/* Scroll Indicator Down Arrow (Cierra el primer viewport en mobile) */}
         <div
           onClick={() => {
             const el = document.getElementById('hero-features');
             if (el) el.scrollIntoView({ behavior: 'smooth' });
           }}
-          className="mt-6 sm:mt-8 flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:text-[#059669] transition-colors cursor-pointer group select-none"
+          className="mt-6 sm:mt-10 flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-[#059669] transition-colors cursor-pointer group select-none"
         >
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest group-hover:text-[#059669] transition-colors">
+          <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-widest group-hover:text-[#059669] transition-colors">
             Desliza para ver más
           </span>
-          <div className="w-8 h-8 rounded-full bg-white/90 border border-slate-200/80 shadow-xs flex items-center justify-center animate-bounce group-hover:border-[#059669]/40 group-hover:shadow-md transition-all">
-            <ChevronDown size={18} className="text-[#059669]" />
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/90 border border-slate-200/80 shadow-xs flex items-center justify-center animate-bounce group-hover:border-[#059669]/40 group-hover:shadow-md transition-all">
+            <ChevronDown size={16} className="text-[#059669]" />
           </div>
         </div>
+      </div>
 
-        {/* Value Trust Badges */}
-        <div id="hero-features" className="mt-6 pt-6 border-t border-[#bccac0]/30 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl w-full text-left scroll-mt-24">
+      {/* Value Trust Badges (Ubicados debajo del pliegue para verse tras el scroll) */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 w-full pt-16 sm:pt-20">
+        <div id="hero-features" className="pt-8 border-t border-[#bccac0]/30 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto text-left scroll-mt-28">
           <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md p-3.5 rounded-2xl border border-white/80 shadow-xs hover:border-[#059669]/40 transition-colors">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-[#059669] flex items-center justify-center shrink-0">
               <Zap size={20} />
