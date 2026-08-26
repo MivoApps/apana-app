@@ -17,7 +17,7 @@ export const LandingFooter: React.FC = () => {
 
           <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-200 bg-white/15 px-3.5 py-1.5 rounded-full mb-4 border border-white/20">
             <Zap size={14} className="text-amber-300" />
-            <span>Listo en 1 minuto</span>
+            <span>Listo en 3 minutos*</span>
           </div>
 
           <h2 className="text-2xl sm:text-4xl font-black tracking-tight max-w-2xl text-balance">

@@ -2,12 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { 
-  ArrowRight, 
-  Sparkles, 
-  CheckCircle2, 
-  Zap, 
-  Smartphone, 
+import {
+  ArrowRight,
+  Sparkles,
+  CheckCircle2,
+  Zap,
+  Smartphone,
   CreditCard,
   QrCode,
   CheckCheck,
@@ -75,7 +75,7 @@ export const LandingHero: React.FC = () => {
 
           {/* Hero Subtitle */}
           <p className="mt-4 sm:mt-6 text-sm sm:text-lg md:text-xl text-[#3d4a42] max-w-2xl leading-relaxed text-balance">
-            Tu tienda online <strong className="text-[#0b1c30] font-bold">lista en 1 minuto</strong>. Sube tus productos, genera tu código QR para tu local o redes, y recibe pedidos con cálculo exacto listos para despachar por WhatsApp.
+            Tu tienda online <strong className="text-[#0b1c30] font-bold">lista en 3 minutos*</strong>. Sube tus productos, genera tu código QR para tu local o redes, y recibe pedidos con cálculo exacto listos para despachar por WhatsApp.
           </p>
 
           {/* Action Buttons */}
@@ -132,7 +132,7 @@ export const LandingHero: React.FC = () => {
               <Zap size={20} />
             </div>
             <div>
-              <p className="text-xs font-bold text-[#0b1c30]">Lista en 1 minuto</p>
+              <p className="text-xs font-bold text-[#0b1c30]">Lista en 3 minutos*</p>
               <p className="text-[11px] text-[#6d7a72]">Configuración instantánea</p>
             </div>
           </div>

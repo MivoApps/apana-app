@@ -30,7 +30,7 @@ export const LandingFAQ: React.FC = () => {
     {
       question: '¿Cuánto tiempo toma tener mi tienda online lista?',
       answer:
-        'Tu tienda online está lista en solo 1 minuto. Solo ingresas el nombre de tu negocio, tu número de WhatsApp y subes tus primeros productos con fotos y precios. Inmediatamente obtienes tu enlace público personalizado y tu código QR listo para imprimir y exhibir.',
+        'Tu tienda online puede estar lista en aproximadamente 3 minutos*. Solo ingresas el nombre de tu negocio, tu número de WhatsApp y subes tus primeros productos con fotos y precios. Inmediatamente obtienes tu enlace público personalizado y tu código QR listo para imprimir y exhibir. (*El tiempo estimado puede variar ligeramente según la velocidad y estabilidad de tu conexión a internet o la cantidad de fotos que cargues).',
     },
     {
       question: '¿Qué es APANA Pagos y cuándo estará activo?',

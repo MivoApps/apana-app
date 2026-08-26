@@ -11,7 +11,7 @@ export const LandingHowItWorks: React.FC = () => {
       icon: PlusCircle,
       title: 'Sube tus productos',
       description: 'Ingresa el nombre de tu tienda, tu número de WhatsApp y carga tus productos con fotos, descripción y precios.',
-      badge: 'En solo 1 minuto',
+      badge: 'En solo 3 minutos*',
       color: 'from-emerald-500/20 to-emerald-500/5 text-emerald-600',
     },
     {
@@ -93,7 +93,7 @@ export const LandingHowItWorks: React.FC = () => {
           href="/register"
           className="inline-flex items-center gap-2 text-sm font-bold text-[#059669] hover:text-[#00855d] bg-emerald-50 hover:bg-emerald-100/80 px-5 py-2.5 rounded-full border border-emerald-200 transition-all shadow-2xs group"
         >
-          <span>¿Listo para comenzar? Crea tu tienda gratis en 1 minuto</span>
+          <span>¿Listo para comenzar? Crea tu tienda gratis en 3 minutos*</span>
           <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
         </Link>
       </div>
