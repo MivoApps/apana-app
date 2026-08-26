@@ -3,11 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Heart, ExternalLink, Zap } from 'lucide-react';
+import { ArrowRight, Heart, ExternalLink, Zap, Mail, Phone, MapPin, BookOpen } from 'lucide-react';
 
 export const LandingFooter: React.FC = () => {
   return (
-    <footer className="bg-white border-t border-[#bccac0]/30 pt-16 pb-12 text-[#0b1c30]">
+    <footer className="bg-[#f8f9ff] pt-16 pb-12 border-t border-[#bccac0]/30 relative overflow-hidden">
       {/* Bottom CTA Banner */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 mb-16">
         <div className="bg-linear-to-br from-[#00855d] via-[#059669] to-[#006c49] rounded-3xl p-8 sm:p-12 text-white text-center flex flex-col items-center relative overflow-hidden shadow-xl shadow-[#059669]/20">
@@ -56,9 +56,9 @@ export const LandingFooter: React.FC = () => {
 
       {/* Main Footer Links */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-12 border-b border-[#bccac0]/25">
-          {/* Column 1: Brand Info */}
-          <div className="md:col-span-2 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-12 border-b border-[#bccac0]/25">
+          {/* Column 1: Brand Info & Contact (5 cols) */}
+          <div className="md:col-span-5 space-y-4">
             <Link href="/" className="inline-block transition-opacity hover:opacity-90">
               <Image
                 src="/logo_lockup.svg"
@@ -71,10 +71,30 @@ export const LandingFooter: React.FC = () => {
             <p className="text-xs sm:text-sm text-[#3d4a42] max-w-sm leading-relaxed">
               La plataforma más simple para crear catálogos digitales con código QR y recibir pedidos organizados directamente en WhatsApp.
             </p>
+
+            {/* Official Contact Info Box */}
+            <div className="pt-2 space-y-2 text-xs text-slate-600 font-medium">
+              <div className="flex items-center gap-2">
+                <Mail size={14} className="text-[#059669] shrink-0" />
+                <a href="mailto:soporte@beapana.com" className="hover:text-[#059669] hover:underline">
+                  soporte@beapana.com
+                </a>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone size={14} className="text-[#059669] shrink-0" />
+                <a href="https://wa.me/51920030074" target="_blank" className="hover:text-[#059669] hover:underline">
+                  +51 920 030 074 (WhatsApp)
+                </a>
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin size={14} className="text-[#059669] shrink-0" />
+                <span>Lima, Perú • Operado por Mivo E.I.R.L.</span>
+              </div>
+            </div>
           </div>
 
-          {/* Column 2: Navigation */}
-          <div>
+          {/* Column 2: Navigation (2 cols) */}
+          <div className="md:col-span-2">
             <h4 className="text-xs font-bold uppercase tracking-wider text-[#0b1c30] mb-3">
               Navegación
             </h4>
@@ -102,8 +122,8 @@ export const LandingFooter: React.FC = () => {
             </ul>
           </div>
 
-          {/* Column 3: Acceso */}
-          <div>
+          {/* Column 3: Acceso (2 cols) */}
+          <div className="md:col-span-2">
             <h4 className="text-xs font-bold uppercase tracking-wider text-[#0b1c30] mb-3">
               Acceso
             </h4>
@@ -126,15 +146,20 @@ export const LandingFooter: React.FC = () => {
             </ul>
           </div>
 
-          {/* Column 4: Legal & Declaración Jurada */}
-          <div>
+          {/* Column 4: Legal & Libro de Reclamaciones (3 cols) */}
+          <div className="md:col-span-3 space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-[#0b1c30] mb-3">
-              Legal
+              Legal & Reclamaciones
             </h4>
             <ul className="space-y-2 text-xs font-medium text-[#3d4a42]">
               <li>
                 <Link href="/terms" className="hover:text-[#059669] transition-colors">
                   Términos y Condiciones
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms#reembolsos" className="hover:text-[#059669] transition-colors">
+                  Política de Cancelaciones y Reembolsos
                 </Link>
               </li>
               <li>
@@ -148,12 +173,28 @@ export const LandingFooter: React.FC = () => {
                 </Link>
               </li>
             </ul>
+
+            {/* Libro de Reclamaciones Badge Oficial */}
+            <div className="pt-2">
+              <Link 
+                href="/libro-de-reclamaciones"
+                className="inline-flex items-center gap-2 p-2.5 rounded-xl bg-white border border-slate-200 hover:border-[#059669] text-[#0b1c30] hover:text-[#006c49] shadow-2xs transition-all group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <BookOpen size={16} />
+                </div>
+                <div className="text-left">
+                  <span className="text-[11px] font-extrabold block leading-tight">Libro de Reclamaciones</span>
+                  <span className="text-[9px] text-slate-500 block leading-tight">Conforme a INDECOPI</span>
+                </div>
+              </Link>
+            </div>
           </div>
         </div>
 
         {/* Bottom copyright line */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#6d7a72] gap-4">
-          <p>© {new Date().getFullYear()} APANA. Todos los derechos reservados.</p>
+          <p>© {new Date().getFullYear()} APANA • Operado por Mivo E.I.R.L. Todos los derechos reservados.</p>
           <div className="flex items-center gap-4 text-xs text-slate-500">
             <Link href="/terms" className="hover:underline">
               Términos del Servicio

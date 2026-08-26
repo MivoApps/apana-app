@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, ShieldCheck, FileText, Scale, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, FileText, Scale, RefreshCw, BookOpen } from 'lucide-react';
 
 export default function TermsPage() {
   return (
@@ -74,13 +74,13 @@ export default function TermsPage() {
               2. Naturaleza del Servicio y Titularidad
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              La plataforma tecnológica, marca y software denominado <strong>APANA</strong> es de titularidad, desarrollo y operación exclusiva de <strong>MIVO (Mivo E.I.R.L.)</strong>.
+              La plataforma tecnológica, marca y software denominado <strong>APANA</strong> es de titularidad, desarrollo y operación exclusiva de <strong>MIVO (Mivo E.I.R.L.)</strong> con domicilio legal en Lima, Perú.
             </p>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              APANA es un proveedor de tecnología (Software as a Service - SaaS) que facilita a los emprendedores la creación de catálogos digitales interactivos y la generación de enlaces de contacto directo hacia la aplicación WhatsApp.
+              APANA es un proveedor de tecnología en la nube (Software as a Service - SaaS) que facilita a emprendedores y comercios la creación de catálogos digitales interactivos y la generación de enlaces de contacto directo hacia la aplicación WhatsApp.
             </p>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              <strong>APANA no es una pasarela de pagos ni un intermediario financiero.</strong> Las transacciones comerciales, cobros, acuerdos de entrega, calidad de los productos y cumplimiento tributario son de entera y exclusiva responsabilidad entre el vendedor y el comprador final.
+              <strong>APANA no es una pasarela de pagos ni un intermediario financiero.</strong> Las transacciones comerciales, cobros de productos, acuerdos de entrega, calidad de los artículos comercializados y obligaciones tributarias son de entera y exclusiva responsabilidad entre el comercio vendedor y su cliente comprador final.
             </p>
           </section>
 
@@ -96,10 +96,10 @@ export default function TermsPage() {
             <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
               <li>Registrar números de teléfono que pertenezcan a terceras personas o comercios sin su autorización expresa por escrito.</li>
               <li>Utilizar marcas comerciales registradas, logotipos o nombres comerciales protegidos de terceros con fines de engaño o estafa.</li>
-              <li>Publicar o comercializar bienes o servicios prohibidos por la ley, incluyendo pero no limitándose a sustancias ilícitas, armas, material falsificado o contenido que atente contra la integridad ciudadana.</li>
+              <li>Publicar o comercializar bienes o servicios prohibidos por la ley peruana, incluyendo sustancias ilícitas, armas, productos falsificados o contenido que atente contra el orden público y las buenas costumbres.</li>
             </ul>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              APANA se reserva el derecho de <strong>cancelar, suspender o bloquear de manera inmediata y sin previo aviso</strong> cualquier cuenta o tienda que infrinja estas disposiciones, así como cooperar plenamente con las autoridades judiciales y policiales en caso de investigaciones por suplantación de identidad o fraude.
+              APANA se reserva el derecho de <strong>cancelar, suspender o bloquear de manera inmediata y sin previo aviso</strong> cualquier cuenta o catálogo que infrinja estas disposiciones, así como cooperar plenamente con las autoridades judiciales y policiales competentes.
             </p>
           </section>
 
@@ -110,35 +110,68 @@ export default function TermsPage() {
               4. Deslinde y Limitación de Responsabilidad
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              APANA no se responsabiliza por:
+              APANA no se responsabiliza por pérdidas económicas, daños o perjuicios resultantes de transacciones acordadas entre comerciantes y compradores a través de WhatsApp, ni por interrupciones atribuibles a proveedores de telecomunicaciones o políticas internas de Meta / WhatsApp.
             </p>
-            <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-              <li>Pérdidas económicas, daños o perjuicios resultantes de transacciones realizadas entre comerciantes y compradores por medio de WhatsApp.</li>
-              <li>Fallas, interrupciones o bloqueos de cuentas causados por las políticas internas de terceros como WhatsApp, Meta o proveedores de internet.</li>
-              <li>Uso fraudulento o no autorizado de credenciales por negligencia del usuario en la custodia de sus contraseñas.</li>
-            </ul>
           </section>
 
-          {/* Section 5: Modificaciones */}
-          <section className="space-y-3">
+          {/* Section 5: Política de Cancelaciones y Reembolsos */}
+          <section className="space-y-3 bg-slate-50 border border-slate-200/80 rounded-2xl p-5 sm:p-6">
             <h2 className="text-lg sm:text-xl font-bold text-[#0b1c30] flex items-center gap-2">
-              <FileText size={18} className="text-[#059669]" />
-              5. Modificaciones a los Términos
+              <RefreshCw size={18} className="text-[#059669]" />
+              5. Política de Cancelación de Suscripción y Reembolsos
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              APANA podrá actualizar estos términos periódicamente para adecuarse a mejoras técnicas o requerimientos legales. El uso continuo de la plataforma tras la publicación de cambios constituye la aceptación plena de los mismos.
-            </p>
+            <div className="space-y-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
+              <p>
+                <strong>5.1. Cancelación de Suscripción:</strong> Los planes de pago de APANA (Plan Emprendedor y Plan Negocio Pro) operan bajo modalidad de suscripción mensual recurrente <strong>sin contratos de permanencia obligatoria</strong>. El usuario puede cancelar su suscripción en cualquier momento y con un solo clic desde la sección <em>Planes</em> de su panel de administración.
+              </p>
+              <p>
+                <strong>5.2. Efecto de la Cancelación:</strong> Al cancelar la suscripción, el usuario conservará el acceso ininterrumpido a todas las funciones de su plan hasta el término exacto del periodo mensual facturado. Posteriormente, su cuenta pasará automáticamente al Plan Gratis sin cargos adicionales.
+              </p>
+              <p>
+                <strong>5.3. Reembolsos y Devoluciones:</strong> Al tratarse de un servicio de software en la nube de consumo y activación inmediata (SaaS), los periodos ya iniciados y facturados no son sujetos a reembolso proporcional, excepto en situaciones donde se demuestre una falla técnica crítica atribuible directamente a la plataforma que haya impedido el uso total del servicio, solicitada dentro de los primeros 7 (siete) días calendario posteriores al cobro respectivo a través de <a href="mailto:soporte@beapana.com" className="text-[#059669] font-bold hover:underline">soporte@beapana.com</a>.
+              </p>
+            </div>
           </section>
 
           {/* Section 6: Contacto y Soporte */}
-          <section className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 space-y-2">
-            <h3 className="font-bold text-sm text-[#0b1c30]">Canal Oficial de Soporte, Legal y Denuncias</h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Para consultas legales, solicitudes de información, soporte técnico o reportes de tiendas que utilicen indebidamente un número telefónico o marca comercial, contáctanos directamente a nuestro correo oficial:
+          <section className="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-5 sm:p-6 space-y-3">
+            <h3 className="font-bold text-base text-[#0b1c30] flex items-center gap-2">
+              <BookOpen size={18} className="text-[#059669]" />
+              6. Datos de Contacto y Libro de Reclamaciones
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
+              Para consultas contractuales, soporte técnico, facturación o reportes de uso indebido:
             </p>
-            <p className="text-xs font-bold text-[#059669]">
-              ✉️ <a href="mailto:soporte@beapana.com" className="hover:underline">soporte@beapana.com</a>
-            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-[#0b1c30] font-medium pt-1">
+              <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-2xs">
+                <span className="text-slate-500 block text-[11px]">Razón Social / Operador:</span>
+                <strong className="text-emerald-950 font-bold">Mivo E.I.R.L.</strong>
+              </div>
+              <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-2xs">
+                <span className="text-slate-500 block text-[11px]">Ubicación Legal:</span>
+                <strong>Lima, Perú</strong>
+              </div>
+              <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-2xs">
+                <span className="text-slate-500 block text-[11px]">Correo Electrónico:</span>
+                <a href="mailto:soporte@beapana.com" className="text-[#059669] font-bold hover:underline">
+                  soporte@beapana.com
+                </a>
+              </div>
+              <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-2xs">
+                <span className="text-slate-500 block text-[11px]">WhatsApp Oficial de Atención:</span>
+                <a href="https://wa.me/51920030074" target="_blank" className="text-[#059669] font-bold hover:underline">
+                  +51 920 030 074
+                </a>
+              </div>
+            </div>
+            <div className="pt-2">
+              <Link 
+                href="/libro-de-reclamaciones" 
+                className="inline-flex items-center gap-2 text-xs font-bold text-[#006c49] hover:underline"
+              >
+                <span>📖 Acceder al Libro de Reclamaciones Virtual conforme a INDECOPI ➔</span>
+              </Link>
+            </div>
           </section>
 
         </div>
@@ -146,7 +179,7 @@ export default function TermsPage() {
 
       {/* Footer */}
       <footer className="py-6 text-center text-xs text-slate-500 border-t border-[#bccac0]/20 bg-white">
-        © {new Date().getFullYear()} APANA • Desarrollado por Mivo E.I.R.L. Todos los derechos reservados.
+        © {new Date().getFullYear()} APANA • Operado por Mivo E.I.R.L. • Lima, Perú.
       </footer>
     </div>
   );
