@@ -3,13 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import QRCode from 'qrcode';
-import { 
-  Sparkles, 
-  ArrowRight, 
-  Store as StoreIcon, 
-  QrCode as QrIcon, 
-  Check, 
-  Copy,
+import {
+  Sparkles,
+  ArrowRight,
+  Store as StoreIcon,
+  QrCode as QrIcon,
   Smartphone
 } from 'lucide-react';
 import { slugify } from '@/lib/firebase/firestore';
@@ -27,7 +25,6 @@ export const LandingStoreSimulator: React.FC = () => {
   const [storeIndex, setStoreIndex] = useState(0);
   const [displayText, setDisplayText] = useState(SAMPLE_STORES[0]);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
 
   // Efecto Máquina de Escribir (Typewriter)
@@ -79,14 +76,6 @@ export const LandingStoreSimulator: React.FC = () => {
       .catch((err) => console.error('Error generando QR:', err));
   }, [fullUrl]);
 
-  const handleCopy = () => {
-    if (typeof navigator !== 'undefined') {
-      navigator.clipboard.writeText(fullUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
   return (
     <section className="py-16 md:py-24 relative overflow-hidden bg-linear-to-b from-[#f8f9ff] via-[#eff4ff]/80 to-[#f8f9ff]">
       {/* Background Glows */}
@@ -110,14 +99,14 @@ export const LandingStoreSimulator: React.FC = () => {
 
         {/* Simulator Central Card */}
         <div className="max-w-md mx-auto bg-white/85 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border border-white shadow-2xl shadow-slate-200/60 flex flex-col gap-5">
-          
+
           {/* Input Nombre de Tienda + Mini QR integrado lado a lado */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-extrabold text-[#0b1c30] uppercase tracking-wider flex items-center gap-1.5">
               <StoreIcon size={14} className="text-[#059669]" />
               <span>Nombre de tu negocio</span>
             </label>
-            
+
             <div className="flex items-center gap-3">
               {/* Display de Escritura Automática */}
               <div className="flex-1 h-13 px-4 rounded-2xl bg-slate-50 border border-slate-200/90 flex items-center shadow-inner overflow-hidden">
@@ -128,7 +117,7 @@ export const LandingStoreSimulator: React.FC = () => {
               </div>
 
               {/* QR Generado Automáticamente */}
-              <div 
+              <div
                 className="w-13 h-13 rounded-2xl p-1.5 bg-white border border-slate-200 shadow-sm shrink-0 flex items-center justify-center relative transition-transform hover:scale-105"
                 title="Código QR generado automáticamente"
               >
@@ -145,23 +134,12 @@ export const LandingStoreSimulator: React.FC = () => {
             </div>
           </div>
 
-          {/* Generated URL Preview Pill with Copy Button */}
-          <div className="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex items-center justify-between gap-2 shadow-inner">
-            <div className="flex items-center gap-2 overflow-hidden">
-              <Smartphone size={15} className="text-[#059669] shrink-0" />
-              <span className="text-xs sm:text-sm font-mono text-slate-600 truncate select-all">
-                beapana.com/s/<strong className="text-emerald-700 font-bold">{cleanSlug}</strong>
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors cursor-pointer shrink-0 shadow-2xs flex items-center gap-1.5 text-xs font-bold active:scale-95"
-              title="Copiar enlace"
-            >
-              {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-              <span>{copied ? 'Copiado' : 'Copiar'}</span>
-            </button>
+          {/* Generated URL Preview Pill (Solo lectura / Ilustrativo) */}
+          <div className="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex items-center justify-center gap-2 shadow-inner">
+            <Smartphone size={15} className="text-[#059669] shrink-0" />
+            <span className="text-xs sm:text-sm font-mono text-slate-600 truncate">
+              beapana.com/s/<strong className="text-emerald-700 font-bold">{cleanSlug}</strong>
+            </span>
           </div>
 
           {/* CTA Registro Directo */}
