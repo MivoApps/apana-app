@@ -263,7 +263,7 @@ export const LandingPricing: React.FC = () => {
                 <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span>Badge de <strong>Tienda Verificada Oficial</strong> 🛡️</span>
+                <span>Hasta <strong>8 imágenes HD</strong> por producto</span>
               </div>
 
               <div className="flex items-center gap-3">

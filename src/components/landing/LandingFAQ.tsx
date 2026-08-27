@@ -15,7 +15,7 @@ export const LandingFAQ: React.FC = () => {
     {
       question: '¿Cuáles son los planes disponibles en APANA?',
       answer:
-        'Contamos con 3 planes diseñados para cada etapa: 1) Plan Gratis (S/ 0 para siempre, hasta 25 productos, 1 foto, QR y pedidos por WhatsApp), 2) Plan Emprendedor (S/ 19.90/mes con hasta 150 productos, 4 fotos, variantes con precios diferenciales de hasta 2 grupos, categorías, métricas y sin marca APANA), y 3) Plan Negocio Pro (S/ 39.90/mes con productos ilimitados, hasta 8 fotos, variantes ilimitadas con foto por opción, métricas completas del mes y Badge de Tienda Verificada VIP).',
+        'Contamos con 3 planes diseñados para cada etapa: 1) Plan Gratis (S/ 0 para siempre, hasta 25 productos, 1 foto, QR y pedidos por WhatsApp), 2) Plan Emprendedor (S/ 19.90/mes con hasta 150 productos, 4 fotos, variantes con precios diferenciales de hasta 2 grupos, categorías, métricas y sin marca APANA), y 3) Plan Negocio Pro (S/ 39.90/mes con productos ilimitados, hasta 8 fotos, variantes ilimitadas con foto por opción, métricas completas del mes y exportación a Excel).',
     },
     {
       question: '¿Cómo funcionan las opciones y variantes de producto en cada plan?',

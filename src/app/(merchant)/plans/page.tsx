@@ -617,7 +617,7 @@ export default function PlansPage() {
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-amber-600" />
-                <span>Badge de <strong>Tienda Verificada Oficial</strong> 🛡️</span>
+                <span>Hasta <strong>8 imágenes HD</strong> por producto</span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-amber-600" />

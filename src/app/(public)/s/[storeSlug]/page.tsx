@@ -17,7 +17,6 @@ import {
   ArrowRight,
   MessageSquare,
   Crown,
-  BadgeCheck,
   MapPin,
   Clock,
 } from 'lucide-react';
@@ -296,21 +295,6 @@ export default function PublicStorePage({ params }: Props) {
                 }`}>
                 {store.name}
               </h2>
-              {store.plan === 'negocio' && (
-                <div className="inline-flex items-center select-none" title="Negocio Oficial Verificado">
-                  {store.themeStyle === 'elegante' ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100/70 border border-amber-300 text-amber-900 font-bold text-[11px] shadow-2xs">
-                      <BadgeCheck size={14} className="text-amber-700 fill-amber-300/60" />
-                      <span>Verificada</span>
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-[11px] shadow-2xs">
-                      <BadgeCheck size={14} className="text-[#059669] fill-emerald-100" />
-                      <span>Verificada</span>
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
             <p className={`text-xs max-w-sm mx-auto leading-relaxed ${store.themeStyle === 'elegante'
                 ? 'text-stone-600 font-sans'
