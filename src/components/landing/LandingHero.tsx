@@ -9,11 +9,8 @@ import {
   Zap,
   Smartphone,
   CreditCard,
-  QrCode,
-  CheckCheck,
   ChevronDown
 } from 'lucide-react';
-import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { Button } from '@/components/ui/Button';
 
 export const LandingHero: React.FC = () => {
@@ -24,32 +21,7 @@ export const LandingHero: React.FC = () => {
       <div className="absolute top-24 right-6 md:right-24 w-80 h-80 bg-[#6cf8bb]/20 blur-3xl rounded-full pointer-events-none -z-10 animate-float-reverse" />
       <div className="absolute top-48 left-6 md:left-24 w-72 h-72 bg-[#38bdf8]/15 blur-3xl rounded-full pointer-events-none -z-10 animate-float-slow" />
 
-      {/* Floating Mockup Badges (Solo Desktop & Tablet) */}
-      <div className="hidden lg:flex items-center gap-3 absolute top-40 left-8 xl:left-20 bg-white/85 backdrop-blur-md p-3.5 rounded-2xl border border-white/90 shadow-xl shadow-slate-200/50 z-20 animate-float-slow hover:scale-105 transition-transform select-none">
-        <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm">
-          <WhatsAppIcon size={20} className="fill-white" />
-        </div>
-        <div className="flex flex-col text-left">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-extrabold text-[#0b1c30]">Nuevo Pedido WhatsApp</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-          </div>
-          <span className="text-[11px] text-slate-500 font-medium">Pan Campesino x2 • <strong className="text-emerald-700 font-bold">S/ 18.00</strong></span>
-        </div>
-      </div>
 
-      <div className="hidden lg:flex items-center gap-3 absolute top-60 right-8 xl:right-20 bg-white/85 backdrop-blur-md p-3.5 rounded-2xl border border-white/90 shadow-xl shadow-slate-200/50 z-20 animate-float-reverse hover:scale-105 transition-transform select-none">
-        <div className="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center shrink-0 shadow-sm">
-          <QrCode size={20} />
-        </div>
-        <div className="flex flex-col text-left">
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] font-extrabold text-[#0b1c30]">QR Escaneado en Mesa</span>
-            <CheckCheck size={13} className="text-indigo-600" />
-          </div>
-          <span className="text-[11px] text-slate-500 font-medium">Catálogo abierto al instante</span>
-        </div>
-      </div>
 
       {/* 1. First Screen Fold: Exact 100svh Viewport on Mobile */}
       <section className="min-h-[100svh] flex flex-col justify-between pt-20 pb-6 sm:pt-32 sm:pb-10 relative z-10">
