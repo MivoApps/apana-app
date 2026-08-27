@@ -58,14 +58,14 @@ export const LandingStoreSimulator: React.FC = () => {
     return () => clearTimeout(timer);
   }, [displayText, isDeleting, storeIndex]);
 
-  // Generar código QR dinámicamente según el negocio actual
+  // Generar código QR en alta resolución dinámicamente según el negocio actual
   const currentBusinessName = displayText || SAMPLE_STORES[storeIndex];
   const cleanSlug = slugify(currentBusinessName) || 'mi-tienda';
   const fullUrl = `https://beapana.com/s/${cleanSlug}`;
 
   useEffect(() => {
     QRCode.toDataURL(fullUrl, {
-      width: 320,
+      width: 400,
       margin: 1,
       color: {
         dark: '#0b1c30',
@@ -97,29 +97,29 @@ export const LandingStoreSimulator: React.FC = () => {
           </p>
         </div>
 
-        {/* Simulator Card: Mobile (max-w-md) & Desktop (max-w-2xl prominente y espacioso) */}
-        <div className="max-w-md md:max-w-xl lg:max-w-2xl mx-auto bg-white/90 backdrop-blur-xl p-6 sm:p-8 md:p-10 rounded-3xl border border-white shadow-2xl shadow-slate-200/70 flex flex-col gap-5 md:gap-7 transition-all">
+        {/* Simulator Card: Mobile (compacto) & Desktop (amplio con QR destacado) */}
+        <div className="max-w-md md:max-w-2xl lg:max-w-3xl mx-auto bg-white/90 backdrop-blur-xl p-6 sm:p-8 md:p-10 rounded-3xl border border-white shadow-2xl shadow-slate-200/70 flex flex-col gap-5 md:gap-7 transition-all">
           
-          {/* Input Nombre de Tienda + Mini QR integrado lado a lado */}
+          {/* Nombre de Tienda + QR destacado */}
           <div className="flex flex-col gap-2 md:gap-3">
             <label className="text-xs md:text-sm font-extrabold text-[#0b1c30] uppercase tracking-wider flex items-center gap-1.5">
               <StoreIcon size={16} className="text-[#059669]" />
               <span>Nombre de tu negocio</span>
             </label>
             
-            <div className="flex items-center gap-3 md:gap-4">
+            <div className="flex items-center gap-3 md:gap-5">
               {/* Display de Escritura Automática */}
-              <div className="flex-1 h-13 md:h-16 lg:h-18 px-4 md:px-6 rounded-2xl bg-slate-50 border border-slate-200/90 flex items-center shadow-inner overflow-hidden">
-                <span className="text-sm sm:text-base md:text-xl lg:text-2xl font-black text-[#0b1c30] tracking-tight truncate">
+              <div className="flex-1 h-13 md:h-28 lg:h-32 px-4 md:px-7 rounded-2xl bg-slate-50 border border-slate-200/90 flex items-center shadow-inner overflow-hidden">
+                <span className="text-sm sm:text-base md:text-2xl lg:text-3xl font-black text-[#0b1c30] tracking-tight truncate">
                   {displayText}
                 </span>
-                <span className="inline-block w-0.5 md:w-1 h-5 md:h-7 bg-[#059669] ml-1.5 animate-pulse" />
+                <span className="inline-block w-0.5 md:w-1 h-5 md:h-8 bg-[#059669] ml-1.5 animate-pulse" />
               </div>
 
-              {/* QR Generado Automáticamente */}
+              {/* QR Generado Automáticamente (Ampliado en Desktop) */}
               <div 
-                className="w-13 h-13 md:w-16 md:h-16 lg:w-18 lg:h-18 rounded-2xl p-1.5 md:p-2 bg-white border border-slate-200 shadow-sm shrink-0 flex items-center justify-center relative transition-transform hover:scale-105"
-                title="Código QR generado automáticamente"
+                className="w-13 h-13 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-2xl p-1.5 md:p-2.5 bg-white border border-slate-200 shadow-md shrink-0 flex items-center justify-center relative transition-transform hover:scale-105"
+                title="Código QR generado en vivo"
               >
                 {qrDataUrl ? (
                   <img

@@ -2,16 +2,34 @@
 
 import React from 'react';
 import Link from 'next/link';
-import {
-  ArrowRight,
-  Sparkles,
-  CheckCircle2,
-  Zap,
-  Smartphone,
+import { 
+  ArrowRight, 
+  Sparkles, 
+  CheckCircle2, 
+  Zap, 
+  Smartphone, 
   CreditCard,
   ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+
+const CATEGORIES_LEFT = [
+  { name: 'Panaderías', icon: '🥖', desc: 'Artesanales y hornos' },
+  { name: 'Moda & Ropa', icon: '👗', desc: 'Boutiques y tendencias' },
+  { name: 'Cafés & Postres', icon: '☕', desc: 'Especialidad y dulces' },
+  { name: 'Joyería', icon: '💎', desc: 'Accesorios y plata' },
+  { name: 'Pet Shop', icon: '🐾', desc: 'Alimentos y accesorios' },
+  { name: 'Florerías', icon: '💐', desc: 'Ramos y detalles' },
+];
+
+const CATEGORIES_RIGHT = [
+  { name: 'Burgers & Grill', icon: '🍔', desc: 'Combos y delivery' },
+  { name: 'Pastelería', icon: '🎂', desc: 'Tortas personalizadas' },
+  { name: 'Skincare', icon: '✨', desc: 'Cosmética y cuidado' },
+  { name: 'Restaurantes', icon: '🍽️', desc: 'Menú digital y mesas' },
+  { name: 'Calzado', icon: '👟', desc: 'Zapatillas y urbano' },
+  { name: 'Minimarkets', icon: '🛒', desc: 'Bodegas y snacks' },
+];
 
 export const LandingHero: React.FC = () => {
   return (
@@ -21,7 +39,33 @@ export const LandingHero: React.FC = () => {
       <div className="absolute top-24 right-6 md:right-24 w-80 h-80 bg-[#6cf8bb]/20 blur-3xl rounded-full pointer-events-none -z-10 animate-float-reverse" />
       <div className="absolute top-48 left-6 md:left-24 w-72 h-72 bg-[#38bdf8]/15 blur-3xl rounded-full pointer-events-none -z-10 animate-float-slow" />
 
+      {/* Decorative Background Category Tiles (Left Flank - Desktop) */}
+      <div className="hidden 2xl:grid grid-cols-2 gap-2.5 absolute left-6 top-32 z-0 opacity-85 hover:opacity-100 transition-opacity">
+        {CATEGORIES_LEFT.map((cat, idx) => (
+          <div
+            key={idx}
+            className="w-40 p-3 rounded-2xl bg-white/70 hover:bg-white/95 border border-slate-200/70 hover:border-[#059669]/60 shadow-2xs hover:shadow-md transition-all duration-300 hover:scale-105 cursor-default backdrop-blur-xs select-none group"
+          >
+            <div className="text-2xl mb-1 group-hover:scale-110 transition-transform">{cat.icon}</div>
+            <p className="text-xs font-extrabold text-[#0b1c30] group-hover:text-[#006c49] transition-colors">{cat.name}</p>
+            <p className="text-[10px] text-slate-500 font-medium">{cat.desc}</p>
+          </div>
+        ))}
+      </div>
 
+      {/* Decorative Background Category Tiles (Right Flank - Desktop) */}
+      <div className="hidden 2xl:grid grid-cols-2 gap-2.5 absolute right-6 top-32 z-0 opacity-85 hover:opacity-100 transition-opacity">
+        {CATEGORIES_RIGHT.map((cat, idx) => (
+          <div
+            key={idx}
+            className="w-40 p-3 rounded-2xl bg-white/70 hover:bg-white/95 border border-slate-200/70 hover:border-[#059669]/60 shadow-2xs hover:shadow-md transition-all duration-300 hover:scale-105 cursor-default backdrop-blur-xs select-none group"
+          >
+            <div className="text-2xl mb-1 group-hover:scale-110 transition-transform">{cat.icon}</div>
+            <p className="text-xs font-extrabold text-[#0b1c30] group-hover:text-[#006c49] transition-colors">{cat.name}</p>
+            <p className="text-[10px] text-slate-500 font-medium">{cat.desc}</p>
+          </div>
+        ))}
+      </div>
 
       {/* 1. First Screen Fold: Exact 100svh Viewport on Mobile */}
       <section className="min-h-[100svh] flex flex-col justify-between pt-20 pb-6 sm:pt-32 sm:pb-10 relative z-10">
@@ -96,7 +140,7 @@ export const LandingHero: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. Below The Fold Section (Solo visible al scrollear o apretar el botón) */}
+      {/* 2. Below The Fold Section */}
       <section id="hero-features" className="max-w-5xl mx-auto px-4 sm:px-6 w-full py-12 sm:py-16 scroll-mt-20 relative z-10">
         <div className="pt-6 border-t border-[#bccac0]/30 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto text-left">
           <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md p-3.5 rounded-2xl border border-white/80 shadow-xs hover:border-[#059669]/40 transition-colors">
