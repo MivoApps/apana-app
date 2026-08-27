@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { 
   ArrowRight, 
@@ -13,59 +13,87 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
-const CATEGORIES_LEFT = [
-  { name: 'Panaderías', icon: '🥖', desc: 'Artesanales y hornos' },
-  { name: 'Moda & Ropa', icon: '👗', desc: 'Boutiques y tendencias' },
-  { name: 'Cafés & Postres', icon: '☕', desc: 'Especialidad y dulces' },
-  { name: 'Joyería', icon: '💎', desc: 'Accesorios y plata' },
-  { name: 'Pet Shop', icon: '🐾', desc: 'Alimentos y accesorios' },
-  { name: 'Florerías', icon: '💐', desc: 'Ramos y detalles' },
-];
+interface FloatingCategory {
+  name: string;
+  icon: string;
+  tag: string;
+  x: string;
+  y: string;
+  factorX: number;
+  factorY: number;
+}
 
-const CATEGORIES_RIGHT = [
-  { name: 'Burgers & Grill', icon: '🍔', desc: 'Combos y delivery' },
-  { name: 'Pastelería', icon: '🎂', desc: 'Tortas personalizadas' },
-  { name: 'Skincare', icon: '✨', desc: 'Cosmética y cuidado' },
-  { name: 'Restaurantes', icon: '🍽️', desc: 'Menú digital y mesas' },
-  { name: 'Calzado', icon: '👟', desc: 'Zapatillas y urbano' },
-  { name: 'Minimarkets', icon: '🛒', desc: 'Bodegas y snacks' },
+const FLOATING_CATEGORIES: FloatingCategory[] = [
+  // Top Left
+  { name: 'Panaderías', icon: '🥖', tag: 'Artesanal', x: '8%', y: '16%', factorX: 30, factorY: 22 },
+  // Top Center-Left
+  { name: 'Pastelería', icon: '🎂', tag: 'Tortas & Postres', x: '28%', y: '10%', factorX: 18, factorY: -22 },
+  // Top Center-Right
+  { name: 'Moda & Ropa', icon: '👗', tag: 'Boutiques', x: '68%', y: '11%', factorX: -22, factorY: 26 },
+  // Far Left
+  { name: 'Cafés & Delis', icon: '☕', tag: 'Specialty', x: '5%', y: '48%', factorX: 34, factorY: -16 },
+  // Far Right
+  { name: 'Burgers & Grill', icon: '🍔', tag: 'Delivery', x: '86%', y: '36%', factorX: -32, factorY: 20 },
+  // Mid Right
+  { name: 'Joyería & Plata', icon: '💎', tag: 'Accesorios', x: '82%', y: '64%', factorX: -24, factorY: -26 },
+  // Bottom Left
+  { name: 'Pet Shop', icon: '🐾', tag: 'Mascotas', x: '9%', y: '74%', factorX: 28, factorY: 24 },
+  // Bottom Center-Left
+  { name: 'Restaurantes', icon: '🍽️', tag: 'Menú & Mesas', x: '24%', y: '84%', factorX: 18, factorY: -20 },
+  // Bottom Right
+  { name: 'Skincare & Belleza', icon: '✨', tag: 'Cosmética', x: '74%', y: '82%', factorX: -20, factorY: 22 },
 ];
 
 export const LandingHero: React.FC = () => {
+  const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5; // -0.5 to 0.5
+    const y = (e.clientY - rect.top) / rect.height - 0.5; // -0.5 to 0.5
+    setMouseOffset({ x, y });
+  };
+
+  const handleMouseLeave = () => {
+    setMouseOffset({ x: 0, y: 0 });
+  };
+
   return (
-    <div className="relative overflow-hidden">
+    <div 
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className="relative overflow-hidden"
+    >
       {/* Background Animated Glows & Mesh Orbs */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[380px] bg-linear-to-tr from-[#85f8c4]/30 via-[#059669]/20 to-[#3b82f6]/10 blur-3xl rounded-full pointer-events-none -z-10 animate-float-slow" />
       <div className="absolute top-24 right-6 md:right-24 w-80 h-80 bg-[#6cf8bb]/20 blur-3xl rounded-full pointer-events-none -z-10 animate-float-reverse" />
       <div className="absolute top-48 left-6 md:left-24 w-72 h-72 bg-[#38bdf8]/15 blur-3xl rounded-full pointer-events-none -z-10 animate-float-slow" />
 
-      {/* Decorative Background Category Tiles (Left Flank - Desktop) */}
-      <div className="hidden 2xl:grid grid-cols-2 gap-2.5 absolute left-6 top-32 z-0 opacity-85 hover:opacity-100 transition-opacity">
-        {CATEGORIES_LEFT.map((cat, idx) => (
-          <div
-            key={idx}
-            className="w-40 p-3 rounded-2xl bg-white/70 hover:bg-white/95 border border-slate-200/70 hover:border-[#059669]/60 shadow-2xs hover:shadow-md transition-all duration-300 hover:scale-105 cursor-default backdrop-blur-xs select-none group"
-          >
-            <div className="text-2xl mb-1 group-hover:scale-110 transition-transform">{cat.icon}</div>
-            <p className="text-xs font-extrabold text-[#0b1c30] group-hover:text-[#006c49] transition-colors">{cat.name}</p>
-            <p className="text-[10px] text-slate-500 font-medium">{cat.desc}</p>
+      {/* Floating 3D Parallax Category Elements (Desktop) */}
+      {FLOATING_CATEGORIES.map((cat, idx) => (
+        <div
+          key={idx}
+          style={{
+            left: cat.x,
+            top: cat.y,
+            transform: `translate(${mouseOffset.x * cat.factorX}px, ${mouseOffset.y * cat.factorY}px)`,
+            transition: 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)',
+          }}
+          className="hidden lg:flex items-center gap-2.5 p-2.5 sm:p-3 rounded-2xl bg-white/80 hover:bg-white border border-slate-200/80 hover:border-emerald-400 shadow-md shadow-slate-200/50 hover:shadow-xl hover:shadow-emerald-500/15 duration-300 hover:scale-110 cursor-default backdrop-blur-md absolute z-1 select-none group"
+        >
+          <div className="text-2xl group-hover:scale-115 transition-transform drop-shadow-xs">
+            {cat.icon}
           </div>
-        ))}
-      </div>
-
-      {/* Decorative Background Category Tiles (Right Flank - Desktop) */}
-      <div className="hidden 2xl:grid grid-cols-2 gap-2.5 absolute right-6 top-32 z-0 opacity-85 hover:opacity-100 transition-opacity">
-        {CATEGORIES_RIGHT.map((cat, idx) => (
-          <div
-            key={idx}
-            className="w-40 p-3 rounded-2xl bg-white/70 hover:bg-white/95 border border-slate-200/70 hover:border-[#059669]/60 shadow-2xs hover:shadow-md transition-all duration-300 hover:scale-105 cursor-default backdrop-blur-xs select-none group"
-          >
-            <div className="text-2xl mb-1 group-hover:scale-110 transition-transform">{cat.icon}</div>
-            <p className="text-xs font-extrabold text-[#0b1c30] group-hover:text-[#006c49] transition-colors">{cat.name}</p>
-            <p className="text-[10px] text-slate-500 font-medium">{cat.desc}</p>
+          <div className="flex flex-col text-left">
+            <span className="text-xs font-black text-[#0b1c30] group-hover:text-[#006c49] transition-colors leading-tight">
+              {cat.name}
+            </span>
+            <span className="text-[10px] text-slate-500 font-semibold leading-tight">
+              {cat.tag}
+            </span>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
 
       {/* 1. First Screen Fold: Exact 100svh Viewport on Mobile */}
       <section className="min-h-[100svh] flex flex-col justify-between pt-20 pb-6 sm:pt-32 sm:pb-10 relative z-10">
@@ -73,7 +101,7 @@ export const LandingHero: React.FC = () => {
         <div className="w-full h-1" />
 
         {/* Center Main Hero Content */}
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center flex flex-col items-center justify-center my-auto">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center flex flex-col items-center justify-center my-auto relative z-10">
           {/* Transparency / Micro-tag */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[#059669]/30 shadow-xs mb-4 text-xs font-semibold text-[#006c49] animate-in fade-in slide-in-from-bottom-2 duration-500">
             <Sparkles size={14} className="text-[#059669] animate-spin-slow" />
@@ -122,7 +150,7 @@ export const LandingHero: React.FC = () => {
         </div>
 
         {/* Bottom Screen Element: ONLY the Scroll Down Arrow */}
-        <div className="w-full flex justify-center pb-2">
+        <div className="w-full flex justify-center pb-2 relative z-10">
           <div
             onClick={() => {
               const el = document.getElementById('hero-features');
