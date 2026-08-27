@@ -147,7 +147,13 @@ export const ProductOptionsModal: React.FC<Props> = ({
                   <span className={`text-[11px] font-semibold ${
                     isElegant ? 'text-amber-800' : 'text-[#059669]'
                   }`}>
-                    {group.values.find((v) => v.id === currentSelectedValId)?.name}
+                    {(() => {
+                      const sel = group.values.find((v) => v.id === currentSelectedValId);
+                      if (!sel) return '';
+                      return (!sel.priceDifference || sel.priceDifference === 0)
+                        ? sel.name.replace(/\s+0+(\.0+)?$/, '').trim()
+                        : sel.name;
+                    })()}
                   </span>
                 </div>
 
@@ -156,6 +162,9 @@ export const ProductOptionsModal: React.FC<Props> = ({
                   {group.values.map((val) => {
                     const isSelected = currentSelectedValId === val.id;
                     const hasDiff = val.priceDifference && val.priceDifference > 0;
+                    const cleanValName = (!val.priceDifference || val.priceDifference === 0)
+                      ? val.name.replace(/\s+0+(\.0+)?$/, '').trim()
+                      : val.name;
 
                     return (
                       <button
@@ -180,11 +189,11 @@ export const ProductOptionsModal: React.FC<Props> = ({
                         {val.imageUrl && (
                           <img
                             src={val.imageUrl}
-                            alt={val.name}
+                            alt={cleanValName}
                             className="w-4 h-4 rounded-md object-cover border border-black/10 shrink-0"
                           />
                         )}
-                        <span>{val.name}</span>
+                        <span>{cleanValName}</span>
                         {hasDiff && (
                           <span className={`text-[10px] ml-0.5 ${
                             isSelected ? 'text-amber-100 font-normal' : isElegant ? 'text-amber-800' : 'text-[#059669]'

@@ -323,8 +323,9 @@ export default function CreateProductPage() {
         values: group.values
           .map(v => {
             let name = v.name.trim();
-            if ((!v.priceDifference || v.priceDifference === 0) && /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+\s+0$/.test(name)) {
-              name = name.replace(/\s+0$/, '');
+            // Si no tiene precio diferencial o es 0, quitar cualquier " 0" accidental al final
+            if (!v.priceDifference || v.priceDifference === 0) {
+              name = name.replace(/\s+0+(\.0+)?$/, '').trim();
             }
             return {
               ...v,

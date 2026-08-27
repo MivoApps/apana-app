@@ -703,8 +703,8 @@ export default function PublicStorePage({ params }: Props) {
         </div>
       )}
 
-      {/* 💬 BOTÓN FLOTANTE RÁPIDO DE WHATSAPP (Corner FAB) */}
-      {store.whatsappPhone && (
+      {/* 💬 BOTÓN FLOTANTE RÁPIDO DE WHATSAPP (Corner FAB - Sólo si está verificado) */}
+      {store.whatsappPhone && store.isWhatsappVerified && (
         <a
           href={`https://wa.me/${store.whatsappPhone}?text=${encodeURIComponent(`¡Hola! Tengo una consulta sobre los productos de ${store.name}`)}`}
           target="_blank"

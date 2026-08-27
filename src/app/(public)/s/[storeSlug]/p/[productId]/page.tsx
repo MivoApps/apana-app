@@ -448,7 +448,14 @@ export default function PublicProductDetailPage({ params }: Props) {
                         <span className={`text-xs font-bold ${
                           isElegant ? 'text-amber-800' : 'text-[#059669]'
                         }`}>
-                          {group.values.find((v: ProductOptionValue) => v.id === currentSelectedValId)?.name}
+                          {(() => {
+                            const selectedVal = group.values.find((v: ProductOptionValue) => v.id === currentSelectedValId);
+                            if (!selectedVal) return '';
+                            const cleanName = (!selectedVal.priceDifference || selectedVal.priceDifference === 0)
+                              ? selectedVal.name.replace(/\s+0+(\.0+)?$/, '').trim()
+                              : selectedVal.name;
+                            return cleanName;
+                          })()}
                         </span>
                       </div>
 
@@ -456,6 +463,9 @@ export default function PublicProductDetailPage({ params }: Props) {
                         {group.values.map((val: ProductOptionValue) => {
                           const isSelected = currentSelectedValId === val.id;
                           const hasDiff = val.priceDifference && val.priceDifference > 0;
+                          const cleanValName = (!val.priceDifference || val.priceDifference === 0)
+                            ? val.name.replace(/\s+0+(\.0+)?$/, '').trim()
+                            : val.name;
 
                           return (
                             <button
@@ -491,11 +501,11 @@ export default function PublicProductDetailPage({ params }: Props) {
                               {val.imageUrl && (
                                 <img
                                   src={val.imageUrl}
-                                  alt={val.name}
+                                  alt={cleanValName}
                                   className="w-4 h-4 rounded-md object-cover border border-black/10 shrink-0"
                                 />
                               )}
-                              <span>{val.name}</span>
+                              <span>{cleanValName}</span>
                               {hasDiff && (
                                 <span className={`text-[10px] ml-0.5 ${
                                   isSelected ? 'text-amber-100 font-normal' : isElegant ? 'text-amber-800' : 'text-[#059669]'
