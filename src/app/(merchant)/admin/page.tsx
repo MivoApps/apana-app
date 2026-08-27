@@ -38,7 +38,10 @@ import {
   Printer,
   Download,
   Copy,
-  Check
+  Check,
+  CheckCircle2,
+  ShieldAlert,
+  Award
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useAuth } from '@/lib/firebase/auth-context';
@@ -53,6 +56,8 @@ import {
   adminDeleteUserFromFS,
   getAllPaymentRecordsForAdminFromFS,
   adminExtendStoreSubscriptionInFS,
+  adminToggleWhatsappVerificationInFS,
+  adminUpdateUserDetailsInFS,
   AdminStoreItem,
   AdminUserItem,
   PaymentRecord
@@ -77,7 +82,7 @@ export default function SuperAdminPage() {
   
   // Filtros
   const [searchQuery, setSearchQuery] = useState('');
-  const [planFilter, setPlanFilter] = useState<'todos' | 'gratis' | 'emprendedor'>('todos');
+  const [planFilter, setPlanFilter] = useState<'todos' | 'gratis' | 'emprendedor' | 'negocio'>('todos');
   const [statusFilter, setStatusFilter] = useState<'todos' | 'activa' | 'pausada'>('todos');
   
   // Feedback
@@ -90,10 +95,19 @@ export default function SuperAdminPage() {
     name: '',
     slug: '',
     whatsappPhone: '',
-    plan: 'gratis' as 'gratis' | 'emprendedor',
+    plan: 'gratis' as 'gratis' | 'emprendedor' | 'negocio',
     status: 'activa' as 'activa' | 'pausada',
+    isWhatsappVerified: false,
   });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const [editingUser, setEditingUser] = useState<AdminUserItem | null>(null);
+  const [editUserForm, setEditUserForm] = useState({
+    name: '',
+    phone: '',
+    role: 'merchant' as 'merchant' | 'admin',
+  });
+  const [isSavingUserEdit, setIsSavingUserEdit] = useState(false);
 
   const [deletingStore, setDeletingStore] = useState<AdminStoreItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -110,7 +124,7 @@ export default function SuperAdminPage() {
     setStickerStore(store);
     const storeUrl = typeof window !== 'undefined'
       ? `${window.location.origin}/s/${store.slug}`
-      : `https://bealiados.com/s/${store.slug}`;
+      : `https://beapana.com/s/${store.slug}`;
     try {
       const url = await QRCode.toDataURL(storeUrl, {
         width: 1024,
@@ -171,16 +185,15 @@ export default function SuperAdminPage() {
     loadData();
   }, [user, authLoading, router]);
 
-  // Acciones Rápidas
-  const handleTogglePlan = async (store: AdminStoreItem) => {
-    const nextPlan = store.plan === 'emprendedor' ? 'gratis' : 'emprendedor';
-    if (!confirm(`¿Cambiar plan de "${store.name}" a ${nextPlan.toUpperCase()}?`)) return;
-
+  // Cambiar Plan directamente desde el Dropdown de la tabla
+  const handleSelectPlan = async (store: AdminStoreItem, newPlan: 'gratis' | 'emprendedor' | 'negocio') => {
+    if (store.plan === newPlan) return;
     setActionLoadingId(store.id);
     try {
-      await adminUpdateStorePlanInFS(store.id, nextPlan);
-      setStores((prev) => prev.map((s) => (s.id === store.id ? { ...s, plan: nextPlan } : s)));
-      setSuccessMsg(`Plan de "${store.name}" actualizado a ${nextPlan}.`);
+      await adminUpdateStorePlanInFS(store.id, newPlan);
+      setStores((prev) => prev.map((s) => (s.id === store.id ? { ...s, plan: newPlan } : s)));
+      const planNames = { gratis: 'Gratis', emprendedor: 'Emprendedor', negocio: 'Negocio Pro' };
+      setSuccessMsg(`Plan de "${store.name}" actualizado a ${planNames[newPlan]}.`);
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (e) {
       alert('Error al actualizar el plan.');
@@ -206,6 +219,22 @@ export default function SuperAdminPage() {
     }
   };
 
+  // Toggle Rápido de Validación de WhatsApp
+  const handleToggleWhatsappVerified = async (store: AdminStoreItem) => {
+    const nextVal = !store.isWhatsappVerified;
+    setActionLoadingId(store.id);
+    try {
+      await adminToggleWhatsappVerificationInFS(store.id, nextVal);
+      setStores((prev) => prev.map((s) => (s.id === store.id ? { ...s, isWhatsappVerified: nextVal } : s)));
+      setSuccessMsg(`WhatsApp de "${store.name}" marcado como ${nextVal ? 'VALIDADO 🟢' : 'NO VALIDADO ⚪'}.`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (e) {
+      alert('Error al actualizar validación de WhatsApp.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   // Extender Suscripción (+30 días)
   const handleExtendSubscription = async (store: AdminStoreItem, days: number = 30) => {
     setActionLoadingId(store.id);
@@ -214,7 +243,7 @@ export default function SuperAdminPage() {
       setStores((prev) =>
         prev.map((s) =>
           s.id === store.id
-            ? { ...s, plan: 'emprendedor', subscriptionStatus: 'active', nextBillingDate: newExpiry }
+            ? { ...s, subscriptionStatus: 'active', nextBillingDate: newExpiry }
             : s
         )
       );
@@ -238,6 +267,7 @@ export default function SuperAdminPage() {
       whatsappPhone: cleanPhone,
       plan: (store.plan as any) || 'gratis',
       status: (store.status as any) || 'activa',
+      isWhatsappVerified: Boolean(store.isWhatsappVerified),
     });
   };
 
@@ -255,6 +285,10 @@ export default function SuperAdminPage() {
         status: editForm.status,
       });
 
+      if (editForm.isWhatsappVerified !== editingStore.isWhatsappVerified) {
+        await adminToggleWhatsappVerificationInFS(editingStore.id, editForm.isWhatsappVerified);
+      }
+
       setStores((prev) =>
         prev.map((s) =>
           s.id === editingStore.id
@@ -265,6 +299,7 @@ export default function SuperAdminPage() {
                 whatsappPhone: fullPhone,
                 plan: editForm.plan,
                 status: editForm.status,
+                isWhatsappVerified: editForm.isWhatsappVerified,
               }
             : s
         )
@@ -277,6 +312,51 @@ export default function SuperAdminPage() {
       alert('Error guardando cambios de la tienda.');
     } finally {
       setIsSavingEdit(false);
+    }
+  };
+
+  // Abrir y Guardar Edición de Usuario
+  const handleOpenEditUser = (u: AdminUserItem) => {
+    setEditingUser(u);
+    setEditUserForm({
+      name: u.name || '',
+      phone: (u as any).phone || '',
+      role: u.role || 'merchant',
+    });
+  };
+
+  const handleSaveUserEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setIsSavingUserEdit(true);
+    try {
+      const targetId = editingUser.email || editingUser.uid;
+      await adminUpdateUserDetailsInFS(targetId, {
+        name: editUserForm.name,
+        phone: editUserForm.phone,
+        role: editUserForm.role,
+      });
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.uid === editingUser.uid || u.email === editingUser.email
+            ? {
+                ...u,
+                name: editUserForm.name,
+                phone: editUserForm.phone,
+                role: editUserForm.role,
+              }
+            : u
+        )
+      );
+
+      setEditingUser(null);
+      setSuccessMsg(`Datos del usuario actualizados exitosamente.`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (e) {
+      alert('Error guardando cambios de usuario.');
+    } finally {
+      setIsSavingUserEdit(false);
     }
   };
 
@@ -314,22 +394,29 @@ export default function SuperAdminPage() {
     }
   };
 
-  // Métricas Globales
+  // Métricas Globales del SaaS
   const totalStores = stores.length;
-  const totalProStores = stores.filter((s) => s.plan === 'emprendedor').length;
-  const totalFreeStores = totalStores - totalProStores;
+  const totalEmprendedorStores = stores.filter((s) => s.plan === 'emprendedor').length;
+  const totalNegocioStores = stores.filter((s) => s.plan === 'negocio').length;
+  const totalFreeStores = stores.filter((s) => !s.plan || s.plan === 'gratis').length;
   const totalActiveStores = stores.filter((s) => s.status !== 'pausada').length;
   const totalProducts = stores.reduce((sum, s) => sum + (s.productCount || 0), 0);
   const totalRegisteredUsers = users.length;
-  const totalRevenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  
+  // MRR REAL Recaudado: Únicamente suma los cobros reales procesados por Culqi
+  const approvedPayments = payments.filter((p) => p.status === 'approved');
+  const realCulqiRevenue = approvedPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  // Total de tiendas en planes de pago para la pestaña de suscripciones
+  const paidStoresCount = stores.filter((s) => s.plan === 'emprendedor' || s.plan === 'negocio').length;
 
   // Helper de cálculo de días de suscripción
   const getSubscriptionInfo = (store: AdminStoreItem) => {
-    if (store.plan !== 'emprendedor') {
-      return { label: 'Plan Gratis', color: 'text-slate-400 bg-slate-800 border-slate-700', daysLeft: 0, status: 'free' };
+    if (!store.plan || store.plan === 'gratis') {
+      return { label: 'Plan Gratuito', color: 'text-slate-400 bg-slate-800/80 border-slate-700', daysLeft: 0, status: 'free' };
     }
     if (!store.nextBillingDate) {
-      return { label: 'Pro (Sin corte)', color: 'text-amber-400 bg-amber-950/60 border-amber-800', daysLeft: 30, status: 'active' };
+      return { label: 'Activo (Sin corte)', color: 'text-emerald-400 bg-emerald-950/60 border-emerald-800', daysLeft: 30, status: 'active' };
     }
     const diffMs = store.nextBillingDate - Date.now();
     const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
@@ -354,7 +441,8 @@ export default function SuperAdminPage() {
     const matchesPlan =
       planFilter === 'todos' ||
       (planFilter === 'emprendedor' && s.plan === 'emprendedor') ||
-      (planFilter === 'gratis' && s.plan !== 'emprendedor');
+      (planFilter === 'negocio' && s.plan === 'negocio') ||
+      (planFilter === 'gratis' && (!s.plan || s.plan === 'gratis'));
     const matchesStatus =
       statusFilter === 'todos' ||
       (statusFilter === 'activa' && s.status !== 'pausada') ||
@@ -430,7 +518,7 @@ export default function SuperAdminPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={loadData}
-              className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all flex items-center gap-1.5 text-xs font-bold border border-slate-700"
+              className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all flex items-center gap-1.5 text-xs font-bold border border-slate-700 cursor-pointer"
               title="Refrescar datos"
             >
               <RefreshCw size={14} />
@@ -438,7 +526,7 @@ export default function SuperAdminPage() {
             </button>
             <button
               onClick={handleLogout}
-              className="px-3.5 py-2 rounded-xl bg-red-950/60 hover:bg-red-900 border border-red-800/80 text-red-200 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-xl bg-red-950/60 hover:bg-red-900 border border-red-800/80 text-red-200 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
             >
               <LogOut size={14} />
               <span>Cerrar Sesión</span>
@@ -460,8 +548,8 @@ export default function SuperAdminPage() {
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 pt-6 flex flex-col gap-6">
 
-        {/* 📊 Métricas Globales del SaaS */}
-        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        {/* 📊 Métricas Globales del SaaS (5 Cards) */}
+        <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
           {/* Total Tiendas */}
           <div className="bg-[#0e1e33] border border-slate-800 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
             <div className="flex items-center justify-between text-slate-400">
@@ -474,15 +562,27 @@ export default function SuperAdminPage() {
             </span>
           </div>
 
-          {/* Planes Emprendedor */}
+          {/* Plan Emprendedor */}
           <div className="bg-[#0e1e33] border border-slate-800 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
             <div className="flex items-center justify-between text-slate-400">
               <span className="text-xs font-semibold">Plan Emprendedor</span>
               <Crown size={18} className="text-amber-400" />
             </div>
-            <p className="text-2xl font-black text-amber-400 mt-1">{totalProStores}</p>
+            <p className="text-2xl font-black text-amber-400 mt-1">{totalEmprendedorStores}</p>
             <span className="text-[11px] text-slate-400 font-medium">
               {totalFreeStores} en Plan Gratis
+            </span>
+          </div>
+
+          {/* Plan Negocio Pro */}
+          <div className="bg-[#0e1e33] border border-slate-800 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-xs font-semibold">Plan Negocio Pro</span>
+              <Sparkles size={18} className="text-emerald-400" />
+            </div>
+            <p className="text-2xl font-black text-emerald-400 mt-1">{totalNegocioStores}</p>
+            <span className="text-[11px] text-slate-400 font-medium">
+              S/ 39.90/mes ilimitado
             </span>
           </div>
 
@@ -490,7 +590,7 @@ export default function SuperAdminPage() {
           <div className="bg-[#0e1e33] border border-slate-800 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
             <div className="flex items-center justify-between text-slate-400">
               <span className="text-xs font-semibold">Total Productos</span>
-              <Package size={18} className="text-emerald-400" />
+              <Package size={18} className="text-cyan-400" />
             </div>
             <p className="text-2xl font-black text-white mt-1">{totalProducts}</p>
             <span className="text-[11px] text-slate-400 font-medium">
@@ -498,17 +598,17 @@ export default function SuperAdminPage() {
             </span>
           </div>
 
-          {/* MRR Estimado y Recaudación */}
-          <div className="bg-[#0e1e33] border border-slate-800 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
+          {/* MRR Real Recaudado (Solo Pagos Culqi Reales) */}
+          <div className="bg-[#0e1e33] border border-slate-800 p-4 rounded-2xl flex flex-col gap-1 shadow-sm col-span-2 sm:col-span-1">
             <div className="flex items-center justify-between text-slate-400">
               <span className="text-xs font-semibold">MRR Recaudado</span>
               <TrendingUp size={18} className="text-purple-400" />
             </div>
             <p className="text-2xl font-black text-emerald-400 mt-1">
-              S/ {(totalProStores * 19.9).toFixed(2)}
+              S/ {realCulqiRevenue.toFixed(2)}
             </p>
             <span className="text-[11px] text-slate-400 font-medium">
-              Culqi: {payments.length} cobros procesados
+              Culqi: {approvedPayments.length} cobros procesados
             </span>
           </div>
         </section>
@@ -517,7 +617,7 @@ export default function SuperAdminPage() {
         <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('stores')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'stores'
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
@@ -529,19 +629,19 @@ export default function SuperAdminPage() {
 
           <button
             onClick={() => setActiveTab('subscriptions')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'subscriptions'
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
             }`}
           >
             <DollarSign size={16} />
-            <span>Suscripciones & Cobros ({totalProStores} Pro)</span>
+            <span>Suscripciones & Cobros ({paidStoresCount})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'users'
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
@@ -573,16 +673,17 @@ export default function SuperAdminPage() {
 
           {activeTab === 'stores' && (
             <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
-              {/* Dropdown 1: Plan */}
-              <div className="relative flex-1 md:w-44">
+              {/* Dropdown 1: Plan (Incluye Negocio Pro) */}
+              <div className="relative flex-1 md:w-48">
                 <select
                   value={planFilter}
                   onChange={(e: any) => setPlanFilter(e.target.value)}
                   className="w-full h-11 appearance-none bg-[#071220] border border-slate-700/80 text-xs text-slate-200 rounded-xl pl-3.5 pr-9 focus:outline-none focus:border-emerald-500 font-semibold cursor-pointer"
                 >
                   <option value="todos">Todos los Planes</option>
-                  <option value="emprendedor">Plan Emprendedor</option>
                   <option value="gratis">Plan Gratis</option>
+                  <option value="emprendedor">Plan Emprendedor</option>
+                  <option value="negocio">Plan Negocio Pro</option>
                 </select>
                 <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
@@ -618,8 +719,8 @@ export default function SuperAdminPage() {
                   <thead className="bg-[#071220] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-800 text-[10px]">
                     <tr>
                       <th className="py-3 px-4">Tienda / Negocio</th>
-                      <th className="py-3 px-4">WhatsApp</th>
-                      <th className="py-3 px-4">Plan Actual</th>
+                      <th className="py-3 px-4">WhatsApp & Verificación</th>
+                      <th className="py-3 px-4">Plan Asignado</th>
                       <th className="py-3 px-4">Productos</th>
                       <th className="py-3 px-4">Estado</th>
                       <th className="py-3 px-4 text-right">Acciones de Propietario</th>
@@ -627,9 +728,9 @@ export default function SuperAdminPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
                     {filteredStores.map((store) => {
-                      const isPro = store.plan === 'emprendedor';
                       const isActive = store.status !== 'pausada';
                       const isBusy = actionLoadingId === store.id;
+                      const currentStorePlan = store.plan || 'gratis';
 
                       return (
                         <tr key={store.id} className="hover:bg-[#162a45]/50 transition-colors">
@@ -658,40 +759,78 @@ export default function SuperAdminPage() {
                             </div>
                           </td>
 
-                          {/* WhatsApp */}
+                          {/* WhatsApp & Validación */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
-                            {store.whatsappPhone ? (
-                              <a
-                                href={`https://wa.me/${store.whatsappPhone}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1.5 text-slate-300 hover:text-emerald-400 font-mono"
-                              >
-                                <Phone size={13} className="text-emerald-500" />
-                                +{store.whatsappPhone}
-                              </a>
-                            ) : (
-                              <span className="text-slate-500 italic">No configurado</span>
-                            )}
+                            <div className="flex flex-col gap-1">
+                              {store.whatsappPhone ? (
+                                <a
+                                  href={`https://wa.me/${store.whatsappPhone}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1.5 text-slate-300 hover:text-emerald-400 font-mono"
+                                >
+                                  <Phone size={13} className="text-emerald-500" />
+                                  +{store.whatsappPhone}
+                                </a>
+                              ) : (
+                                <span className="text-slate-500 italic text-[11px]">No configurado</span>
+                              )}
+
+                              {/* Badge de Verificación con toggle rápido */}
+                              {store.whatsappPhone && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleWhatsappVerified(store)}
+                                  disabled={isBusy}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold w-fit transition-all cursor-pointer ${
+                                    store.isWhatsappVerified
+                                      ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-700/60 hover:bg-emerald-900'
+                                      : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white hover:border-slate-500'
+                                  }`}
+                                  title={store.isWhatsappVerified ? "WhatsApp verificado oficialmente (Clic para desvalidar)" : "Clic para validar WhatsApp manualmente"}
+                                >
+                                  {store.isWhatsappVerified ? (
+                                    <>
+                                      <CheckCircle2 size={10} className="text-emerald-400" />
+                                      <span>Validado</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ShieldAlert size={10} className="text-slate-400" />
+                                      <span>Sin validar (Clic para validar)</span>
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
                           </td>
 
-                          {/* Plan */}
+                          {/* Dropdown de Selección de Plan */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                                isPro
-                                  ? 'bg-amber-400/15 text-amber-300 border border-amber-400/30'
-                                  : 'bg-slate-700/60 text-slate-300 border border-slate-600/40'
-                              }`}
-                            >
-                              {isPro ? <Crown size={11} /> : <Zap size={11} />}
-                              {isPro ? 'Emprendedor (Pro)' : 'Gratis'}
-                            </span>
+                            <div className="relative inline-block w-40">
+                              <select
+                                value={currentStorePlan}
+                                disabled={isBusy}
+                                onChange={(e) => handleSelectPlan(store, e.target.value as any)}
+                                className={`w-full appearance-none px-2.5 py-1.5 rounded-xl text-[11px] font-bold border focus:outline-none transition-all cursor-pointer ${
+                                  currentStorePlan === 'negocio'
+                                    ? 'bg-emerald-950/70 text-emerald-300 border-emerald-600/60'
+                                    : currentStorePlan === 'emprendedor'
+                                    ? 'bg-amber-950/70 text-amber-300 border-amber-600/60'
+                                    : 'bg-slate-800 text-slate-300 border-slate-700'
+                                }`}
+                              >
+                                <option value="gratis">⚡ Plan Gratis</option>
+                                <option value="emprendedor">👑 Emprendedor (S/ 19.90)</option>
+                                <option value="negocio">⭐ Negocio Pro (S/ 39.90)</option>
+                              </select>
+                              <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            </div>
                           </td>
 
                           {/* Productos */}
                           <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-200">
-                            📦 {store.productCount || 0} / {isPro ? 250 : 25}
+                            📦 {store.productCount || 0} / {currentStorePlan === 'negocio' ? '∞' : currentStorePlan === 'emprendedor' ? 150 : 25}
                           </td>
 
                           {/* Estado */}
@@ -731,27 +870,12 @@ export default function SuperAdminPage() {
                                 <Edit2 size={15} />
                               </button>
 
-                              {/* Toggle Plan */}
-                              <button
-                                type="button"
-                                disabled={isBusy}
-                                onClick={() => handleTogglePlan(store)}
-                                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
-                                  isPro
-                                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                                    : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40'
-                                }`}
-                                title={isPro ? 'Bajar a Plan Gratis' : 'Ascender a Plan Emprendedor'}
-                              >
-                                {isPro ? 'Bajar a Gratis' : '⭐ Ascender a Pro'}
-                              </button>
-
                               {/* Toggle Estado */}
                               <button
                                 type="button"
                                 disabled={isBusy}
                                 onClick={() => handleToggleStatus(store)}
-                                className={`p-1.5 rounded-lg transition-all ${
+                                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                                   isActive
                                     ? 'text-amber-400 hover:bg-amber-950/40'
                                     : 'text-emerald-400 hover:bg-emerald-950/40'
@@ -765,7 +889,7 @@ export default function SuperAdminPage() {
                               <button
                                 type="button"
                                 onClick={() => setDeletingStore(store)}
-                                className="p-1.5 rounded-lg text-red-400 hover:bg-red-950/50 transition-all ml-1"
+                                className="p-1.5 rounded-lg text-red-400 hover:bg-red-950/50 transition-all ml-1 cursor-pointer"
                                 title="Eliminar Tienda y Productos"
                               >
                                 <Trash2 size={15} />
@@ -810,6 +934,7 @@ export default function SuperAdminPage() {
                     const dateStr = store.nextBillingDate
                       ? new Date(store.nextBillingDate).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
                       : 'No fijada';
+                    const isPaid = store.plan === 'emprendedor' || store.plan === 'negocio';
 
                     return (
                       <tr key={store.id} className="hover:bg-[#162a45]/50 transition-colors">
@@ -820,12 +945,22 @@ export default function SuperAdminPage() {
                           </div>
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="font-bold text-amber-300">
-                            {store.plan === 'emprendedor' ? '⭐ Plan Emprendedor' : 'Plan Gratis'}
+                          <span className={`font-bold ${
+                            store.plan === 'negocio'
+                              ? 'text-emerald-400'
+                              : store.plan === 'emprendedor'
+                              ? 'text-amber-300'
+                              : 'text-slate-400'
+                          }`}>
+                            {store.plan === 'negocio'
+                              ? '⭐ Plan Negocio Pro'
+                              : store.plan === 'emprendedor'
+                              ? '👑 Plan Emprendedor'
+                              : '⚡ Plan Gratis'}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 font-mono text-slate-300">
-                          {dateStr}
+                          {isPaid ? dateStr : '—'}
                         </td>
                         <td className="py-3.5 px-4">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${sub.color}`}>
@@ -833,34 +968,36 @@ export default function SuperAdminPage() {
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {/* Extender +30 Días */}
-                            <button
-                              type="button"
-                              disabled={isBusy}
-                              onClick={() => handleExtendSubscription(store, 30)}
-                              className="px-2.5 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-[11px] font-bold transition-all flex items-center gap-1"
-                              title="Extender 30 días adicionales"
-                            >
-                              <PlusCircle size={13} />
-                              <span>+30 Días</span>
-                            </button>
-
-                            {/* Recordar por WhatsApp */}
-                            {store.whatsappPhone && (
-                              <a
-                                href={`https://wa.me/${store.whatsappPhone}?text=${encodeURIComponent(
-                                  `Hola ${store.name}, te saludamos de APANA. Tu suscripción al Plan Emprendedor vence el ${dateStr}. Recuerda mantener tu método de pago activo para seguir disfrutando de tus beneficios.`
-                                )}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 transition-all"
-                                title="Enviar recordatorio de cobro por WhatsApp"
+                          {isPaid && (
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Extender +30 Días */}
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => handleExtendSubscription(store, 30)}
+                                className="px-2.5 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                title="Extender 30 días adicionales"
                               >
-                                <MessageCircle size={15} />
-                              </a>
-                            )}
-                          </div>
+                                <PlusCircle size={13} />
+                                <span>+30 Días</span>
+                              </button>
+
+                              {/* Recordar por WhatsApp */}
+                              {store.whatsappPhone && (
+                                <a
+                                  href={`https://wa.me/${store.whatsappPhone}?text=${encodeURIComponent(
+                                    `Hola ${store.name}, te saludamos de APANA. Tu suscripción a APANA vence el ${dateStr}. Recuerda mantener tu método de pago activo para seguir disfrutando de tus beneficios.`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 transition-all"
+                                  title="Enviar recordatorio de cobro por WhatsApp"
+                                >
+                                  <MessageCircle size={15} />
+                                </a>
+                              )}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
@@ -931,16 +1068,28 @@ export default function SuperAdminPage() {
                             )}
                           </td>
                           <td className="py-3.5 px-4 text-right">
-                            {!isAdmin && (
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Editar Usuario */}
                               <button
                                 type="button"
-                                onClick={() => setDeletingUser(u)}
-                                className="p-1.5 rounded-lg text-red-400 hover:bg-red-950/50 transition-all"
-                                title="Eliminar Registro de Usuario"
+                                onClick={() => handleOpenEditUser(u)}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer"
+                                title="Editar Datos del Usuario"
                               >
-                                <Trash2 size={15} />
+                                <Edit2 size={15} />
                               </button>
-                            )}
+
+                              {!isAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => setDeletingUser(u)}
+                                  className="p-1.5 rounded-lg text-red-400 hover:bg-red-950/50 transition-all cursor-pointer"
+                                  title="Eliminar Registro de Usuario"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -965,7 +1114,7 @@ export default function SuperAdminPage() {
               </h3>
               <button
                 onClick={() => setEditingStore(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -1011,6 +1160,20 @@ export default function SuperAdminPage() {
                 </div>
               </div>
 
+              {/* Checkbox Validación de WhatsApp */}
+              <div className="flex items-center gap-2 pt-1 pb-1">
+                <input
+                  type="checkbox"
+                  id="editIsWhatsappVerified"
+                  checked={editForm.isWhatsappVerified}
+                  onChange={(e) => setEditForm({ ...editForm, isWhatsappVerified: e.target.checked })}
+                  className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                />
+                <label htmlFor="editIsWhatsappVerified" className="text-xs font-medium text-slate-200 cursor-pointer">
+                  WhatsApp Verificado Oficialmente
+                </label>
+              </div>
+
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-300">Plan</label>
@@ -1020,7 +1183,8 @@ export default function SuperAdminPage() {
                     className="h-10 bg-[#071220] border border-slate-700 rounded-xl px-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-semibold"
                   >
                     <option value="gratis">Gratis</option>
-                    <option value="emprendedor">Emprendedor (Pro)</option>
+                    <option value="emprendedor">Emprendedor (S/ 19.90)</option>
+                    <option value="negocio">Negocio Pro (S/ 39.90)</option>
                   </select>
                 </div>
                 <div className="flex flex-col gap-1">
@@ -1040,16 +1204,99 @@ export default function SuperAdminPage() {
                 <button
                   type="button"
                   onClick={() => setEditingStore(null)}
-                  className="flex-1 h-10 border border-slate-700 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-800"
+                  className="flex-1 h-10 border border-slate-700 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-800 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingEdit}
-                  className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+                  className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
                 >
                   {isSavingEdit ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ✏️ Modal de Edición de Usuario */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0e1e33] border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl flex flex-col gap-4 relative animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="font-bold text-base text-white flex items-center gap-2">
+                <Edit2 size={18} className="text-emerald-400" />
+                Editar Usuario / Comerciante
+              </h3>
+              <button
+                onClick={() => setEditingUser(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveUserEdit} className="flex flex-col gap-3.5">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-slate-300">Correo Electrónico (No editable)</label>
+                <input
+                  type="email"
+                  disabled
+                  value={editingUser.email || ''}
+                  className="h-10 bg-slate-900/80 border border-slate-800 rounded-xl px-3 text-xs text-slate-400 font-mono"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-slate-300">Nombre Completo</label>
+                <input
+                  type="text"
+                  required
+                  value={editUserForm.name}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, name: e.target.value })}
+                  className="h-10 bg-[#071220] border border-slate-700 rounded-xl px-3 text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-slate-300">Teléfono Personal</label>
+                <input
+                  type="tel"
+                  placeholder="9XXXXXXXX"
+                  value={editUserForm.phone}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value })}
+                  className="h-10 bg-[#071220] border border-slate-700 rounded-xl px-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-slate-300">Rol en APANA</label>
+                <select
+                  value={editUserForm.role}
+                  onChange={(e: any) => setEditUserForm({ ...editUserForm, role: e.target.value })}
+                  className="h-10 bg-[#071220] border border-slate-700 rounded-xl px-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-semibold"
+                >
+                  <option value="merchant">🏬 Comerciante</option>
+                  <option value="admin">👑 SuperAdmin</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="flex-1 h-10 border border-slate-700 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-800 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingUserEdit}
+                  className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                >
+                  {isSavingUserEdit ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
               </div>
             </form>
@@ -1074,7 +1321,7 @@ export default function SuperAdminPage() {
               <button
                 type="button"
                 onClick={() => setDeletingStore(null)}
-                className="flex-1 h-10 border border-slate-700 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-800"
+                className="flex-1 h-10 border border-slate-700 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-800 cursor-pointer"
               >
                 Cancelar
               </button>
@@ -1082,7 +1329,7 @@ export default function SuperAdminPage() {
                 type="button"
                 disabled={isDeleting}
                 onClick={handleConfirmDeleteStore}
-                className="flex-1 h-10 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+                className="flex-1 h-10 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
               >
                 {isDeleting ? 'Eliminando...' : 'Sí, Eliminar'}
               </button>
@@ -1099,16 +1346,16 @@ export default function SuperAdminPage() {
               <Trash2 size={28} />
             </div>
             <div className="flex flex-col gap-1">
-              <h3 className="text-base font-bold text-white">¿Eliminar Registro de Usuario?</h3>
+              <h3 className="text-base font-bold text-white">¿Eliminar Usuario?</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Se eliminará el perfil de <strong className="text-white">{deletingUser.email}</strong>.
+                Estás a punto de borrar al usuario <strong className="text-white">{deletingUser.email}</strong> de Firestore.
               </p>
             </div>
             <div className="flex gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setDeletingUser(null)}
-                className="flex-1 h-10 border border-slate-700 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-800"
+                className="flex-1 h-10 border border-slate-700 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-800 cursor-pointer"
               >
                 Cancelar
               </button>
@@ -1125,134 +1372,143 @@ export default function SuperAdminPage() {
         </div>
       )}
 
-      {/* 🏷️ Modal de Sticker QR (5x5 cm) para SuperAdmin */}
+      {/* 🖨️ Modal de Sticker QR (5x5 cm) */}
       {stickerStore && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
-          {/* Estilo para Impresión Aislada */}
-          <style jsx global>{`
-            @media print {
-              body * {
-                visibility: hidden;
-              }
-              #admin-sticker-print-area, #admin-sticker-print-area * {
-                visibility: visible;
-              }
-              #admin-sticker-print-area {
-                position: fixed;
-                left: 50%;
-                top: 50%;
-                transform: translate(-50%, -50%);
-                width: 5cm !important;
-                height: 5cm !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                border: 1px dashed #ccc !important;
-                box-shadow: none !important;
-              }
-            }
-          `}</style>
-
-          <div className="bg-[#0e1e33] border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl flex flex-col gap-4 text-center animate-in zoom-in-95 relative">
-            <button
-              type="button"
-              onClick={() => setStickerStore(null)}
-              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="flex items-center gap-2 justify-center text-xs font-bold text-emerald-400">
-              <QrCode size={18} />
-              <span>Plantilla de Sticker Físico (5x5 cm)</span>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0e1e33] border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl flex flex-col gap-5 relative animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                  <QrCode size={18} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">Sticker QR (5x5 cm)</h3>
+                  <p className="text-[11px] text-slate-400">{stickerStore.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setStickerStore(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
             </div>
 
-            {/* PLANTILLA DE STICKER (5x5 cm / Troquel 4x4 cm) */}
-            <div
-              id="admin-sticker-print-area"
-              className="w-64 h-64 bg-white rounded-3xl p-4 border-2 border-dashed border-slate-300 flex flex-col items-center justify-between shadow-xs mx-auto text-slate-900"
-            >
-              {/* Cabecera */}
-              <div className="flex flex-col items-center gap-0.5">
-                <h2 className="font-extrabold text-sm text-[#0b1c30] tracking-tight truncate max-w-[190px]">
-                  {stickerStore.name}
-                </h2>
-                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-                  Catálogo Digital
-                </span>
-              </div>
-
-              {/* Imagen QR HD */}
-              {stickerQrUrl ? (
-                <div className="p-1.5 bg-white rounded-xl border border-slate-100 shadow-2xs">
-                  <img src={stickerQrUrl} alt={`QR ${stickerStore.name}`} className="w-36 h-36 object-contain" />
+            {/* Canvas / Visualizador del Sticker 5x5 cm */}
+            <div className="flex flex-col items-center justify-center p-6 bg-slate-900/60 rounded-2xl border border-slate-800">
+              <div
+                id="printable-admin-sticker"
+                className="w-56 h-56 bg-white rounded-2xl p-4 flex flex-col items-center justify-between shadow-lg text-slate-900 border border-slate-200"
+              >
+                {/* Header Sticker */}
+                <div className="text-center">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">
+                    Escanea y Pide
+                  </span>
+                  <span className="text-xs font-bold text-slate-900 truncate max-w-[190px] block">
+                    {stickerStore.name}
+                  </span>
                 </div>
-              ) : (
-                <div className="w-36 h-36 bg-slate-100 rounded-xl flex items-center justify-center animate-pulse">
-                  <QrCode size={32} className="text-slate-400" />
+
+                {/* QR Code */}
+                {stickerQrUrl ? (
+                  <img src={stickerQrUrl} alt="QR Tienda" className="w-32 h-32 object-contain" />
+                ) : (
+                  <div className="w-32 h-32 bg-slate-100 flex items-center justify-center text-slate-400 text-xs">
+                    Generando...
+                  </div>
+                )}
+
+                {/* Footer Sticker */}
+                <div className="text-center">
+                  <span className="text-[9px] font-mono text-slate-500 block">
+                    beapana.com/s/{stickerStore.slug}
+                  </span>
                 </div>
-              )}
-
-              {/* Pie */}
-              <div className="flex flex-col items-center">
-                <span className="text-[10px] font-extrabold text-[#059669]">
-                  📲 Escanea y Pide por WhatsApp
-                </span>
-                <span className="text-[8px] text-slate-400 font-mono">
-                  /s/{stickerStore.slug}
-                </span>
               </div>
-            </div>
-
-            <p className="text-[11px] text-slate-400 leading-tight">
-              Diseño cuadrado para impresión en papel sticker <strong>5x5 cm</strong> (área troquelada <strong>4x4 cm</strong>).
-            </p>
-
-            {/* Enlace y Copiar */}
-            <div className="w-full bg-[#071220] p-2.5 rounded-xl border border-slate-800 flex items-center justify-between gap-2 text-left">
-              <span className="text-xs text-slate-300 font-mono truncate">
-                {typeof window !== 'undefined' ? `${window.location.origin}/s/${stickerStore.slug}` : `/s/${stickerStore.slug}`}
+              <span className="text-[10px] text-slate-400 mt-2 font-medium">
+                Formato cuadrado 5x5 cm para vitrina, mostrador o empaque
               </span>
+            </div>
+
+            {/* Acciones */}
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
-                  const url = `${window.location.origin}/s/${stickerStore.slug}`;
+                  const printContent = document.getElementById('printable-admin-sticker');
+                  if (!printContent) return;
+                  const win = window.open('', '', 'width=600,height=600');
+                  if (win) {
+                    win.document.write(`
+                      <html>
+                        <head>
+                          <title>Sticker QR - ${stickerStore.name}</title>
+                          <style>
+                            body { margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
+                            .sticker { width: 5cm; height: 5cm; border: 1px dashed #ccc; padding: 0.3cm; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; }
+                            .title { font-size: 11px; font-weight: bold; color: #047857; text-transform: uppercase; }
+                            .name { font-size: 13px; font-weight: bold; }
+                            .url { font-size: 9px; color: #666; font-family: monospace; }
+                            img { width: 3.2cm; height: 3.2cm; }
+                          </style>
+                        </head>
+                        <body>
+                          <div class="sticker">
+                            <div>
+                              <div class="title">Escanea y Pide</div>
+                              <div class="name">${stickerStore.name}</div>
+                            </div>
+                            <img src="${stickerQrUrl}" />
+                            <div class="url">beapana.com/s/${stickerStore.slug}</div>
+                          </div>
+                        </body>
+                      </html>
+                    `);
+                    win.document.close();
+                    win.focus();
+                    win.print();
+                    win.close();
+                  }
+                }}
+                className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              >
+                <Printer size={15} />
+                <span>Imprimir (5x5 cm)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!stickerQrUrl) return;
+                  const a = document.createElement('a');
+                  a.href = stickerQrUrl;
+                  a.download = `qr-${stickerStore.slug}-5x5cm.png`;
+                  a.click();
+                }}
+                className="h-10 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                title="Descargar imagen PNG"
+              >
+                <Download size={15} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `https://beapana.com/s/${stickerStore.slug}`;
                   navigator.clipboard.writeText(url);
                   setStickerCopied(true);
                   setTimeout(() => setStickerCopied(false), 2000);
                 }}
-                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
-                title="Copiar enlace"
+                className="h-10 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                title="Copiar URL"
               >
                 {stickerCopied ? <Check size={15} className="text-emerald-400" /> : <Copy size={15} />}
               </button>
             </div>
-
-            {/* Botones de Acción */}
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="h-10 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs"
-              >
-                <Printer size={15} />
-                <span>Imprimir Sticker</span>
-              </button>
-
-              {stickerQrUrl && (
-                <a
-                  href={stickerQrUrl}
-                  download={`sticker-qr-${stickerStore.slug}-1024px.png`}
-                  className="h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs"
-                >
-                  <Download size={15} />
-                  <span>Descargar HD</span>
-                </a>
-              )}
-            </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

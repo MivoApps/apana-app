@@ -484,7 +484,7 @@ export const getAllStoresForAdminFromFS = async (): Promise<AdminStoreItem[]> =>
   }
 };
 
-export const adminUpdateStorePlanInFS = async (storeId: string, newPlan: 'gratis' | 'emprendedor'): Promise<void> => {
+export const adminUpdateStorePlanInFS = async (storeId: string, newPlan: 'gratis' | 'emprendedor' | 'negocio'): Promise<void> => {
   try {
     const storeRef = doc(db, 'stores', storeId);
     await updateDoc(storeRef, {
@@ -582,7 +582,7 @@ export const adminCleanSuperAdminStoresInFS = async (adminUid: string): Promise<
 
 export const adminUpdateStoreDetailsInFS = async (
   storeId: string, 
-  data: { name: string; slug: string; whatsappPhone: string; plan: 'gratis' | 'emprendedor'; status: 'activa' | 'pausada' }
+  data: { name: string; slug: string; whatsappPhone: string; plan: 'gratis' | 'emprendedor' | 'negocio'; status: 'activa' | 'pausada'; isWhatsappVerified?: boolean }
 ): Promise<void> => {
   try {
     const storeRef = doc(db, 'stores', storeId);
@@ -642,6 +642,35 @@ export const adminDeleteUserFromFS = async (emailOrUid: string): Promise<void> =
     await deleteDoc(userRef);
   } catch (error) {
     console.error('Error al eliminar usuario en Firestore:', error);
+    throw error;
+  }
+};
+
+export const adminToggleWhatsappVerificationInFS = async (storeId: string, isVerified: boolean): Promise<void> => {
+  try {
+    const storeRef = doc(db, 'stores', storeId);
+    await updateDoc(storeRef, {
+      isWhatsappVerified: isVerified,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error al cambiar verificación de WhatsApp:', error);
+    throw error;
+  }
+};
+
+export const adminUpdateUserDetailsInFS = async (
+  emailOrUid: string,
+  data: { name?: string; phone?: string; role?: 'merchant' | 'admin' }
+): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', emailOrUid.toLowerCase().trim());
+    await updateDoc(userRef, {
+      ...data,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error al actualizar datos de usuario en Firestore:', error);
     throw error;
   }
 };
