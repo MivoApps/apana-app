@@ -5,6 +5,7 @@ import {
   getDocs, 
   setDoc, 
   updateDoc, 
+  addDoc,
   query, 
   where, 
   deleteDoc, 
@@ -877,4 +878,110 @@ export const getStoreOrdersFromFS = async (storeId: string): Promise<StoreOrder[
     return [];
   }
 };
+
+export interface ReclamacionItem {
+  id: string;
+  claimCode: string;
+  fullName: string;
+  docType: string;
+  docNumber: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  isMinor: boolean;
+  parentName?: string;
+  contractType: string;
+  amount?: string;
+  goodDescription: string;
+  claimType: 'reclamo' | 'queja';
+  detail: string;
+  consumerRequest: string;
+  status: 'pendiente' | 'atendido';
+  responseNotes?: string;
+  createdAt: number;
+}
+
+export const createReclamacionInFS = async (data: Omit<ReclamacionItem, 'id' | 'createdAt' | 'status'>): Promise<string> => {
+  try {
+    const reclamacionesRef = collection(db, 'reclamaciones');
+    const newDoc = await addDoc(reclamacionesRef, {
+      ...data,
+      status: 'pendiente',
+      createdAt: Date.now(),
+    });
+    return newDoc.id;
+  } catch (error) {
+    console.error('Error guardando reclamación en Firestore:', error);
+    return '';
+  }
+};
+
+export const getAllReclamacionesForAdminFromFS = async (): Promise<ReclamacionItem[]> => {
+  try {
+    const reclamacionesRef = collection(db, 'reclamaciones');
+    const snap = await getDocs(reclamacionesRef);
+    const list: ReclamacionItem[] = [];
+    snap.docs.forEach((d) => {
+      list.push({ id: d.id, ...d.data() } as ReclamacionItem);
+    });
+    return list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  } catch (error) {
+    console.error('Error obteniendo reclamaciones para SuperAdmin:', error);
+    return [];
+  }
+};
+
+export const adminUpdateReclamacionStatusInFS = async (
+  id: string,
+  status: 'pendiente' | 'atendido',
+  responseNotes?: string
+): Promise<void> => {
+  try {
+    const docRef = doc(db, 'reclamaciones', id);
+    await updateDoc(docRef, {
+      status,
+      responseNotes: responseNotes || '',
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error actualizando estado de reclamación:', error);
+    throw error;
+  }
+};
+
+export interface GlobalAnnouncement {
+  message: string;
+  active: boolean;
+  type: 'info' | 'warning' | 'success';
+  updatedAt?: number;
+}
+
+export const adminSaveGlobalAnnouncementInFS = async (announcement: GlobalAnnouncement): Promise<void> => {
+  try {
+    const docRef = doc(db, 'system_settings', 'global_announcement');
+    await setDoc(docRef, {
+      ...announcement,
+      updatedAt: Date.now(),
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error guardando anuncio global en Firestore:', error);
+    throw error;
+  }
+};
+
+export const getGlobalAnnouncementFromFS = async (): Promise<GlobalAnnouncement | null> => {
+  try {
+    const docRef = doc(db, 'system_settings', 'global_announcement');
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as GlobalAnnouncement;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error obteniendo anuncio global:', error);
+    return null;
+  }
+};
+
 

@@ -91,22 +91,56 @@ export default function DashboardPage() {
     }
   };
 
+  const [globalAnnouncement, setGlobalAnnouncement] = React.useState<{ message: string; active: boolean; type?: string } | null>(null);
+  const [isImpersonating, setIsImpersonating] = React.useState(false);
+
+  React.useEffect(() => {
+    import('@/lib/firebase/firestore').then(({ getGlobalAnnouncementFromFS }) => {
+      getGlobalAnnouncementFromFS().then((ann) => {
+        if (ann && ann.active) setGlobalAnnouncement(ann);
+      }).catch(() => {});
+    });
+  }, []);
+
   React.useEffect(() => {
     let isMounted = true;
 
     const checkAuthAndSync = async () => {
       if (authLoading) return;
 
-      // 1. Si no hay usuario autenticado en Firebase ➔ Redirigir a Login
-      if (!user) {
+      // Verificar si hay una sesión de impersonación activa
+      let impersonatedStoreData: Store | null = null;
+      if (typeof window !== 'undefined') {
+        try {
+          const imp = sessionStorage.getItem('apana_impersonated_store');
+          if (imp) {
+            impersonatedStoreData = JSON.parse(imp);
+            setIsImpersonating(true);
+          }
+        } catch (_) {}
+      }
+
+      // 1. Si no hay usuario autenticado en Firebase y no está impersonando ➔ Redirigir a Login
+      if (!user && !impersonatedStoreData) {
         window.location.href = '/login';
         return;
       }
 
-      // Si es el SuperAdmin (Dueño de APANA) ➔ Redirigir automáticamente a la consola de administración
-      const userEmail = user.email?.toLowerCase().trim() || '';
-      if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
+      // Si es el SuperAdmin (Dueño de APANA) y NO está impersonando ➔ Redirigir automáticamente a la consola de administración
+      const userEmail = user?.email?.toLowerCase().trim() || '';
+      if (!impersonatedStoreData && (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com')) {
         window.location.href = '/admin';
+        return;
+      }
+
+      // Si está impersonando, usar la tienda impersonada
+      if (impersonatedStoreData) {
+        setFsStore(impersonatedStoreData);
+        setIsLoading(false);
+        try {
+          const prods = await getProductsByStoreIdFromFS(impersonatedStoreData.id);
+          if (isMounted) setFsProducts(prods);
+        } catch (_) {}
         return;
       }
 
@@ -114,6 +148,8 @@ export default function DashboardPage() {
       const safetyTimer = setTimeout(() => {
         if (isMounted) setIsLoading(false);
       }, 1500);
+
+      if (!user) return;
 
       try {
         // Intentar leer caché específico del usuario
@@ -279,8 +315,43 @@ export default function DashboardPage() {
         </div>
       </header>
 
+      {/* Barra de Impersonación SuperAdmin */}
+      {isImpersonating && (
+        <div className="bg-amber-500 text-amber-950 px-4 py-2 text-xs font-bold flex items-center justify-between sticky top-0 z-50 shadow-md">
+          <div className="flex items-center gap-2">
+            <span>🛡️ <strong>Modo SuperAdmin:</strong> Viendo la tienda <u>{fsStore?.name}</u></span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              sessionStorage.removeItem('apana_impersonated_store');
+              window.location.href = '/admin';
+            }}
+            className="bg-amber-950 text-amber-100 hover:bg-black px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer"
+          >
+            Salir y Volver al Admin →
+          </button>
+        </div>
+      )}
+
       {/* Main Container */}
-      <main className="pt-16 px-4 max-w-[640px] w-full mx-auto flex flex-col gap-5">
+      <main className={`${isImpersonating ? 'pt-8' : 'pt-16'} px-4 max-w-[640px] w-full mx-auto flex flex-col gap-5`}>
+        {/* Banner de Anuncio Global del Sistema (Si está activo) */}
+        {globalAnnouncement && globalAnnouncement.active && (
+          <div className={`p-4 rounded-2xl border shadow-xs flex items-center gap-3 text-xs animate-in fade-in ${
+            globalAnnouncement.type === 'warning'
+              ? 'bg-amber-50 border-amber-200 text-amber-900'
+              : globalAnnouncement.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              : 'bg-blue-50 border-blue-200 text-blue-900'
+          }`}>
+            <Sparkles size={18} className="shrink-0 text-emerald-600" />
+            <div className="flex-1 font-medium leading-relaxed">
+              {globalAnnouncement.message}
+            </div>
+          </div>
+        )}
+
         {/* Banner de Onboarding de Bienvenida para Tiendas con 0 productos */}
         {totalProductsCount === 0 && (
           <div className="bg-linear-to-br from-[#059669] to-[#006c49] text-white p-5 sm:p-6 rounded-3xl shadow-md flex flex-col gap-3.5 relative overflow-hidden animate-in fade-in">

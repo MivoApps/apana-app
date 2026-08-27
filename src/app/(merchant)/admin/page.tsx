@@ -41,7 +41,13 @@ import {
   Check,
   CheckCircle2,
   ShieldAlert,
-  Award
+  Award,
+  Key,
+  FileSpreadsheet,
+  BookOpen,
+  Megaphone,
+  CheckSquare,
+  FileText
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useAuth } from '@/lib/firebase/auth-context';
@@ -58,9 +64,15 @@ import {
   adminExtendStoreSubscriptionInFS,
   adminToggleWhatsappVerificationInFS,
   adminUpdateUserDetailsInFS,
+  getAllReclamacionesForAdminFromFS,
+  adminUpdateReclamacionStatusInFS,
+  adminSaveGlobalAnnouncementInFS,
+  getGlobalAnnouncementFromFS,
   AdminStoreItem,
   AdminUserItem,
-  PaymentRecord
+  PaymentRecord,
+  ReclamacionItem,
+  GlobalAnnouncement
 } from '@/lib/firebase/firestore';
 
 const SUPERADMIN_EMAILS = [
@@ -72,11 +84,18 @@ export default function SuperAdminPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
   
-  // Estado Principal (3 Pestañas)
-  const [activeTab, setActiveTab] = useState<'stores' | 'subscriptions' | 'users'>('stores');
+  // Estado Principal (4 Pestañas)
+  const [activeTab, setActiveTab] = useState<'stores' | 'subscriptions' | 'users' | 'reclamaciones'>('stores');
   const [stores, setStores] = useState<AdminStoreItem[]>([]);
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [reclamaciones, setReclamaciones] = useState<ReclamacionItem[]>([]);
+  const [announcement, setAnnouncement] = useState<GlobalAnnouncement>({
+    message: '',
+    active: false,
+    type: 'info'
+  });
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   
@@ -115,6 +134,20 @@ export default function SuperAdminPage() {
   const [deletingUser, setDeletingUser] = useState<AdminUserItem | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
 
+  // Modal Anuncio Global
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
+  const [announcementForm, setAnnouncementForm] = useState<GlobalAnnouncement>({
+    message: '',
+    active: false,
+    type: 'info'
+  });
+  const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
+
+  // Modal Detalle Reclamación
+  const [selectedReclamacion, setSelectedReclamacion] = useState<ReclamacionItem | null>(null);
+  const [reclamacionResponseNotes, setReclamacionResponseNotes] = useState('');
+  const [isSavingReclamacionStatus, setIsSavingReclamacionStatus] = useState(false);
+
   // Estados para Modal de Sticker QR (5x5 cm)
   const [stickerStore, setStickerStore] = useState<AdminStoreItem | null>(null);
   const [stickerQrUrl, setStickerQrUrl] = useState<string>('');
@@ -149,14 +182,21 @@ export default function SuperAdminPage() {
       if (user?.uid) {
         await adminCleanSuperAdminStoresInFS(user.uid);
       }
-      const [storesData, usersData, paymentsData] = await Promise.all([
+      const [storesData, usersData, paymentsData, reclamacionesData, globalAnn] = await Promise.all([
         getAllStoresForAdminFromFS(),
         getAllUsersForAdminFromFS(),
         getAllPaymentRecordsForAdminFromFS(),
+        getAllReclamacionesForAdminFromFS(),
+        getGlobalAnnouncementFromFS(),
       ]);
       setStores(storesData);
       setUsers(usersData);
       setPayments(paymentsData);
+      setReclamaciones(reclamacionesData);
+      if (globalAnn) {
+        setAnnouncement(globalAnn);
+        setAnnouncementForm(globalAnn);
+      }
     } catch (err) {
       console.error('Error al cargar datos de admin:', err);
     } finally {
@@ -184,6 +224,99 @@ export default function SuperAdminPage() {
     setIsAuthorized(true);
     loadData();
   }, [user, authLoading, router]);
+
+  // 1. Impersonación / Magic Login
+  const handleImpersonateStore = (store: AdminStoreItem) => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('apana_impersonated_store', JSON.stringify(store));
+      router.push('/dashboard');
+    }
+  };
+
+  // 2. Exportar a Excel (CSV)
+  const handleExportStoresCSV = () => {
+    if (stores.length === 0) {
+      alert('No hay tiendas para exportar.');
+      return;
+    }
+
+    const headers = [
+      'ID Tienda',
+      'Nombre Comercial',
+      'Slug',
+      'URL Publica',
+      'WhatsApp',
+      'WhatsApp Validado',
+      'Plan Actual',
+      'Total Productos',
+      'Estado',
+      'Fecha Creacion'
+    ];
+
+    const rows = stores.map((s) => [
+      `"${s.id}"`,
+      `"${s.name.replace(/"/g, '""')}"`,
+      `"${s.slug}"`,
+      `"https://beapana.com/s/${s.slug}"`,
+      `"${s.whatsappPhone ? `+${s.whatsappPhone}` : 'No asignado'}"`,
+      `"${s.isWhatsappVerified ? 'SI' : 'NO'}"`,
+      `"${s.plan || 'gratis'}"`,
+      s.productCount || 0,
+      `"${s.status || 'activa'}"`,
+      `"${s.createdAt ? new Date(s.createdAt).toLocaleDateString('es-PE') : 'N/A'}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `tiendas_apana_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Guardar Anuncio Global
+  const handleSaveGlobalAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingAnnouncement(true);
+    try {
+      await adminSaveGlobalAnnouncementInFS(announcementForm);
+      setAnnouncement(announcementForm);
+      setIsAnnouncementModalOpen(false);
+      setSuccessMsg('Anuncio global actualizado exitosamente.');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      alert('Error al guardar el anuncio global.');
+    } finally {
+      setIsSavingAnnouncement(false);
+    }
+  };
+
+  // Cambiar Estado de Reclamación
+  const handleUpdateReclamacion = async (status: 'pendiente' | 'atendido') => {
+    if (!selectedReclamacion) return;
+    setIsSavingReclamacionStatus(true);
+    try {
+      await adminUpdateReclamacionStatusInFS(selectedReclamacion.id, status, reclamacionResponseNotes);
+      setReclamaciones((prev) =>
+        prev.map((r) =>
+          r.id === selectedReclamacion.id
+            ? { ...r, status, responseNotes: reclamacionResponseNotes }
+            : r
+        )
+      );
+      setSelectedReclamacion(null);
+      setSuccessMsg(`Reclamación marcada como ${status.toUpperCase()}.`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (e) {
+      alert('Error actualizando la reclamación.');
+    } finally {
+      setIsSavingReclamacionStatus(false);
+    }
+  };
 
   // Cambiar Plan directamente desde el Dropdown de la tabla
   const handleSelectPlan = async (store: AdminStoreItem, newPlan: 'gratis' | 'emprendedor' | 'negocio') => {
@@ -403,12 +536,13 @@ export default function SuperAdminPage() {
   const totalProducts = stores.reduce((sum, s) => sum + (s.productCount || 0), 0);
   const totalRegisteredUsers = users.length;
   
-  // MRR REAL Recaudado: Únicamente suma los cobros reales procesados por Culqi
+  // MRR REAL Recaudado (Pagos Culqi)
   const approvedPayments = payments.filter((p) => p.status === 'approved');
   const realCulqiRevenue = approvedPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
   // Total de tiendas en planes de pago para la pestaña de suscripciones
   const paidStoresCount = stores.filter((s) => s.plan === 'emprendedor' || s.plan === 'negocio').length;
+  const pendingReclamacionesCount = reclamaciones.filter((r) => r.status === 'pendiente').length;
 
   // Helper de cálculo de días de suscripción
   const getSubscriptionInfo = (store: AdminStoreItem) => {
@@ -429,6 +563,21 @@ export default function SuperAdminPage() {
       return { label: `🟠 En Gracia (${Math.abs(daysLeft)}d vencido)`, color: 'text-orange-400 bg-orange-950/60 border-orange-800', daysLeft, status: 'grace_period' };
     } else {
       return { label: `🔴 Vencido (${Math.abs(daysLeft)}d)`, color: 'text-red-400 bg-red-950/60 border-red-800', daysLeft, status: 'expired' };
+    }
+  };
+
+  // Helper para cálculo de 15 días hábiles INDECOPI en reclamaciones
+  const getReclamacionDaysInfo = (createdAt: number) => {
+    const elapsedDays = Math.floor((Date.now() - createdAt) / (1000 * 60 * 60 * 24));
+    const legalLimitDays = 15; // 15 días hábiles INDECOPI
+    const daysRemaining = legalLimitDays - elapsedDays;
+
+    if (daysRemaining > 5) {
+      return { label: `Quedan ${daysRemaining} días`, color: 'text-emerald-400 bg-emerald-950/60 border-emerald-800' };
+    } else if (daysRemaining >= 0) {
+      return { label: `⚠️ Urgente: ${daysRemaining} días`, color: 'text-amber-400 bg-amber-950/60 border-amber-800' };
+    } else {
+      return { label: `🚨 Plazo Vencido (${Math.abs(daysRemaining)}d)`, color: 'text-red-400 bg-red-950/60 border-red-800' };
     }
   };
 
@@ -458,6 +607,16 @@ export default function SuperAdminPage() {
       (u.name && u.name.toLowerCase().includes(term)) ||
       (u.storeName && u.storeName.toLowerCase().includes(term)) ||
       (u.storeSlug && u.storeSlug.toLowerCase().includes(term))
+    );
+  });
+
+  const filteredReclamaciones = reclamaciones.filter((r) => {
+    const term = searchQuery.toLowerCase();
+    return (
+      r.claimCode.toLowerCase().includes(term) ||
+      r.fullName.toLowerCase().includes(term) ||
+      r.docNumber.includes(term) ||
+      r.email.toLowerCase().includes(term)
     );
   });
 
@@ -493,6 +652,11 @@ export default function SuperAdminPage() {
     );
   }
 
+  // Comprobar si el usuario seleccionado para eliminar tiene tienda activa (Bloqueo Preventivo)
+  const deletingUserAssociatedStore = deletingUser
+    ? stores.find((s) => s.ownerId === deletingUser.uid || s.ownerId === deletingUser.email || s.name === deletingUser.storeName)
+    : null;
+
   return (
     <div className="min-h-screen bg-[#071220] text-slate-100 font-sans pb-20">
       {/* Top Admin Navbar */}
@@ -515,21 +679,35 @@ export default function SuperAdminPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {/* Botón Anuncio Global */}
+            <button
+              onClick={() => setIsAnnouncementModalOpen(true)}
+              className="px-3 py-2 rounded-xl bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 hover:text-white transition-all flex items-center gap-1.5 text-xs font-bold border border-purple-800/80 cursor-pointer"
+              title="Publicar Anuncio Global para todos los Comerciantes"
+            >
+              <Megaphone size={14} />
+              <span className="hidden sm:inline">Anuncio Global</span>
+              {announcement.active && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />}
+            </button>
+
+            {/* Refrescar Datos */}
             <button
               onClick={loadData}
               className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all flex items-center gap-1.5 text-xs font-bold border border-slate-700 cursor-pointer"
               title="Refrescar datos"
             >
               <RefreshCw size={14} />
-              <span>Refrescar</span>
+              <span className="hidden sm:inline">Refrescar</span>
             </button>
+
+            {/* Cerrar Sesión */}
             <button
               onClick={handleLogout}
               className="px-3.5 py-2 rounded-xl bg-red-950/60 hover:bg-red-900 border border-red-800/80 text-red-200 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
             >
               <LogOut size={14} />
-              <span>Cerrar Sesión</span>
+              <span className="hidden sm:inline">Cerrar Sesión</span>
             </button>
           </div>
         </div>
@@ -613,7 +791,7 @@ export default function SuperAdminPage() {
           </div>
         </section>
 
-        {/* 📑 Selector de Pestañas (Tiendas vs Suscripciones vs Usuarios) */}
+        {/* 📑 Selector de Pestañas (Tiendas vs Suscripciones vs Usuarios vs Reclamaciones) */}
         <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('stores')}
@@ -650,9 +828,26 @@ export default function SuperAdminPage() {
             <Users size={16} />
             <span>Usuarios & Comerciantes ({users.length})</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('reclamaciones')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              activeTab === 'reclamaciones'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+            }`}
+          >
+            <BookOpen size={16} />
+            <span>Reclamaciones ({reclamaciones.length})</span>
+            {pendingReclamacionesCount > 0 && (
+              <span className="px-1.5 py-0.2 bg-amber-500 text-amber-950 font-black text-[10px] rounded-full">
+                {pendingReclamacionesCount}
+              </span>
+            )}
+          </button>
         </div>
 
-        {/* 🔍 Barra de Búsqueda y Dropdowns 100% Alineados */}
+        {/* 🔍 Barra de Búsqueda, Dropdowns y Botón Exportar CSV */}
         <section className="bg-[#0e1e33] border border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row gap-3 items-center justify-between">
           <div className="relative w-full md:flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
@@ -663,7 +858,9 @@ export default function SuperAdminPage() {
                   ? "Buscar por nombre, slug o teléfono..."
                   : activeTab === 'subscriptions'
                   ? "Buscar por tienda o ID de pago Culqi..."
-                  : "Buscar por correo, nombre o tienda..."
+                  : activeTab === 'users'
+                  ? "Buscar por correo, nombre o tienda..."
+                  : "Buscar por código de reclamación, DNI o cliente..."
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -673,8 +870,8 @@ export default function SuperAdminPage() {
 
           {activeTab === 'stores' && (
             <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
-              {/* Dropdown 1: Plan (Incluye Negocio Pro) */}
-              <div className="relative flex-1 md:w-48">
+              {/* Dropdown 1: Plan */}
+              <div className="relative flex-1 md:w-44">
                 <select
                   value={planFilter}
                   onChange={(e: any) => setPlanFilter(e.target.value)}
@@ -689,7 +886,7 @@ export default function SuperAdminPage() {
               </div>
 
               {/* Dropdown 2: Estado */}
-              <div className="relative flex-1 md:w-44">
+              <div className="relative flex-1 md:w-40">
                 <select
                   value={statusFilter}
                   onChange={(e: any) => setStatusFilter(e.target.value)}
@@ -701,6 +898,16 @@ export default function SuperAdminPage() {
                 </select>
                 <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
+
+              {/* Botón Exportar CSV */}
+              <button
+                onClick={handleExportStoresCSV}
+                className="h-11 px-3.5 bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer shadow-xs"
+                title="Descargar base de datos de tiendas en Excel / CSV"
+              >
+                <FileSpreadsheet size={15} />
+                <span className="hidden sm:inline">Exportar Excel</span>
+              </button>
             </div>
           )}
         </section>
@@ -850,6 +1057,16 @@ export default function SuperAdminPage() {
                           {/* Acciones */}
                           <td className="py-3.5 px-4 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
+                              {/* 🔑 Magic Login / Acceder como Comerciante */}
+                              <button
+                                type="button"
+                                onClick={() => handleImpersonateStore(store)}
+                                className="p-1.5 rounded-lg bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-800/60 transition-all cursor-pointer"
+                                title="Acceder y Administrar como Comerciante (Magic Login)"
+                              >
+                                <Key size={15} />
+                              </button>
+
                               {/* Sticker QR (5x5 cm) */}
                               <button
                                 type="button"
@@ -908,104 +1125,173 @@ export default function SuperAdminPage() {
 
         {/* 💰 TAB 2: CONTROL DE SUSCRIPCIONES Y COBROS RECURRENTES */}
         {activeTab === 'subscriptions' && (
-          <section className="bg-[#0e1e33] border border-slate-800 rounded-2xl overflow-hidden shadow-sm flex flex-col">
-            <div className="p-4 px-5 border-b border-slate-800 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <CreditCard size={17} className="text-emerald-400" />
-                Control de Membresías & Vencimientos
-              </h2>
-            </div>
+          <div className="flex flex-col gap-6">
+            {/* Membresías de Tiendas */}
+            <section className="bg-[#0e1e33] border border-slate-800 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+              <div className="p-4 px-5 border-b border-slate-800 flex items-center justify-between">
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <CreditCard size={17} className="text-emerald-400" />
+                  Control de Membresías & Vencimientos
+                </h2>
+              </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#071220] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-800 text-[10px]">
-                  <tr>
-                    <th className="py-3 px-4">Tienda</th>
-                    <th className="py-3 px-4">Plan Actual</th>
-                    <th className="py-3 px-4">Próximo Débito / Vencimiento</th>
-                    <th className="py-3 px-4">Estado del Cobro</th>
-                    <th className="py-3 px-4 text-right">Acciones de Cobro</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {stores.map((store) => {
-                    const sub = getSubscriptionInfo(store);
-                    const isBusy = actionLoadingId === store.id;
-                    const dateStr = store.nextBillingDate
-                      ? new Date(store.nextBillingDate).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
-                      : 'No fijada';
-                    const isPaid = store.plan === 'emprendedor' || store.plan === 'negocio';
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#071220] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-800 text-[10px]">
+                    <tr>
+                      <th className="py-3 px-4">Tienda</th>
+                      <th className="py-3 px-4">Plan Actual</th>
+                      <th className="py-3 px-4">Próximo Débito / Vencimiento</th>
+                      <th className="py-3 px-4">Estado del Cobro</th>
+                      <th className="py-3 px-4 text-right">Acciones de Cobro</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {stores.map((store) => {
+                      const sub = getSubscriptionInfo(store);
+                      const isBusy = actionLoadingId === store.id;
+                      const dateStr = store.nextBillingDate
+                        ? new Date(store.nextBillingDate).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : 'No fijada';
+                      const isPaid = store.plan === 'emprendedor' || store.plan === 'negocio';
 
-                    return (
-                      <tr key={store.id} className="hover:bg-[#162a45]/50 transition-colors">
-                        <td className="py-3.5 px-4 font-bold text-white">
-                          <div className="flex flex-col">
-                            <span>{store.name}</span>
-                            <span className="text-[11px] font-mono text-slate-400">/s/{store.slug}</span>
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span className={`font-bold ${
-                            store.plan === 'negocio'
-                              ? 'text-emerald-400'
-                              : store.plan === 'emprendedor'
-                              ? 'text-amber-300'
-                              : 'text-slate-400'
-                          }`}>
-                            {store.plan === 'negocio'
-                              ? '⭐ Plan Negocio Pro'
-                              : store.plan === 'emprendedor'
-                              ? '👑 Plan Emprendedor'
-                              : '⚡ Plan Gratis'}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 font-mono text-slate-300">
-                          {isPaid ? dateStr : '—'}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${sub.color}`}>
-                            {sub.label}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          {isPaid && (
-                            <div className="flex items-center justify-end gap-1.5">
-                              {/* Extender +30 Días */}
-                              <button
-                                type="button"
-                                disabled={isBusy}
-                                onClick={() => handleExtendSubscription(store, 30)}
-                                className="px-2.5 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
-                                title="Extender 30 días adicionales"
-                              >
-                                <PlusCircle size={13} />
-                                <span>+30 Días</span>
-                              </button>
-
-                              {/* Recordar por WhatsApp */}
-                              {store.whatsappPhone && (
-                                <a
-                                  href={`https://wa.me/${store.whatsappPhone}?text=${encodeURIComponent(
-                                    `Hola ${store.name}, te saludamos de APANA. Tu suscripción a APANA vence el ${dateStr}. Recuerda mantener tu método de pago activo para seguir disfrutando de tus beneficios.`
-                                  )}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 transition-all"
-                                  title="Enviar recordatorio de cobro por WhatsApp"
-                                >
-                                  <MessageCircle size={15} />
-                                </a>
-                              )}
+                      return (
+                        <tr key={store.id} className="hover:bg-[#162a45]/50 transition-colors">
+                          <td className="py-3.5 px-4 font-bold text-white">
+                            <div className="flex flex-col">
+                              <span>{store.name}</span>
+                              <span className="text-[11px] font-mono text-slate-400">/s/{store.slug}</span>
                             </div>
-                          )}
-                        </td>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className={`font-bold ${
+                              store.plan === 'negocio'
+                                ? 'text-emerald-400'
+                                : store.plan === 'emprendedor'
+                                ? 'text-amber-300'
+                                : 'text-slate-400'
+                            }`}>
+                              {store.plan === 'negocio'
+                                ? '⭐ Plan Negocio Pro'
+                                : store.plan === 'emprendedor'
+                                ? '👑 Plan Emprendedor'
+                                : '⚡ Plan Gratis'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-slate-300">
+                            {isPaid ? dateStr : '—'}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${sub.color}`}>
+                              {sub.label}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                            {isPaid && (
+                              <div className="flex items-center justify-end gap-1.5">
+                                {/* Extender +30 Días */}
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => handleExtendSubscription(store, 30)}
+                                  className="px-2.5 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                  title="Extender 30 días adicionales"
+                                >
+                                  <PlusCircle size={13} />
+                                  <span>+30 Días</span>
+                                </button>
+
+                                {/* Recordar por WhatsApp */}
+                                {store.whatsappPhone && (
+                                  <a
+                                    href={`https://wa.me/${store.whatsappPhone}?text=${encodeURIComponent(
+                                      `Hola ${store.name}, te saludamos de APANA. Tu suscripción a APANA vence el ${dateStr}. Recuerda mantener tu método de pago activo para seguir disfrutando de tus beneficios.`
+                                    )}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 transition-all"
+                                    title="Enviar recordatorio de cobro por WhatsApp"
+                                  >
+                                    <MessageCircle size={15} />
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            {/* Historial Detallado de Transacciones Culqi */}
+            <section className="bg-[#0e1e33] border border-slate-800 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+              <div className="p-4 px-5 border-b border-slate-800 flex items-center justify-between">
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <TrendingUp size={17} className="text-purple-400" />
+                  Historial de Transacciones Culqi ({payments.length})
+                </h2>
+              </div>
+
+              {payments.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-xs">
+                  No hay registros de transacciones procesadas por Culqi aún.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#071220] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-800 text-[10px]">
+                      <tr>
+                        <th className="py-3 px-4">ID Transacción</th>
+                        <th className="py-3 px-4">Tienda / ID</th>
+                        <th className="py-3 px-4">Monto Cobrado</th>
+                        <th className="py-3 px-4">Correo</th>
+                        <th className="py-3 px-4">Fecha / Hora</th>
+                        <th className="py-3 px-4 text-right">Estado</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {payments.map((p) => {
+                        const targetStore = stores.find((s) => s.id === p.storeId);
+                        const isApproved = p.status === 'approved';
+
+                        return (
+                          <tr key={p.id || p.culqiChargeId} className="hover:bg-[#162a45]/50 transition-colors">
+                            <td className="py-3.5 px-4 font-mono text-[11px] text-emerald-400">
+                              {p.culqiChargeId || p.id}
+                            </td>
+                            <td className="py-3.5 px-4 font-bold text-white">
+                              {targetStore?.name || p.storeId}
+                            </td>
+                            <td className="py-3.5 px-4 font-bold text-emerald-400">
+                              S/ {p.amount?.toFixed(2) || '0.00'}
+                            </td>
+                            <td className="py-3.5 px-4 font-mono text-slate-300">
+                              {p.email || '—'}
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-400">
+                              {p.createdAt ? new Date(p.createdAt).toLocaleString('es-PE') : '—'}
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                isApproved
+                                  ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
+                                  : 'bg-red-950/60 text-red-400 border border-red-800'
+                              }`}>
+                                {isApproved ? 'Aprobado' : p.status}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </div>
         )}
 
         {/* 👤 TAB 3: DIRECTORIO DE USUARIOS */}
@@ -1101,7 +1387,259 @@ export default function SuperAdminPage() {
           </section>
         )}
 
+        {/* 📖 TAB 4: LIBRO DE RECLAMACIONES INDECOPI */}
+        {activeTab === 'reclamaciones' && (
+          <section className="bg-[#0e1e33] border border-slate-800 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+            <div className="p-4 px-5 border-b border-slate-800 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <BookOpen size={17} className="text-emerald-400" />
+                Hojas de Reclamación Virtuales Registradas (INDECOPI)
+              </h2>
+              <span className="text-xs text-slate-400">Plazo legal de respuesta: 15 días hábiles</span>
+            </div>
+
+            {filteredReclamaciones.length === 0 ? (
+              <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
+                <CheckCircle2 size={32} className="text-emerald-500/50" />
+                <span>No hay reclamaciones ni quejas registradas. Todo en orden.</span>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#071220] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-800 text-[10px]">
+                    <tr>
+                      <th className="py-3 px-4">Código / Hoja</th>
+                      <th className="py-3 px-4">Consumidor</th>
+                      <th className="py-3 px-4">Tipo</th>
+                      <th className="py-3 px-4">Bien Contratado</th>
+                      <th className="py-3 px-4">Plazo Restante</th>
+                      <th className="py-3 px-4">Estado</th>
+                      <th className="py-3 px-4 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {filteredReclamaciones.map((rec) => {
+                      const daysInfo = getReclamacionDaysInfo(rec.createdAt);
+                      const isPending = rec.status === 'pendiente';
+
+                      return (
+                        <tr key={rec.id} className="hover:bg-[#162a45]/50 transition-colors">
+                          <td className="py-3.5 px-4 font-mono font-bold text-emerald-400">
+                            {rec.claimCode}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-white">{rec.fullName}</span>
+                              <span className="text-[11px] text-slate-400">{rec.docType}: {rec.docNumber} • {rec.phone}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              rec.claimType === 'queja'
+                                ? 'bg-amber-950/60 text-amber-300 border border-amber-800'
+                                : 'bg-red-950/60 text-red-300 border border-red-800'
+                            }`}>
+                              {rec.claimType}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-300 max-w-[200px] truncate">
+                            {rec.goodDescription}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${daysInfo.color}`}>
+                              {daysInfo.label}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                              isPending
+                                ? 'bg-amber-950/60 text-amber-300 border border-amber-800'
+                                : 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
+                            }`}>
+                              {isPending ? '⏳ Pendiente' : '✅ Atendido'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedReclamacion(rec);
+                                setReclamacionResponseNotes(rec.responseNotes || '');
+                              }}
+                              className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-bold transition-all border border-slate-700 cursor-pointer"
+                            >
+                              Ver Hoja Completa
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
+
       </main>
+
+      {/* 📢 Modal de Anuncio Global */}
+      {isAnnouncementModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0e1e33] border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl flex flex-col gap-4 relative animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="font-bold text-base text-white flex items-center gap-2">
+                <Megaphone size={18} className="text-purple-400" />
+                Banner de Anuncio Global
+              </h3>
+              <button
+                onClick={() => setIsAnnouncementModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveGlobalAnnouncement} className="flex flex-col gap-3.5">
+              <div className="flex items-center justify-between bg-[#071220] p-3 rounded-2xl border border-slate-800">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-white">Estado del Anuncio</span>
+                  <span className="text-[11px] text-slate-400">Mostrar en el Dashboard de todos los comerciantes</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={announcementForm.active}
+                  onChange={(e) => setAnnouncementForm({ ...announcementForm, active: e.target.checked })}
+                  className="w-5 h-5 accent-emerald-500 rounded cursor-pointer"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-slate-300">Tipo de Alerta</label>
+                <select
+                  value={announcementForm.type}
+                  onChange={(e: any) => setAnnouncementForm({ ...announcementForm, type: e.target.value })}
+                  className="h-10 bg-[#071220] border border-slate-700 rounded-xl px-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-semibold"
+                >
+                  <option value="info">🔵 Informativo (Azul)</option>
+                  <option value="warning">🟡 Advertencia / Mantenimiento (Ámbar)</option>
+                  <option value="success">🟢 Novedad / Éxito (Verde)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-slate-300">Mensaje del Anuncio</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Ej: Mantenimiento programado hoy a las 11:00 PM..."
+                  value={announcementForm.message}
+                  onChange={(e) => setAnnouncementForm({ ...announcementForm, message: e.target.value })}
+                  className="bg-[#071220] border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-purple-500 leading-relaxed"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAnnouncementModalOpen(false)}
+                  className="flex-1 h-10 border border-slate-700 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-800 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingAnnouncement}
+                  className="flex-1 h-10 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                >
+                  {isSavingAnnouncement ? 'Guardando...' : 'Publicar Anuncio'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 📖 Modal Detalle de Reclamación INDECOPI */}
+      {selectedReclamacion && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0e1e33] border border-slate-800 rounded-3xl p-6 max-w-xl w-full shadow-2xl flex flex-col gap-4 relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <BookOpen size={20} className="text-emerald-400" />
+                <div>
+                  <h3 className="font-bold text-sm text-white">Hoja N° {selectedReclamacion.claimCode}</h3>
+                  <span className="text-[11px] text-slate-400">
+                    Fecha de Registro: {new Date(selectedReclamacion.createdAt).toLocaleString('es-PE')}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedReclamacion(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Datos del Consumidor */}
+            <div className="bg-[#071220] p-4 rounded-2xl border border-slate-800 flex flex-col gap-1.5 text-xs text-slate-300">
+              <span className="font-bold text-white border-b border-slate-800 pb-1">Identificación del Consumidor</span>
+              <p><strong>Nombre:</strong> {selectedReclamacion.fullName}</p>
+              <p><strong>{selectedReclamacion.docType}:</strong> {selectedReclamacion.docNumber}</p>
+              <p><strong>Correo:</strong> {selectedReclamacion.email} • <strong>Teléfono:</strong> {selectedReclamacion.phone}</p>
+              <p><strong>Dirección:</strong> {selectedReclamacion.address}, {selectedReclamacion.city}</p>
+            </div>
+
+            {/* Detalle del Reclamo / Queja */}
+            <div className="bg-[#071220] p-4 rounded-2xl border border-slate-800 flex flex-col gap-2 text-xs text-slate-300">
+              <span className="font-bold text-white border-b border-slate-800 pb-1">Detalle del Bien y Reclamación</span>
+              <p><strong>Tipo:</strong> <span className="uppercase text-amber-400 font-bold">{selectedReclamacion.claimType}</span></p>
+              <p><strong>Bien Contratado:</strong> {selectedReclamacion.goodDescription} {selectedReclamacion.amount ? `(Monto: S/ ${selectedReclamacion.amount})` : ''}</p>
+              <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800/80">
+                <span className="font-bold text-slate-200 block mb-1">Descripción del Reclamo:</span>
+                <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{selectedReclamacion.detail}</p>
+              </div>
+              <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800/80">
+                <span className="font-bold text-slate-200 block mb-1">Pedido del Consumidor:</span>
+                <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{selectedReclamacion.consumerRequest}</p>
+              </div>
+            </div>
+
+            {/* Notas de Respuesta del Administrador */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-white">Notas de Atención / Respuesta al Consumidor:</label>
+              <textarea
+                rows={2}
+                placeholder="Registra aquí la respuesta enviada por correo o solución acordada..."
+                value={reclamacionResponseNotes}
+                onChange={(e) => setReclamacionResponseNotes(e.target.value)}
+                className="bg-[#071220] border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            {/* Acciones */}
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => handleUpdateReclamacion('pendiente')}
+                disabled={isSavingReclamacionStatus}
+                className="flex-1 h-10 border border-amber-700/80 bg-amber-950/40 text-amber-300 text-xs font-bold rounded-xl hover:bg-amber-900/60 cursor-pointer"
+              >
+                Marcar como Pendiente
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUpdateReclamacion('atendido')}
+                disabled={isSavingReclamacionStatus}
+                className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+              >
+                Marcar como Atendido ✅
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ✏️ Modal de Edición de Tienda */}
       {editingStore && (
@@ -1338,7 +1876,7 @@ export default function SuperAdminPage() {
         </div>
       )}
 
-      {/* 🗑️ Modal de Confirmación para Eliminar Usuario */}
+      {/* 🗑️ Modal de Confirmación para Eliminar Usuario (CON BLOQUEO PREVENTIVO) */}
       {deletingUser && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#0e1e33] border border-red-900/60 rounded-3xl p-6 max-w-sm w-full shadow-2xl flex flex-col gap-4 text-center animate-in zoom-in-95">
@@ -1346,24 +1884,46 @@ export default function SuperAdminPage() {
               <Trash2 size={28} />
             </div>
             <div className="flex flex-col gap-1">
-              <h3 className="text-base font-bold text-white">¿Eliminar Usuario?</h3>
+              <h3 className="text-base font-bold text-white">Eliminar Usuario</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Estás a punto de borrar al usuario <strong className="text-white">{deletingUser.email}</strong> de Firestore.
+                Usuario: <strong className="text-white font-mono">{deletingUser.email}</strong>
               </p>
             </div>
+
+            {/* Bloqueo Preventivo si tiene tienda activa */}
+            {deletingUserAssociatedStore ? (
+              <div className="p-3.5 bg-amber-950/60 border border-amber-600/70 rounded-2xl text-left flex flex-col gap-1.5 text-amber-200 text-xs">
+                <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                  <AlertTriangle size={15} />
+                  <span>Bloqueo Preventivo: Tienda Activa</span>
+                </div>
+                <p className="leading-relaxed text-[11px]">
+                  Este usuario es dueño de la tienda activa <strong className="text-white">"{deletingUserAssociatedStore.name}"</strong>. Para evitar dejar datos huérfanos, primero debes eliminar su tienda desde el <strong>Directorio de Tiendas</strong>.
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-300">
+                ¿Estás seguro de eliminar este usuario? No tiene tiendas asociadas.
+              </p>
+            )}
+
             <div className="flex gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setDeletingUser(null)}
                 className="flex-1 h-10 border border-slate-700 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-800 cursor-pointer"
               >
-                Cancelar
+                Cerrar
               </button>
               <button
                 type="button"
-                disabled={isDeletingUser}
+                disabled={Boolean(deletingUserAssociatedStore) || isDeletingUser}
                 onClick={handleConfirmDeleteUser}
-                className="flex-1 h-10 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                className={`flex-1 h-10 font-bold text-xs rounded-xl shadow-xs transition-all ${
+                  deletingUserAssociatedStore
+                    ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                    : 'bg-red-600 hover:bg-red-500 text-white cursor-pointer'
+                }`}
               >
                 {isDeletingUser ? 'Eliminando...' : 'Sí, Eliminar'}
               </button>

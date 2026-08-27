@@ -60,7 +60,7 @@ export default function LibroReclamacionesPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.acceptedTerms) {
       alert('Debes declarar la veracidad de la información y aceptar las condiciones para enviar la reclamación.');
@@ -68,8 +68,29 @@ export default function LibroReclamacionesPage() {
     }
 
     setLoading(true);
-    setTimeout(() => {
+    try {
       const randomCode = `LR-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(100000 + Math.random() * 900000)}`;
+      const { createReclamacionInFS } = await import('@/lib/firebase/firestore');
+      
+      await createReclamacionInFS({
+        claimCode: randomCode,
+        fullName: formData.fullName,
+        docType: formData.docType,
+        docNumber: formData.docNumber,
+        phone: formData.phone,
+        email: formData.email,
+        address: formData.address,
+        city: formData.city,
+        isMinor: formData.isMinor,
+        parentName: formData.parentName,
+        contractType: formData.contractType,
+        amount: formData.amount,
+        goodDescription: formData.goodDescription,
+        claimType: formData.claimType as 'reclamo' | 'queja',
+        detail: formData.detail,
+        consumerRequest: formData.consumerRequest,
+      });
+
       setClaimCode(randomCode);
       setSubmissionDate(new Date().toLocaleString('es-PE', { 
         year: 'numeric', 
@@ -78,10 +99,14 @@ export default function LibroReclamacionesPage() {
         hour: '2-digit', 
         minute: '2-digit' 
       }));
-      setLoading(false);
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 600);
+    } catch (err) {
+      console.error('Error enviando reclamación:', err);
+      alert('Ocurrió un error al registrar la reclamación. Por favor intenta nuevamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
