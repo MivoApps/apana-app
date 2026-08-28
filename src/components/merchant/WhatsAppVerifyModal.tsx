@@ -77,28 +77,28 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
 
   if (!isOpen) return null;
 
-  // Mensaje 100% limpio hacia el bot oficial de APANA (+51 920030074)
+  // Mensaje oficial hacia el bot de APANA (+51 920030074)
   const messageText = `Hola equipo de APANA 👋, solicito mi código de activación para mi tienda *${storeName || 'Mi Tienda'}*.`;
-  const whatsappUrl = `https://wa.me/${APANA_OFFICIAL_WHATSAPP}?text=${encodeURIComponent(messageText)}`;
+  const whatsappUrl = `https://api.whatsapp.com/send?phone=${APANA_OFFICIAL_WHATSAPP}&text=${encodeURIComponent(messageText)}`;
 
-  const handleOpenWhatsApp = async () => {
+  const handleClickWhatsAppLink = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (displayPhone.length !== 9) {
+      e.preventDefault();
       setErrorMessage('Por favor ingresa un número de WhatsApp válido de 9 dígitos.');
       return;
     }
 
     setHasOpenedWhatsApp(true);
     setErrorMessage('');
-    
-    // Regenerar un código fresco y renovar la ventana de 15 minutos en Firestore al hacer clic
+
+    // Registrar solicitud fresca en Firestore de forma inmediata
     if (user && fullPhone) {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       setGeneratedCode(code);
-      await createOtpRequestInFS(fullPhone, code, storeId, storeName, user.uid);
+      createOtpRequestInFS(fullPhone, code, storeId, storeName, user.uid).catch((err) => {
+        console.error('Error registrando OTP en background:', err);
+      });
     }
-
-    const { openUniversalWhatsApp } = await import('@/lib/whatsapp');
-    openUniversalWhatsApp(APANA_OFFICIAL_WHATSAPP, messageText);
   };
 
   const handleValidateCode = async (e?: React.FormEvent) => {
@@ -271,19 +271,23 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
                 Pide tu código por WhatsApp
               </label>
 
-              <button
-                type="button"
-                onClick={handleOpenWhatsApp}
-                className={`w-full h-11 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  hasOpenedWhatsApp
-                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+              <a
+                href={displayPhone.length === 9 ? whatsappUrl : '#'}
+                target={displayPhone.length === 9 ? '_blank' : undefined}
+                rel="noopener noreferrer"
+                onClick={handleClickWhatsAppLink}
+                className={`w-full h-11 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer select-none no-underline ${
+                  displayPhone.length !== 9
+                    ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                    : hasOpenedWhatsApp
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 active:scale-[0.98]'
                     : 'bg-[#059669] hover:bg-[#00855d] active:scale-[0.98] text-white shadow-emerald-700/20'
                 }`}
               >
                 <WhatsAppIcon size={18} />
                 <span>{hasOpenedWhatsApp ? 'Volver a abrir chat de WhatsApp' : 'Solicitar código a APANA (+51 920030074)'}</span>
                 <ExternalLink size={14} />
-              </button>
+              </a>
             </div>
 
             {/* PASO 2: Ingresar Código Recibido */}
