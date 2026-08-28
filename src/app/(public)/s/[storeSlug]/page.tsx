@@ -56,12 +56,7 @@ export default function PublicStorePage({ params }: Props) {
   const [fsStore, setFsStore] = useState<Store | null>(null);
   const [fsProducts, setFsProducts] = useState<Product[]>([]);
   const [isFetchingFS, setIsFetchingFS] = useState(true);
-
-  // Modal de WhatsApp tras publicar 1er producto
-  const [showPhoneModal, setShowPhoneModal] = useState(false);
-  const [whatsappPhone, setWhatsappPhone] = useState('');
-  const [phoneSavedSuccess, setPhoneSavedSuccess] = useState(false);
-
+  
   // Desenvolver params de la ruta
   const resolvedParams = React.use(params);
   const targetSlug = resolvedParams.storeSlug;
@@ -93,15 +88,15 @@ export default function PublicStorePage({ params }: Props) {
 
         // Registrar visita única por sesión
         const sessionVisitKey = `apana_session_visited_${fetchedStore.id}`;
-        if (!sessionStorage.getItem(sessionVisitKey) && (fetchedStore.plan === 'emprendedor' || fetchedStore.plan === 'negocio')) {
+        if (typeof window !== 'undefined' && !sessionStorage.getItem(sessionVisitKey)) {
           sessionStorage.setItem(sessionVisitKey, 'true');
           const { recordAnalyticsEvent } = await import('@/lib/firebase/firestore');
-          recordAnalyticsEvent(fetchedStore.id, 'visit');
+          recordAnalyticsEvent(fetchedStore.id, 'visit').catch(() => {});
         }
 
-        const fetchedProducts = await getProductsByStoreIdFromFS(fetchedStore.id);
-        setFsProducts(fetchedProducts);
-        sessionStorage.setItem(`apana_public_prods_${targetSlug}`, JSON.stringify(fetchedProducts));
+        const prods = await getProductsByStoreIdFromFS(fetchedStore.id);
+        setFsProducts(prods);
+        sessionStorage.setItem(`apana_public_prods_${targetSlug}`, JSON.stringify(prods));
       } else {
         // Si la tienda fue borrada en Firestore, limpiar caché y forzar vista no encontrada
         setFsStore(null);
@@ -116,48 +111,6 @@ export default function PublicStorePage({ params }: Props) {
   }, [targetSlug]);
 
   const store = fsStore;
-
-  React.useEffect(() => {
-    // Si viene de publicar el primer producto y AÚN NO tiene un teléfono configurado
-    const isFirstProduct = searchParams.get('firstProductCreated') === 'true';
-    const currentPhone = store?.whatsappPhone || '';
-    const hasPhoneAlready = currentPhone.trim() !== '';
-
-    if (isFirstProduct && !hasPhoneAlready) {
-      // Abrir el modal inmediatamente sin delay para capturar el WhatsApp
-      setShowPhoneModal(true);
-    }
-  }, [searchParams, store]);
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 9);
-    setWhatsappPhone(value);
-  };
-
-  const handleSaveModalPhone = async (e: React.FormEvent, storeName: string, themeStyle?: any, primaryColor?: string, description?: string) => {
-    e.preventDefault();
-    if (whatsappPhone.length < 9) return;
-
-    const fullPhone = `51${whatsappPhone}`;
-
-    // Guardar en Firestore
-    if (store?.ownerId) {
-      const { createOrUpdateStoreInFS } = await import('@/lib/firebase/firestore');
-      await createOrUpdateStoreInFS(store.ownerId, {
-        name: storeName,
-        whatsappPhone: fullPhone,
-        themeStyle: themeStyle || 'minimalista',
-        primaryColor: primaryColor || '#059669',
-      });
-    }
-
-    setPhoneSavedSuccess(true);
-    setTimeout(() => {
-      setShowPhoneModal(false);
-      // Redirigir automáticamente al panel de administración /dashboard
-      router.push('/dashboard');
-    }, 1500);
-  };
 
   // Evitar error de hidratación renderizando cuando se monte el cliente
   if (!mounted || isFetchingFS) {
@@ -752,95 +705,6 @@ export default function PublicStorePage({ params }: Props) {
           </Link>
         </div>
       </nav>
-
-      {/* Modal Automático de Vincular WhatsApp */}
-      {showPhoneModal && (
-        <div className="fixed inset-0 z-50 bg-[#0b1c30]/75 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300 pointer-events-auto">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl flex flex-col gap-5 relative border border-[#bccac0]/30 animate-in zoom-in-95 duration-300">
-            {/* Header Modal */}
-            <div className="flex flex-col items-center text-center gap-2 pt-2">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-[#059669] flex items-center justify-center shadow-xs">
-                <WhatsAppIcon size={32} />
-              </div>
-              <h3 className="text-xl font-bold text-[#0b1c30]">
-                ¡Recibe tus pedidos por WhatsApp!
-              </h3>
-              <p className="text-xs text-[#6d7a72] leading-relaxed">
-                Ingresa tu número de WhatsApp para que tus clientes puedan enviarte sus compras directamente.
-              </p>
-            </div>
-
-            {/* Form Input WhatsApp */}
-            <form onSubmit={(e) => handleSaveModalPhone(e, store.name, store.themeStyle, store.primaryColor, store.description)} className="flex flex-col gap-4">
-              {(() => {
-                const hasStartedTyping = whatsappPhone.length > 0;
-                const isInvalidStart = hasStartedTyping && !whatsappPhone.startsWith('9');
-                const isCompleteValid = whatsappPhone.length === 9 && whatsappPhone.startsWith('9');
-
-                return (
-                  <>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-[#0b1c30] ml-1">
-                        Número de Celular
-                      </label>
-                      <div className={`relative flex items-center bg-white border rounded-xl overflow-hidden shadow-xs transition-all ${isInvalidStart
-                          ? 'border-red-500 ring-2 ring-red-500/10'
-                          : 'border-[#bccac0] focus-within:border-[#059669] focus-within:ring-2 focus-within:ring-[#059669]/10'
-                        }`}>
-                        <div className="flex items-center gap-1.5 px-3 py-2.5 bg-gray-50 border-r border-gray-200 select-none shrink-0">
-                          <span className="text-base leading-none" role="img" aria-label="Bandera de Perú">🇵🇪</span>
-                          <span className="text-xs font-bold text-[#0b1c30]">+51</span>
-                        </div>
-                        <input
-                          type="tel"
-                          required
-                          maxLength={9}
-                          placeholder="987654321"
-                          value={whatsappPhone}
-                          onChange={handlePhoneChange}
-                          className="h-11 w-full bg-transparent px-3 text-sm font-medium text-[#0b1c30] placeholder:text-[#6d7a72]/40 focus:outline-none tracking-wide"
-                        />
-                      </div>
-
-                      {/* Mensaje de Error Informativo */}
-                      {isInvalidStart ? (
-                        <p className="text-[11px] font-semibold text-red-500 flex items-center gap-1 mt-0.5 ml-1 animate-in fade-in">
-                          <span>⚠️ El número celular debe comenzar obligatoriamente con 9.</span>
-                        </p>
-                      ) : (
-                        <p className="text-[10px] text-slate-400 ml-1">
-                          Ingresa los 9 dígitos de tu número de WhatsApp.
-                        </p>
-                      )}
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={!isCompleteValid}
-                      className="h-12 w-full bg-[#059669] hover:bg-[#00855d] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl font-bold text-sm shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                    >
-                      {phoneSavedSuccess ? <Check size={20} /> : <WhatsAppIcon size={20} />}
-                      {phoneSavedSuccess ? '¡WhatsApp Conectado!' : 'Guardar y Vincular WhatsApp'}
-                    </button>
-                  </>
-                );
-              })()}
-
-              <p className="text-[10px] text-slate-400 text-center leading-tight">
-                Al vincular tu número, declaras bajo juramento ser el titular de la línea y aceptas los{' '}
-                <button
-                  type="button"
-                  onClick={() => setIsTermsOpen(true)}
-                  className="text-[#059669] underline font-medium hover:text-[#006c49]"
-                >
-                  Términos y Condiciones
-                </button>
-                .
-              </p>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Modal de Términos y Condiciones */}
       <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />

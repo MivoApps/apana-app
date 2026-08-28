@@ -100,6 +100,14 @@ export default function DashboardPage() {
         if (ann && ann.active) setGlobalAnnouncement(ann);
       }).catch(() => {});
     });
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('verifyWhatsapp') === 'true') {
+        setIsVerifyModalOpen(true);
+        window.history.replaceState({}, '', '/dashboard');
+      }
+    }
   }, []);
 
   React.useEffect(() => {

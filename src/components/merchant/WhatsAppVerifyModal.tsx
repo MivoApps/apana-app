@@ -126,11 +126,29 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
       }
 
       setIsSuccess(true);
+
+      // Actualizar caché de sesión local inmediatamente
+      if (typeof window !== 'undefined') {
+        try {
+          const cached = sessionStorage.getItem(`apana_cache_store_${user.uid}`);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            const updated = {
+              ...parsed,
+              whatsappPhone: fullPhone,
+              isWhatsappVerified: true,
+            };
+            sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(updated));
+            sessionStorage.setItem('apana_active_store', JSON.stringify(updated));
+          }
+        } catch (_) {}
+      }
+
       if (onSuccess) onSuccess();
 
       setTimeout(() => {
         onClose();
-      }, 2200);
+      }, 2000);
     } catch (err: any) {
       console.error('Error validando código:', err);
       setErrorMessage('Ocurrió un error al validar el código. Inténtalo de nuevo.');
