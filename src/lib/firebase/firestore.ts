@@ -81,6 +81,65 @@ export const getUserProfileFromFS = async (uidOrEmail: string): Promise<UserProf
 
 // --- SERVICIOS DE TIENDA (STORES) ---
 
+// Palabras reservadas que no pueden ser slugs de tiendas públicas
+const RESERVED_SLUGS = [
+  'panaderia-don-jose',
+  'admin',
+  'login',
+  'register',
+  'dashboard',
+  'products',
+  'settings',
+  'plans',
+  'orders',
+  'qr',
+  'analytics',
+  'forgot-password',
+  'store-not-found',
+  'libro-de-reclamaciones',
+  'terms',
+  'api'
+];
+
+export const isStoreSlugAvailableInFS = async (slug: string, currentStoreId?: string): Promise<boolean> => {
+  const clean = slugify(slug);
+  if (!clean || RESERVED_SLUGS.includes(clean)) {
+    return false;
+  }
+  try {
+    const storesRef = collection(db, 'stores');
+    const q = query(storesRef, where('slug', '==', clean));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) return true;
+    // Si la única tienda que tiene ese slug es la misma tienda actual, está disponible
+    if (currentStoreId && querySnapshot.docs.length === 1 && querySnapshot.docs[0].id === currentStoreId) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error al verificar disponibilidad de slug:', error);
+    return false;
+  }
+};
+
+export const generateUniqueStoreSlugInFS = async (baseNameOrSlug: string, currentStoreId?: string): Promise<string> => {
+  let base = slugify(baseNameOrSlug || 'mi-tienda');
+  if (!base) base = 'mi-tienda';
+
+  const isAvailable = await isStoreSlugAvailableInFS(base, currentStoreId);
+  if (isAvailable) return base;
+
+  let counter = 2;
+  while (counter <= 50) {
+    const candidate = `${base}-${counter}`;
+    const candidateAvailable = await isStoreSlugAvailableInFS(candidate, currentStoreId);
+    if (candidateAvailable) return candidate;
+    counter++;
+  }
+  return `${base}-${Math.floor(1000 + Math.random() * 9000)}`;
+};
+
 export const getStoreBySlugFromFS = async (slug: string): Promise<Store | null> => {
   // Manejo de la tienda demo oficial de muestra
   if (slug === 'panaderia-don-jose') {
@@ -143,18 +202,29 @@ export const createOrUpdateStoreInFS = async (
   userId: string, 
   storeData: Partial<Store>
 ): Promise<Store> => {
-  const baseSlug = storeData.slug || slugify(storeData.name || 'mi-tienda');
   const storeId = storeData.id || `store_${userId}`;
-
   const storeRef = doc(db, 'stores', storeId);
   const existingSnap = await getDoc(storeRef);
   const isNew = !existingSnap.exists();
   const existingData = existingSnap.exists() ? existingSnap.data() : null;
 
+  // Garantizar Slug 100% Único (Previene colisión o sobreescritura de catálogos ajenos)
+  let finalSlug: string;
+  if (isNew) {
+    finalSlug = await generateUniqueStoreSlugInFS(storeData.slug || storeData.name || 'mi-tienda', storeId);
+  } else {
+    // Si ya existe la tienda y se especifica un slug diferente al actual, validar unicidad
+    if (storeData.slug && storeData.slug !== existingData?.slug) {
+      finalSlug = await generateUniqueStoreSlugInFS(storeData.slug, storeId);
+    } else {
+      finalSlug = existingData?.slug || (await generateUniqueStoreSlugInFS(storeData.name || 'mi-tienda', storeId));
+    }
+  }
+
   const fullStore: Store = {
     id: storeId,
     name: storeData.name || (existingData?.name ?? 'Mi Tienda APANA'),
-    slug: baseSlug,
+    slug: finalSlug,
     category: storeData.category || (existingData?.category ?? 'General'),
     whatsappPhone: storeData.whatsappPhone !== undefined ? storeData.whatsappPhone : (existingData?.whatsappPhone ?? ''),
     themeStyle: storeData.themeStyle || (existingData?.themeStyle ?? 'minimalista'),
@@ -584,13 +654,16 @@ export const adminCleanSuperAdminStoresInFS = async (adminUid: string): Promise<
 export const adminUpdateStoreDetailsInFS = async (
   storeId: string, 
   data: { name: string; slug: string; whatsappPhone: string; plan: 'gratis' | 'emprendedor' | 'negocio'; status: 'activa' | 'pausada'; isWhatsappVerified?: boolean }
-): Promise<void> => {
+): Promise<string> => {
   try {
+    const validatedSlug = await generateUniqueStoreSlugInFS(data.slug || data.name, storeId);
     const storeRef = doc(db, 'stores', storeId);
     await updateDoc(storeRef, {
       ...data,
+      slug: validatedSlug,
       updatedAt: serverTimestamp(),
     });
+    return validatedSlug;
   } catch (error) {
     console.error('Error al actualizar datos de tienda desde admin:', error);
     throw error;

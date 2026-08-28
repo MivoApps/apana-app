@@ -364,6 +364,11 @@ export default function OnboardingWizardPage() {
                     <CheckCircle2 size={18} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#059669]" />
                   )}
                 </div>
+                {businessName.trim() && (
+                  <p className="text-[11px] font-mono text-[#006c49] bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200/80 mt-1">
+                    🔗 Enlace de tu catálogo: <strong>beapana.com/s/{slugify(businessName)}</strong>
+                  </p>
+                )}
               </div>
 
               <Button
