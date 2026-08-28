@@ -68,6 +68,7 @@ import {
   adminUpdateReclamacionStatusInFS,
   adminSaveGlobalAnnouncementInFS,
   getGlobalAnnouncementFromFS,
+  cleanupExpiredOtpRequestsInFS,
   AdminStoreItem,
   AdminUserItem,
   PaymentRecord,
@@ -182,6 +183,9 @@ export default function SuperAdminPage() {
       if (user?.uid) {
         await adminCleanSuperAdminStoresInFS(user.uid);
       }
+      // Limpiar automáticamente OTPs expirados
+      cleanupExpiredOtpRequestsInFS().catch(() => {});
+
       const [storesData, usersData, paymentsData, reclamacionesData, globalAnn] = await Promise.all([
         getAllStoresForAdminFromFS(),
         getAllUsersForAdminFromFS(),

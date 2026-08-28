@@ -13,7 +13,8 @@ import {
   increment,
   orderBy,
   limit,
-  Timestamp
+  Timestamp,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from './config';
 import { Store, Product } from '@/types/store';
@@ -818,6 +819,30 @@ export interface OtpRequest {
   otpSentAt?: number;
 }
 
+// Limpieza automática de OTPs expirados o abandonados (> 15 min)
+export const cleanupExpiredOtpRequestsInFS = async (): Promise<number> => {
+  try {
+    const otpRef = collection(db, 'otp_requests');
+    const nowTimestamp = Timestamp.now();
+    const q = query(otpRef, where('expiresAt', '<', nowTimestamp));
+    const snap = await getDocs(q);
+
+    if (snap.empty) return 0;
+
+    let deletedCount = 0;
+    const batch = writeBatch(db);
+    snap.docs.forEach((d) => {
+      batch.delete(d.ref);
+      deletedCount++;
+    });
+    await batch.commit();
+    return deletedCount;
+  } catch (error) {
+    console.warn('Aviso limpiando OTPs expirados:', error);
+    return 0;
+  }
+};
+
 export const createOtpRequestInFS = async (
   rawPhone: string,
   code: string,
@@ -826,6 +851,9 @@ export const createOtpRequestInFS = async (
   userId: string
 ): Promise<boolean> => {
   try {
+    // Limpieza pasiva en segundo plano
+    cleanupExpiredOtpRequestsInFS().catch(() => {});
+
     const digitsOnly = rawPhone.replace(/\D/g, '');
     const cleanPhone = digitsOnly.startsWith('51') ? digitsOnly : `51${digitsOnly}`;
 
