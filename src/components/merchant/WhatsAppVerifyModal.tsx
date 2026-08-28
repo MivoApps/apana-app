@@ -47,9 +47,10 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const activePhoneDigits = (phone || customPhone).replace(/\D/g, '');
+  const currentPhoneValue = (isEditingPhone || !phone) ? customPhone : (customPhone || phone);
+  const activePhoneDigits = currentPhoneValue.replace(/\D/g, '');
   const displayPhone = activePhoneDigits.length > 9 ? activePhoneDigits.slice(-9) : activePhoneDigits;
-  const fullPhone = activePhoneDigits.startsWith('51') ? activePhoneDigits : `51${activePhoneDigits}`;
+  const fullPhone = activePhoneDigits ? (activePhoneDigits.startsWith('51') ? activePhoneDigits : `51${activePhoneDigits}`) : '';
 
   // Sincronizar teléfono inicial
   useEffect(() => {
@@ -62,9 +63,9 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
     }
   }, [phone]);
 
-  // Al abrir el modal, generar código de 6 dígitos y registrar la solicitud en Firestore si hay teléfono válido
+  // Al abrir el modal o cambiar teléfono, generar código de 6 dígitos y registrar la solicitud en Firestore
   useEffect(() => {
-    if (isOpen && user && displayPhone.length === 9) {
+    if (isOpen && user && displayPhone.length === 9 && fullPhone) {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       setGeneratedCode(code);
       setInputCode('');
@@ -89,7 +90,7 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
   const businessWhatsAppUrl = `https://wa.me/${APANA_OFFICIAL_WHATSAPP}?text=${encodedText}`;
 
   const triggerOtpGeneration = () => {
-    if (displayPhone.length !== 9) {
+    if (displayPhone.length !== 9 || !fullPhone) {
       setErrorMessage('Por favor ingresa un número de WhatsApp válido de 9 dígitos.');
       return false;
     }
@@ -97,7 +98,7 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
     setHasOpenedWhatsApp(true);
     setErrorMessage('');
 
-    if (user && fullPhone) {
+    if (user) {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       setGeneratedCode(code);
       createOtpRequestInFS(fullPhone, code, storeId, storeName, user.uid).catch((err) => {
@@ -108,11 +109,11 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
   };
 
   const handleResendCode = async () => {
-    if (displayPhone.length !== 9) {
+    if (displayPhone.length !== 9 || !fullPhone) {
       setErrorMessage('Por favor ingresa un número de WhatsApp válido de 9 dígitos.');
       return;
     }
-    if (!user || !fullPhone) return;
+    if (!user) return;
 
     setIsResendingCode(true);
     setErrorMessage('');
@@ -123,7 +124,9 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
       setGeneratedCode(code);
       await createOtpRequestInFS(fullPhone, code, storeId, storeName, user.uid);
       setHasOpenedWhatsApp(true);
-      window.open(standardWhatsAppUrl, '_blank', 'noopener,noreferrer');
+      
+      // Abrir WhatsApp en la misma pestaña en móvil para evitar bloqueo de Safari
+      window.location.href = standardWhatsAppUrl;
     } catch (e) {
       console.error('Error reenviando código:', e);
     } finally {
