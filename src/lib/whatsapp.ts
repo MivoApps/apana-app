@@ -88,5 +88,28 @@ export function generateWhatsAppLink(
   message += `\n✨ _Pedido generado desde mi tienda APANA_`;
 
   const encodedMessage = encodeURIComponent(message);
-  return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+  return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
+}
+
+/**
+ * Abre WhatsApp o WhatsApp Business de forma inteligente según el dispositivo.
+ * En móviles dispara el deep linking nativo para ambas aplicaciones.
+ */
+export function openUniversalWhatsApp(rawPhone: string, text: string): void {
+  let cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+  if (cleanPhone.length === 9) {
+    cleanPhone = `51${cleanPhone}`;
+  }
+  const encodedText = encodeURIComponent(text);
+  const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    // Protocolo oficial de Meta que soporta WhatsApp Messenger y WhatsApp Business nativamente
+    const mobileUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
+    window.open(mobileUrl, '_blank', 'noopener,noreferrer');
+  } else {
+    // Computadora / Escritorio
+    const desktopUrl = `https://wa.me/${cleanPhone}?text=${encodedText}`;
+    window.open(desktopUrl, '_blank', 'noopener,noreferrer');
+  }
 }

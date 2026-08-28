@@ -97,7 +97,8 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
       await createOtpRequestInFS(fullPhone, code, storeId, storeName, user.uid);
     }
 
-    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    const { openUniversalWhatsApp } = await import('@/lib/whatsapp');
+    openUniversalWhatsApp(APANA_OFFICIAL_WHATSAPP, messageText);
   };
 
   const handleValidateCode = async (e?: React.FormEvent) => {
