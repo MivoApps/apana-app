@@ -78,6 +78,12 @@ export default function ProductGalleryPage() {
       // 2. Traer la verdad actualizada desde Firestore en segundo plano (silenciosamente)
       const storeFromFS = await getStoreByUserIdFromFS(user.uid);
       if (!storeFromFS) {
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem(`apana_cache_store_${user.uid}`);
+          sessionStorage.removeItem('apana_active_store');
+          sessionStorage.removeItem('apana_active_products');
+          sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
+        }
         router.push('/store/setup');
         return;
       }

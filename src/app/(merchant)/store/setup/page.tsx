@@ -84,18 +84,6 @@ export default function OnboardingWizardPage() {
         return;
       }
 
-      // Si ya sabemos por caché que tiene tienda, redirigir instantáneamente
-      const cachedStore = sessionStorage.getItem(`apana_cache_store_${user.uid}`);
-      if (cachedStore) {
-        try {
-          const parsed = JSON.parse(cachedStore);
-          if (parsed?.name) {
-            window.location.href = '/dashboard';
-            return;
-          }
-        } catch (_) {}
-      }
-
       // Temporizador de seguridad de 1.5 segundos: desbloquear de inmediato el Wizard si Firestore tarda
       const safetyTimeout = setTimeout(() => {
         if (isMounted) {
@@ -117,9 +105,16 @@ export default function OnboardingWizardPage() {
 
         if (existingStore) {
           sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(existingStore));
+          sessionStorage.setItem('apana_active_store', JSON.stringify(existingStore));
           window.location.href = '/dashboard';
           return;
         }
+
+        // Si no hay tienda creada en Firestore ➔ Limpiar cualquier residuo de caché obsoleto
+        sessionStorage.removeItem(`apana_cache_store_${user.uid}`);
+        sessionStorage.removeItem('apana_active_store');
+        sessionStorage.removeItem('apana_active_products');
+        sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
 
         // Crear perfil en segundo plano sin frenar al usuario
         if (!userProfile && user.email) {
@@ -131,7 +126,7 @@ export default function OnboardingWizardPage() {
           }).catch((e) => console.warn('Error auto-creando perfil:', e));
         }
 
-        // Si no hay tienda creada ➔ Resetear todos los campos a vacíos y forzar Paso 1
+        // Resetear todos los campos a vacíos y forzar Paso 1
         localStorage.removeItem('apana_wizard_step');
         setBusinessName('');
         setWhatsappPhone('');

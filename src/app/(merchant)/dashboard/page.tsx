@@ -177,10 +177,15 @@ export default function DashboardPage() {
         // Consultar tienda y productos en Firestore
         const storeFromFS = await getStoreByUserIdFromFS(user.uid);
 
-        if (!isMounted) return;
-
         if (!storeFromFS) {
           clearTimeout(safetyTimer);
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('apana_active_store');
+            sessionStorage.removeItem(`apana_cache_store_${user.uid}`);
+            sessionStorage.removeItem('apana_active_products');
+            sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
+          }
+          setFsStore(null);
           window.location.href = '/store/setup';
           return;
         }
