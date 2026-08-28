@@ -527,6 +527,38 @@ export default function SuperAdminPage() {
     }
   };
 
+  // Eliminar Tienda y Usuario juntos (Borrado en Cascada desde el modal de usuario)
+  const handleDeleteStoreAndUserCascade = async () => {
+    if (!deletingUser || !deletingUserAssociatedStore) return;
+    if (!confirm(`¿Confirmas eliminar la tienda "${deletingUserAssociatedStore.name}", todos sus productos y la cuenta de usuario "${deletingUser.email}" permanentemente?`)) return;
+
+    setIsDeletingUser(true);
+    try {
+      // 1. Eliminar tienda y productos
+      await adminDeleteStoreAndProductsFromFS(deletingUserAssociatedStore.id);
+      setStores((prev) => prev.filter((s) => s.id !== deletingUserAssociatedStore.id));
+
+      // 2. Eliminar usuario
+      await adminDeleteUserFromFS(deletingUser.email || deletingUser.uid);
+      setUsers((prev) => prev.filter((u) => u.uid !== deletingUser.uid));
+
+      setDeletingUser(null);
+      setSuccessMsg(`Tienda "${deletingUserAssociatedStore.name}" y usuario eliminados permanentemente.`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (e) {
+      alert('Error al eliminar tienda y usuario.');
+    } finally {
+      setIsDeletingUser(false);
+    }
+  };
+
+  // Redirigir directamente al Directorio con la tienda buscada
+  const handleGoToStoreInDirectory = (storeName: string) => {
+    setDeletingUser(null);
+    setActiveTab('stores');
+    setSearchQuery(storeName);
+  };
+
   // Métricas Globales del SaaS
   const totalStores = stores.length;
   const totalEmprendedorStores = stores.filter((s) => s.plan === 'emprendedor').length;
@@ -1892,42 +1924,75 @@ export default function SuperAdminPage() {
 
             {/* Bloqueo Preventivo si tiene tienda activa */}
             {deletingUserAssociatedStore ? (
-              <div className="p-3.5 bg-amber-950/60 border border-amber-600/70 rounded-2xl text-left flex flex-col gap-1.5 text-amber-200 text-xs">
-                <div className="flex items-center gap-1.5 font-bold text-amber-300">
-                  <AlertTriangle size={15} />
-                  <span>Bloqueo Preventivo: Tienda Activa</span>
+              <div className="flex flex-col gap-3">
+                <div className="p-3.5 bg-amber-950/60 border border-amber-600/70 rounded-2xl text-left flex flex-col gap-1.5 text-amber-200 text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                    <AlertTriangle size={15} />
+                    <span>Tienda Activa Detectada</span>
+                  </div>
+                  <p className="leading-relaxed text-[11px]">
+                    Este usuario es propietario de <strong className="text-white">"{deletingUserAssociatedStore.name}"</strong> (/s/{deletingUserAssociatedStore.slug}).
+                  </p>
                 </div>
-                <p className="leading-relaxed text-[11px]">
-                  Este usuario es dueño de la tienda activa <strong className="text-white">"{deletingUserAssociatedStore.name}"</strong>. Para evitar dejar datos huérfanos, primero debes eliminar su tienda desde el <strong>Directorio de Tiendas</strong>.
-                </p>
+
+                {/* Acciones Directas */}
+                <div className="flex flex-col gap-2 pt-1">
+                  {/* Opción 1: Ir directo al Directorio de Tiendas */}
+                  <button
+                    type="button"
+                    onClick={() => handleGoToStoreInDirectory(deletingUserAssociatedStore.name)}
+                    className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <StoreIcon size={16} />
+                    <span>Ir a "{deletingUserAssociatedStore.name}" en Directorio →</span>
+                  </button>
+
+                  {/* Opción 2: Eliminar Tienda y Usuario juntos */}
+                  <button
+                    type="button"
+                    disabled={isDeletingUser}
+                    onClick={handleDeleteStoreAndUserCascade}
+                    className="w-full h-10 bg-red-950/80 hover:bg-red-900 border border-red-800 text-red-200 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Trash2 size={14} />
+                    <span>{isDeletingUser ? 'Eliminando...' : 'Eliminar Tienda y Usuario Juntos'}</span>
+                  </button>
+
+                  {/* Opción 3: Cerrar modal */}
+                  <button
+                    type="button"
+                    onClick={() => setDeletingUser(null)}
+                    className="w-full h-9 border border-slate-700 text-slate-300 text-xs font-semibold rounded-xl hover:bg-slate-800 cursor-pointer mt-1"
+                  >
+                    Cancelar
+                  </button>
+                </div>
               </div>
             ) : (
-              <p className="text-xs text-slate-300">
-                ¿Estás seguro de eliminar este usuario? No tiene tiendas asociadas.
-              </p>
-            )}
+              <>
+                <p className="text-xs text-slate-300">
+                  ¿Estás seguro de eliminar este usuario? No tiene tiendas asociadas.
+                </p>
 
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeletingUser(null)}
-                className="flex-1 h-10 border border-slate-700 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-800 cursor-pointer"
-              >
-                Cerrar
-              </button>
-              <button
-                type="button"
-                disabled={Boolean(deletingUserAssociatedStore) || isDeletingUser}
-                onClick={handleConfirmDeleteUser}
-                className={`flex-1 h-10 font-bold text-xs rounded-xl shadow-xs transition-all ${
-                  deletingUserAssociatedStore
-                    ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                    : 'bg-red-600 hover:bg-red-500 text-white cursor-pointer'
-                }`}
-              >
-                {isDeletingUser ? 'Eliminando...' : 'Sí, Eliminar'}
-              </button>
-            </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeletingUser(null)}
+                    className="flex-1 h-10 border border-slate-700 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-800 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isDeletingUser}
+                    onClick={handleConfirmDeleteUser}
+                    className="flex-1 h-10 font-bold text-xs rounded-xl shadow-xs transition-all bg-red-600 hover:bg-red-500 text-white cursor-pointer"
+                  >
+                    {isDeletingUser ? 'Eliminando...' : 'Sí, Eliminar'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
