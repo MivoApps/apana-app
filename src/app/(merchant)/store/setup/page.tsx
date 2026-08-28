@@ -13,7 +13,8 @@ import {
   PackagePlus,
   QrCode,
   ExternalLink,
-  LogOut
+  LogOut,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { slugify } from '@/lib/app-store';
@@ -62,6 +63,34 @@ export default function OnboardingWizardPage() {
   const [createdSlug, setCreatedSlug] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
+
+  // Estado de validación de unicidad de nombre de tienda
+  const [isCheckingSlug, setIsCheckingSlug] = useState(false);
+  const [isSlugAvailable, setIsSlugAvailable] = useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    const cleanSlug = slugify(businessName);
+    if (!cleanSlug || cleanSlug.length < 2) {
+      setIsSlugAvailable(null);
+      setIsCheckingSlug(false);
+      return;
+    }
+
+    setIsCheckingSlug(true);
+    const timer = setTimeout(async () => {
+      try {
+        const { isStoreSlugAvailableInFS } = await import('@/lib/firebase/firestore');
+        const available = await isStoreSlugAvailableInFS(cleanSlug);
+        setIsSlugAvailable(available);
+      } catch (_) {
+        setIsSlugAvailable(true);
+      } finally {
+        setIsCheckingSlug(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [businessName]);
 
   const TOTAL_STEPS = 4;
   const router = useRouter();
@@ -271,8 +300,8 @@ export default function OnboardingWizardPage() {
           {/* PASO 1: Bienvenido */}
           {step === 1 && (
             <div className="flex flex-col items-center text-center gap-6 p-6 pt-8 pb-8 bg-white rounded-2xl border border-[#bccac0]/40 shadow-xs">
-              <div className="w-16 h-16 bg-[#00855d] text-white rounded-2xl flex items-center justify-center shadow-sm mt-2">
-                <Store size={32} />
+              <div className="w-20 h-20 bg-white border border-[#bccac0]/40 rounded-3xl p-3.5 flex items-center justify-center shadow-md mt-1">
+                <img src="/logo.svg" alt="APANA Logo" className="w-full h-full object-contain" />
               </div>
 
               <div className="flex flex-col gap-2">
@@ -341,7 +370,7 @@ export default function OnboardingWizardPage() {
               </div>
 
               {/* Campo Nombre */}
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2">
                 <label htmlFor="business-name" className="text-xs font-bold text-slate-700">
                   Nombre de tu tienda o marca *
                 </label>
@@ -353,16 +382,40 @@ export default function OnboardingWizardPage() {
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                     required
-                    className="w-full h-12 px-4 rounded-xl bg-white border border-[#bccac0] text-[#0b1c30] text-sm font-semibold placeholder:text-[#6d7a72] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                    className={`w-full h-12 px-4 rounded-xl bg-white border text-[#0b1c30] text-sm font-semibold placeholder:text-[#6d7a72] focus:outline-none transition-all shadow-xs ${
+                      isSlugAvailable === false
+                        ? 'border-red-500 ring-2 ring-red-500/10'
+                        : isSlugAvailable === true
+                        ? 'border-[#059669] ring-2 ring-[#059669]/10'
+                        : 'border-[#bccac0] focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10'
+                    }`}
                   />
-                  {businessName.trim() && (
-                    <CheckCircle2 size={18} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#059669]" />
-                  )}
+                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center">
+                    {isCheckingSlug && (
+                      <span className="w-4 h-4 border-2 border-[#059669] border-t-transparent rounded-full animate-spin" />
+                    )}
+                    {!isCheckingSlug && isSlugAvailable === true && (
+                      <CheckCircle2 size={18} className="text-[#059669]" />
+                    )}
+                    {!isCheckingSlug && isSlugAvailable === false && (
+                      <AlertCircle size={18} className="text-red-500" />
+                    )}
+                  </div>
                 </div>
-                {businessName.trim() && (
-                  <p className="text-[11px] font-mono text-[#006c49] bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200/80 mt-1">
-                    🔗 Enlace de tu catálogo: <strong>beapana.com/s/{slugify(businessName)}</strong>
-                  </p>
+
+                {/* Feedback Dinámico de Disponibilidad */}
+                {businessName.trim() && !isCheckingSlug && isSlugAvailable === false && (
+                  <div className="flex items-center gap-1.5 text-xs text-red-600 font-semibold bg-red-50 p-2.5 rounded-xl border border-red-200/80 animate-in fade-in">
+                    <AlertCircle size={15} className="shrink-0 text-red-500" />
+                    <span>El nombre ya está registrado. Por favor elige otro nombre.</span>
+                  </div>
+                )}
+
+                {businessName.trim() && isSlugAvailable === true && (
+                  <div className="flex items-center justify-between text-[11px] font-mono text-[#006c49] bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200/80 animate-in fade-in">
+                    <span className="truncate mr-2">🔗 Enlace: <strong>beapana.com/s/{slugify(businessName)}</strong></span>
+                    <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full shrink-0">¡Disponible!</span>
+                  </div>
                 )}
               </div>
 
@@ -370,7 +423,7 @@ export default function OnboardingWizardPage() {
                 onClick={nextStep}
                 variant="primary"
                 fullWidth
-                disabled={!businessName.trim() || isNavigatingStep}
+                disabled={!businessName.trim() || isCheckingSlug || isSlugAvailable === false || isNavigatingStep}
                 className="h-12 text-base mt-2"
               >
                 {isNavigatingStep ? (
