@@ -9,7 +9,9 @@ import {
   AlertCircle,
   MessageSquare,
   Sparkles,
-  KeyRound
+  KeyRound,
+  Briefcase,
+  RotateCw
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { useAuth } from '@/lib/firebase/auth-context';
@@ -41,6 +43,7 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
   const [isEditingPhone, setIsEditingPhone] = useState(!phone);
   const [hasOpenedWhatsApp, setHasOpenedWhatsApp] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isResendingCode, setIsResendingCode] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -79,25 +82,52 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
 
   // Mensaje oficial hacia el bot de APANA (+51 920030074)
   const messageText = `Hola equipo de APANA 👋, solicito mi código de activación para mi tienda *${storeName || 'Mi Tienda'}*.`;
-  const whatsappUrl = `https://api.whatsapp.com/send?phone=${APANA_OFFICIAL_WHATSAPP}&text=${encodeURIComponent(messageText)}`;
+  const encodedText = encodeURIComponent(messageText);
 
-  const handleClickWhatsAppLink = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  // URLs universales para WhatsApp y WhatsApp Business
+  const standardWhatsAppUrl = `https://api.whatsapp.com/send?phone=${APANA_OFFICIAL_WHATSAPP}&text=${encodedText}`;
+  const businessWhatsAppUrl = `https://wa.me/${APANA_OFFICIAL_WHATSAPP}?text=${encodedText}`;
+
+  const triggerOtpGeneration = () => {
     if (displayPhone.length !== 9) {
-      e.preventDefault();
       setErrorMessage('Por favor ingresa un número de WhatsApp válido de 9 dígitos.');
-      return;
+      return false;
     }
 
     setHasOpenedWhatsApp(true);
     setErrorMessage('');
 
-    // Registrar solicitud fresca en Firestore de forma inmediata
     if (user && fullPhone) {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       setGeneratedCode(code);
       createOtpRequestInFS(fullPhone, code, storeId, storeName, user.uid).catch((err) => {
-        console.error('Error registrando OTP en background:', err);
+        console.error('Error registrando OTP:', err);
       });
+    }
+    return true;
+  };
+
+  const handleResendCode = async () => {
+    if (displayPhone.length !== 9) {
+      setErrorMessage('Por favor ingresa un número de WhatsApp válido de 9 dígitos.');
+      return;
+    }
+    if (!user || !fullPhone) return;
+
+    setIsResendingCode(true);
+    setErrorMessage('');
+    setInputCode('');
+
+    try {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedCode(code);
+      await createOtpRequestInFS(fullPhone, code, storeId, storeName, user.uid);
+      setHasOpenedWhatsApp(true);
+      window.open(standardWhatsAppUrl, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      console.error('Error reenviando código:', e);
+    } finally {
+      setIsResendingCode(false);
     }
   };
 
@@ -265,37 +295,57 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
             )}
 
             {/* PASO 1: Solicitar Código */}
-            <div className="flex flex-col gap-1.5 pt-1">
+            <div className="flex flex-col gap-2 pt-1">
               <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                 <span className="w-5 h-5 rounded-full bg-slate-800 text-white text-[10px] flex items-center justify-center font-bold">1</span>
-                Pide tu código por WhatsApp
+                Pide tu código de activación:
               </label>
 
-              <a
-                href={displayPhone.length === 9 ? whatsappUrl : '#'}
-                target={displayPhone.length === 9 ? '_blank' : undefined}
-                rel="noopener noreferrer"
-                onClick={handleClickWhatsAppLink}
-                className={`w-full h-11 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer select-none no-underline ${
-                  displayPhone.length !== 9
-                    ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                    : hasOpenedWhatsApp
-                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 active:scale-[0.98]'
-                    : 'bg-[#059669] hover:bg-[#00855d] active:scale-[0.98] text-white shadow-emerald-700/20'
-                }`}
-              >
-                <WhatsAppIcon size={18} />
-                <span>{hasOpenedWhatsApp ? 'Volver a abrir chat de WhatsApp' : 'Solicitar código a APANA (+51 920030074)'}</span>
-                <ExternalLink size={14} />
-              </a>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* Opción A: WhatsApp Messenger */}
+                <a
+                  href={displayPhone.length === 9 ? standardWhatsAppUrl : '#'}
+                  target={displayPhone.length === 9 ? '_blank' : undefined}
+                  rel="noopener noreferrer"
+                  onClick={() => triggerOtpGeneration()}
+                  className={`h-11 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all select-none no-underline ${
+                    displayPhone.length !== 9
+                      ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                      : 'bg-[#059669] hover:bg-[#00855d] active:scale-[0.98] text-white shadow-emerald-700/20 cursor-pointer'
+                  }`}
+                >
+                  <WhatsAppIcon size={17} />
+                  <span>WhatsApp Personal</span>
+                  <ExternalLink size={12} />
+                </a>
+
+                {/* Opción B: WhatsApp Business */}
+                <a
+                  href={displayPhone.length === 9 ? businessWhatsAppUrl : '#'}
+                  target={displayPhone.length === 9 ? '_blank' : undefined}
+                  rel="noopener noreferrer"
+                  onClick={() => triggerOtpGeneration()}
+                  className={`h-11 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all select-none no-underline ${
+                    displayPhone.length !== 9
+                      ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                      : 'bg-[#0b1c30] hover:bg-[#162a45] active:scale-[0.98] text-emerald-300 border border-emerald-500/30 cursor-pointer'
+                  }`}
+                >
+                  <Briefcase size={15} />
+                  <span>WhatsApp Business</span>
+                  <ExternalLink size={12} />
+                </a>
+              </div>
             </div>
 
             {/* PASO 2: Ingresar Código Recibido */}
             <form onSubmit={handleValidateCode} className="flex flex-col gap-2 pt-2 border-t border-slate-100">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <span className="w-5 h-5 rounded-full bg-slate-800 text-white text-[10px] flex items-center justify-center font-bold">2</span>
-                Ingresa el código de 6 dígitos que te envió el bot:
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-slate-800 text-white text-[10px] flex items-center justify-center font-bold">2</span>
+                  Ingresa el código de 6 dígitos:
+                </label>
+              </div>
 
               <div className="relative">
                 <input
@@ -313,6 +363,20 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
                   className="w-full h-12 px-4 text-center font-mono text-xl font-bold tracking-[0.4em] rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all text-[#0b1c30]"
                 />
                 <KeyRound size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+
+              {/* Botón Reenviar / Nuevo Código */}
+              <div className="flex items-center justify-between text-[11px] px-1">
+                <span className="text-slate-400">¿Expiró o no llegó?</span>
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={isResendingCode || displayPhone.length !== 9}
+                  className="font-bold text-[#059669] hover:text-[#00855d] flex items-center gap-1 hover:underline cursor-pointer disabled:opacity-50"
+                >
+                  <RotateCw size={12} className={isResendingCode ? 'animate-spin' : ''} />
+                  <span>{isResendingCode ? 'Generando...' : 'Generar nuevo código'}</span>
+                </button>
               </div>
 
               {errorMessage && (
