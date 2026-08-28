@@ -879,32 +879,34 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Bottom Nav Fija (Inicio, Productos, Ajustes) */}
-      <nav className="fixed bottom-0 w-full z-50 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)]">
-        <div className="h-16 flex items-center justify-around max-w-[640px] mx-auto">
-          <Link
-            href="/dashboard"
-            className="flex flex-col items-center gap-1 text-[#059669] font-semibold"
-          >
-            <Home size={20} />
-            <span className="text-xs">Inicio</span>
-          </Link>
-          <Link
-            href="/products"
-            className="flex flex-col items-center gap-1 text-[#6d7a72] hover:text-[#0b1c30]"
-          >
-            <Package size={20} />
-            <span className="text-xs font-medium">Productos</span>
-          </Link>
-          <Link
-            href="/settings"
-            className="flex flex-col items-center gap-1 text-[#6d7a72] hover:text-[#0b1c30]"
-          >
-            <Settings size={20} />
-            <span className="text-xs font-medium">Ajustes</span>
-          </Link>
-        </div>
-      </nav>
+      {/* Bottom Nav Fija (Inicio, Productos, Ajustes) - Oculta durante la verificación de WhatsApp */}
+      {!isVerifyModalOpen && (
+        <nav className="fixed bottom-0 w-full z-40 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)] animate-in fade-in duration-200">
+          <div className="h-16 flex items-center justify-around max-w-[640px] mx-auto">
+            <Link
+              href="/dashboard"
+              className="flex flex-col items-center gap-1 text-[#059669] font-semibold"
+            >
+              <Home size={20} />
+              <span className="text-xs">Inicio</span>
+            </Link>
+            <Link
+              href="/products"
+              className="flex flex-col items-center gap-1 text-[#6d7a72] hover:text-[#0b1c30]"
+            >
+              <Package size={20} />
+              <span className="text-xs font-medium">Productos</span>
+            </Link>
+            <Link
+              href="/settings"
+              className="flex flex-col items-center gap-1 text-[#6d7a72] hover:text-[#0b1c30]"
+            >
+              <Settings size={20} />
+              <span className="text-xs font-medium">Ajustes</span>
+            </Link>
+          </div>
+        </nav>
+      )}
     </div>
   );
 }
