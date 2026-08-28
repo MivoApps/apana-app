@@ -384,7 +384,7 @@ export default function CreateProductPage() {
     const isWhatsappVerified = Boolean(realStore?.isWhatsappVerified);
 
     if (!hasPhoneConfigured || !isWhatsappVerified) {
-      router.replace('/dashboard?verifyWhatsapp=true');
+      window.location.href = '/dashboard?verifyWhatsapp=true';
     } else {
       router.replace('/products');
     }

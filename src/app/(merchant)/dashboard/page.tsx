@@ -399,9 +399,11 @@ export default function DashboardPage() {
         {/* Banner Unificado de Seguridad Inteligente (Email + WhatsApp) */}
         {(() => {
           const needsEmail = user && !user.emailVerified;
-          const needsWhatsapp = fsStore && !fsStore.isWhatsappVerified && fsStore.whatsappPhone;
+          const needsWhatsapp = fsStore && (!fsStore.isWhatsappVerified || !fsStore.whatsappPhone);
 
           if (!needsEmail && !needsWhatsapp) return null;
+
+          const hasPhoneSet = Boolean(fsStore?.whatsappPhone);
 
           // CASO 1: Faltan AMBOS (Consolidado en 1 solo banner)
           if (needsEmail && needsWhatsapp) {
@@ -413,11 +415,13 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-xs text-amber-950">Protege tu cuenta: 2 pasos pendientes</span>
-                      <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">Seguridad</span>
+                      <span className="font-extrabold text-xs text-amber-950">Pasos pendientes para recibir pedidos</span>
+                      <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">Atención</span>
                     </div>
                     <span className="text-[11px] text-amber-900/80 mt-0.5 leading-snug">
-                      Valida tu correo y tu línea de WhatsApp para blindar tu tienda y recibir pedidos.
+                      {hasPhoneSet 
+                        ? 'Valida tu correo y tu línea de WhatsApp para blindar tu tienda y recibir pedidos.'
+                        : 'Configura tu número de WhatsApp y confirma tu correo para recibir pedidos de clientes.'}
                     </span>
                   </div>
                 </div>
@@ -429,7 +433,7 @@ export default function DashboardPage() {
                     className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     <ShieldCheck size={14} />
-                    <span>Validar WhatsApp</span>
+                    <span>{hasPhoneSet ? 'Validar WhatsApp' : 'Conectar WhatsApp'}</span>
                   </button>
                   <button
                     type="button"
@@ -479,17 +483,23 @@ export default function DashboardPage() {
                   <ShieldCheck size={18} />
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="font-bold text-xs text-amber-950 truncate">WhatsApp pendiente de validación</span>
-                  <span className="text-[11px] text-amber-900/80">Valida la titularidad de tu número para evitar suplantaciones.</span>
+                  <span className="font-bold text-xs text-amber-950 truncate">
+                    {hasPhoneSet ? 'WhatsApp pendiente de validación' : 'WhatsApp no configurado'}
+                  </span>
+                  <span className="text-[11px] text-amber-900/80">
+                    {hasPhoneSet 
+                      ? 'Valida la titularidad de tu número para recibir pedidos con el sello oficial.'
+                      : 'Conecta tu celular para que tus clientes puedan enviarte pedidos por WhatsApp.'}
+                  </span>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setIsVerifyModalOpen(true)}
-                className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all shrink-0 cursor-pointer"
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all shrink-0 cursor-pointer"
               >
-                Validar titularidad
+                {hasPhoneSet ? 'Validar titularidad' : 'Conectar WhatsApp'}
               </button>
             </div>
           );
