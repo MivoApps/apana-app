@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import QRCode from 'qrcode';
+import { generateQrWithLogo } from '@/lib/qr-generator';
 import { ArrowLeft, Download, Share2, Copy, Check, Printer, Sparkles, QrCode, Store as StoreIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -12,51 +12,102 @@ import { Store } from '@/types/store';
 
 export default function QRPage() {
   const { user, loading: authLoading } = useAuth();
-  const [store, setStore] = useState<Store | null>(null);
+  const [store, setStore] = useState<Store | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('apana_active_store');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed?.name) return parsed;
+        }
+      } catch (_) {}
+    }
+    return null;
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchStore = async () => {
       if (authLoading) return;
-      if (!user) return;
-
-      setIsLoading(true);
-      const storeFromFS = await getStoreByUserIdFromFS(user.uid);
-      if (storeFromFS) {
-        setStore(storeFromFS);
+      if (!user) {
+        setIsLoading(false);
+        return;
       }
-      setIsLoading(false);
+
+      // 1. Intentar cargar de sessionStorage para renderizado instantáneo sin parpadeo
+      if (typeof window !== 'undefined' && !store) {
+        try {
+          const userCache = sessionStorage.getItem(`apana_cache_store_${user.uid}`) || sessionStorage.getItem('apana_active_store');
+          if (userCache) {
+            const parsed = JSON.parse(userCache);
+            if (parsed?.name && isMounted) {
+              setStore(parsed);
+              setIsLoading(false);
+            }
+          }
+        } catch (_) {}
+      }
+
+      try {
+        const storeFromFS = await getStoreByUserIdFromFS(user.uid);
+        if (storeFromFS && isMounted) {
+          setStore(storeFromFS);
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('apana_active_store', JSON.stringify(storeFromFS));
+            sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(storeFromFS));
+          }
+        }
+      } catch (err) {
+        console.error('Error al obtener tienda para QR:', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
     };
+
     fetchStore();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user, authLoading]);
 
-  const storeName = store?.name || 'Mi Tienda APANA';
-  const targetSlug = store?.slug || 'mi-tienda';
+  const storeName = store?.name || '';
+  const targetSlug = store?.slug || '';
+  const storeId = store?.id || (user ? `store_${user.uid}` : '');
   const brandColor = store?.primaryColor || '#059669';
 
   const [qrUrl, setQrUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
-  const storeUrl = typeof window !== 'undefined'
+
+  // URL dinámica e inmutable en el QR (permite cambiar de nombre/slug sin reimprimir)
+  const qrDynamicUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/r/${storeId || targetSlug}`
+    : `https://beapana.com/r/${storeId || targetSlug}`;
+
+  // URL pública directa
+  const publicStoreUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/s/${targetSlug}`
-    : `https://bealiados.com/s/${targetSlug}`;
+    : `https://beapana.com/s/${targetSlug}`;
 
   useEffect(() => {
-    // Generar en Ultra Alta Definición (1024x1024 px con Nivel de Corrección 'H' para 300 DPI en impresión)
-    QRCode.toDataURL(storeUrl, {
+    if (!storeId && !targetSlug) return;
+
+    // Generar en Ultra Alta Definición (1024x1024 px con Logo APANA en el centro)
+    generateQrWithLogo(qrDynamicUrl, {
       width: 1024,
       margin: 2,
-      errorCorrectionLevel: 'H',
-      color: {
-        dark: '#0b1c30',
-        light: '#ffffff',
-      },
+      darkColor: '#0b1c30',
+      lightColor: '#ffffff',
+      logoSizeRatio: 0.22,
     })
       .then(setQrUrl)
       .catch(console.error);
-  }, [storeUrl]);
+  }, [qrDynamicUrl, storeId, targetSlug]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(storeUrl);
+    navigator.clipboard.writeText(publicStoreUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -124,34 +175,39 @@ export default function QRPage() {
         >
           {/* Cabecera del Sticker */}
           <div className="flex flex-col items-center gap-0.5">
-            <div className="flex items-center gap-1.5">
-              {store?.logoUrl ? (
-                <img src={store.logoUrl} alt={storeName} className="w-5 h-5 rounded-full object-cover shadow-2xs" />
-              ) : (
-                <div
-                  style={{ backgroundColor: brandColor }}
-                  className="w-4 h-4 rounded-full text-white flex items-center justify-center text-[9px] font-bold"
-                >
-                  {storeName.substring(0, 1).toUpperCase()}
-                </div>
-              )}
-              <h2 className="font-extrabold text-sm text-[#0b1c30] tracking-tight truncate max-w-[190px]">
-                {storeName}
-              </h2>
-            </div>
+            {isLoading && !store ? (
+              <div className="h-5 w-32 bg-slate-100 rounded-full animate-pulse my-1" />
+            ) : (
+              <div className="flex items-center gap-1.5">
+                {store?.logoUrl ? (
+                  <img src={store.logoUrl} alt={storeName} className="w-5 h-5 rounded-full object-cover shadow-2xs" />
+                ) : (
+                  <div
+                    style={{ backgroundColor: brandColor }}
+                    className="w-4 h-4 rounded-full text-white flex items-center justify-center text-[9px] font-bold"
+                  >
+                    {(storeName || 'M').substring(0, 1).toUpperCase()}
+                  </div>
+                )}
+                <h2 className="font-extrabold text-sm text-[#0b1c30] tracking-tight truncate max-w-[190px]">
+                  {storeName || 'Mi Tienda'}
+                </h2>
+              </div>
+            )}
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
               Catálogo Digital
             </span>
           </div>
 
-          {/* Imagen QR de Alta Definición */}
+          {/* Imagen QR de Alta Definición con Logo de APANA */}
           {qrUrl ? (
             <div className="p-2 bg-white rounded-2xl border border-slate-100 shadow-2xs">
               <img src={qrUrl} alt={`QR ${storeName}`} className="w-36 h-36 sm:w-40 sm:h-40 object-contain" />
             </div>
           ) : (
-            <div className="w-36 h-36 bg-slate-100 rounded-2xl flex items-center justify-center animate-pulse">
-              <QrCode size={32} className="text-slate-400" />
+            <div className="w-36 h-36 sm:w-40 sm:h-40 bg-slate-100 rounded-2xl flex flex-col items-center justify-center gap-2 animate-pulse">
+              <QrCode size={32} className="text-slate-300" />
+              <span className="text-[10px] text-slate-400 font-medium">Generando QR...</span>
             </div>
           )}
 
@@ -161,7 +217,7 @@ export default function QRPage() {
               <span>📲 Escanea y Pide por WhatsApp</span>
             </span>
             <span className="text-[8px] text-slate-400 font-mono">
-              /s/{targetSlug}
+              {isLoading && !targetSlug ? '...' : `/s/${targetSlug}`}
             </span>
           </div>
         </div>
@@ -173,7 +229,7 @@ export default function QRPage() {
 
         {/* Enlace y Copia */}
         <div className="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between gap-2 no-print">
-          <span className="text-xs text-[#0b1c30] font-mono truncate">{storeUrl}</span>
+          <span className="text-xs text-[#0b1c30] font-mono truncate">{publicStoreUrl}</span>
           <button
             onClick={handleCopy}
             className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition-colors cursor-pointer"

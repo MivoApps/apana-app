@@ -165,6 +165,31 @@ export default function PublicStorePage({ params }: Props) {
         </div>
       </header>
 
+      {/* SEO Structured Data Schema.org */}
+      {store && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "LocalBusiness",
+              "name": store.name,
+              "description": store.description || `Catálogo digital de ${store.name}. Realiza tus pedidos por WhatsApp.`,
+              "url": `https://beapana.com/s/${store.slug}`,
+              ...(store.logoUrl ? { "image": store.logoUrl } : {}),
+              ...(store.whatsappPhone ? { "telephone": store.whatsappPhone } : {}),
+              "priceRange": "$$",
+              "address": {
+                "@type": "PostalAddress",
+                ...(store.city ? { "addressLocality": store.city } : {}),
+                ...(store.department ? { "addressRegion": store.department } : {}),
+                "addressCountry": "PE",
+              },
+            }),
+          }}
+        />
+      )}
+
       {/* Main Container */}
       <main className={`pt-16 pb-24 min-h-screen transition-colors ${store.themeStyle === 'elegante'
           ? 'bg-[#FAF8F5] text-stone-900'
@@ -199,8 +224,8 @@ export default function PublicStorePage({ params }: Props) {
           </div>
         )}
 
-        {/* Banner Informativo si la tienda no tiene WhatsApp validado */}
-        {(!store.whatsappPhone || !store.isWhatsappVerified) && (
+        {/* Banner Informativo si la tienda no tiene WhatsApp validado (no aplica para la tienda demo oficial) */}
+        {store.slug !== 'panaderia-don-jose' && (!store.whatsappPhone || !store.isWhatsappVerified) && (
           <div className="w-full bg-amber-50/95 border-b border-amber-200/90 text-amber-950 px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2 sticky top-0 z-30 shadow-2xs backdrop-blur-xs">
             <span className="text-sm">🛠️</span>
             <span>Esta tienda está configurando sus canales de atención. Muy pronto disponible para pedidos por WhatsApp.</span>

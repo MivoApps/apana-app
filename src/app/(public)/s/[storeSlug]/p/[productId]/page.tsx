@@ -227,6 +227,32 @@ export default function PublicProductDetailPage({ params }: Props) {
         ? 'bg-slate-50 text-[#0b1c30]'
         : 'bg-white text-neutral-900'
     }`}>
+      {/* Product SEO Structured Data Schema.org */}
+      {targetProduct && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Product",
+              "name": targetProduct.title,
+              "description": targetProduct.description || `${targetProduct.title} disponible en ${activeStore?.name || 'APANA'}.`,
+              "image": targetProduct.imageUrl ? [targetProduct.imageUrl] : (targetProduct.imageUrls || []),
+              "offers": {
+                "@type": "Offer",
+                "price": targetProduct.price,
+                "priceCurrency": activeStore?.currency || "PEN",
+                "availability": targetProduct.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                "seller": {
+                  "@type": "Organization",
+                  "name": activeStore?.name || "APANA",
+                },
+              },
+            }),
+          }}
+        />
+      )}
+
       {/* Header Fijo con logo y back */}
       <header className={`fixed top-0 w-full z-50 backdrop-blur-xl border-b transition-colors ${
         isElegant

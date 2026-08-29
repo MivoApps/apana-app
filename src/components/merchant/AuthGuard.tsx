@@ -13,7 +13,8 @@ export const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children })
   const pathname = usePathname();
 
   const isPublicStorePath = pathname.startsWith('/s/');
-  const isPublicPath = PUBLIC_PATHS.includes(pathname) || isPublicStorePath;
+  const isPublicDynamicQrPath = pathname.startsWith('/r/') || (pathname.startsWith('/qr/') && pathname !== '/qr');
+  const isPublicPath = PUBLIC_PATHS.includes(pathname) || isPublicStorePath || isPublicDynamicQrPath;
 
   useEffect(() => {
     if (!loading && !user && !isPublicPath) {

@@ -167,6 +167,28 @@ export const getStoreBySlugFromFS = async (slug: string): Promise<Store | null> 
   }
 };
 
+export const getStoreByIdFromFS = async (storeId: string): Promise<Store | null> => {
+  if (!storeId) return null;
+  if (storeId === 'demo-store' || storeId === 'panaderia-don-jose') {
+    const { DEMO_STORE } = await import('@/lib/mock-demo-store');
+    return DEMO_STORE;
+  }
+  try {
+    const storeRef = doc(db, 'stores', storeId);
+    const storeSnap = await getDoc(storeRef);
+    if (storeSnap.exists()) {
+      return {
+        id: storeSnap.id,
+        ...storeSnap.data(),
+      } as Store;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error al obtener tienda por storeId desde Firestore:', error);
+    return null;
+  }
+};
+
 export const getStoreByUserIdFromFS = async (userId: string): Promise<Store | null> => {
   try {
     // 1. Intentar consulta por documento directo store_${userId} (instantáneo O(1))

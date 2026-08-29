@@ -49,7 +49,7 @@ import {
   CheckSquare,
   FileText
 } from 'lucide-react';
-import QRCode from 'qrcode';
+import { generateQrWithLogo } from '@/lib/qr-generator';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { 
   getAllStoresForAdminFromFS, 
@@ -156,15 +156,17 @@ export default function SuperAdminPage() {
 
   const handleOpenSticker = async (store: AdminStoreItem) => {
     setStickerStore(store);
-    const storeUrl = typeof window !== 'undefined'
-      ? `${window.location.origin}/s/${store.slug}`
-      : `https://beapana.com/s/${store.slug}`;
+    const storeTargetId = store.id || store.slug;
+    const dynamicQrUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}/r/${storeTargetId}`
+      : `https://beapana.com/r/${storeTargetId}`;
     try {
-      const url = await QRCode.toDataURL(storeUrl, {
+      const url = await generateQrWithLogo(dynamicQrUrl, {
         width: 1024,
         margin: 2,
-        errorCorrectionLevel: 'H',
-        color: { dark: '#0b1c30', light: '#ffffff' }
+        darkColor: '#0b1c30',
+        lightColor: '#ffffff',
+        logoSizeRatio: 0.22,
       });
       setStickerQrUrl(url);
     } catch (e) {
