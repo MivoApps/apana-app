@@ -136,3 +136,106 @@ export async function generateQrWithLogo(
 
   return canvas.toDataURL('image/png');
 }
+
+/**
+ * Genera la imagen completa del STICKER (5x5 cm / 1000x1000 px)
+ * Incluyendo cabecera "MIRA Y PIDE AQUÍ", nombre de tienda, QR HD con logo y pie "Escanea para pedir".
+ * Listo para guardar directo en la galería / fotos del celular o imprimir en mini impresora térmica.
+ */
+export async function generateFullStickerImage(
+  storeName: string,
+  qrDataUrl: string
+): Promise<string> {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return qrDataUrl;
+  }
+
+  const size = 1000; // 1000x1000 px (alta fidelidad cuadrada 5x5 cm)
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return qrDataUrl;
+
+  // 1. Fondo blanco puro con esquinas redondeadas
+  const radius = 60;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(radius, 0);
+  ctx.lineTo(size - radius, 0);
+  ctx.quadraticCurveTo(size, 0, size, radius);
+  ctx.lineTo(size, size - radius);
+  ctx.quadraticCurveTo(size, size, size - radius, size);
+  ctx.lineTo(radius, size);
+  ctx.quadraticCurveTo(0, size, 0, size - radius);
+  ctx.lineTo(0, radius);
+  ctx.quadraticCurveTo(0, 0, radius, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  // Borde punteado/sutil de sticker
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // 2. Cabecera: "— MIRA Y PIDE AQUÍ —"
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  
+  // Líneas decorativas
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(size / 2 - 190, 80);
+  ctx.lineTo(size / 2 - 130, 80);
+  ctx.moveTo(size / 2 + 130, 80);
+  ctx.lineTo(size / 2 + 190, 80);
+  ctx.stroke();
+
+  ctx.fillStyle = '#334155';
+  ctx.font = '900 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('MIRA Y PIDE AQUÍ', size / 2, 80);
+
+  // Nombre de la Tienda
+  ctx.fillStyle = '#020617';
+  ctx.font = '900 42px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  const cleanName = storeName || 'Mi Tienda';
+  ctx.fillText(cleanName.length > 22 ? cleanName.substring(0, 20) + '...' : cleanName, size / 2, 140);
+
+  // 3. Dibujar QR HD con Logo APANA al centro
+  try {
+    const qrImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      img.src = qrDataUrl;
+    });
+
+    const qrSize = 620;
+    const qrX = (size - qrSize) / 2;
+    const qrY = 195;
+    ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+  } catch (e) {
+    console.error('Error dibujando QR en sticker completo:', e);
+  }
+
+  // 4. Pie de sticker: "📱 Escanea para pedir"
+  ctx.fillStyle = '#020617';
+  ctx.font = '900 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('📱 Escanea para pedir', size / 2, 865);
+
+  // Línea divisoria
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(size / 2 - 60, 905);
+  ctx.lineTo(size / 2 + 60, 905);
+  ctx.stroke();
+
+  // "Una tienda online de APANA"
+  ctx.fillStyle = '#64748b';
+  ctx.font = '600 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('Una tienda online de APANA', size / 2, 940);
+
+  return canvas.toDataURL('image/png');
+}

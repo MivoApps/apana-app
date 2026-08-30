@@ -49,7 +49,7 @@ import {
   CheckSquare,
   FileText
 } from 'lucide-react';
-import { generateQrWithLogo } from '@/lib/qr-generator';
+import { generateQrWithLogo, generateFullStickerImage } from '@/lib/qr-generator';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { 
   getAllStoresForAdminFromFS, 
@@ -2080,9 +2080,23 @@ export default function SuperAdminPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const win = window.open('', '', 'width=500,height=500');
-                  if (win) {
-                    win.document.write(`
+                  let printIframe = document.getElementById('apana-admin-print-frame') as HTMLIFrameElement;
+                  if (!printIframe) {
+                    printIframe = document.createElement('iframe');
+                    printIframe.id = 'apana-admin-print-frame';
+                    printIframe.style.position = 'fixed';
+                    printIframe.style.right = '0';
+                    printIframe.style.bottom = '0';
+                    printIframe.style.width = '0';
+                    printIframe.style.height = '0';
+                    printIframe.style.border = '0';
+                    document.body.appendChild(printIframe);
+                  }
+
+                  const doc = printIframe.contentWindow?.document;
+                  if (doc) {
+                    doc.open();
+                    doc.write(`
                       <!DOCTYPE html>
                       <html>
                         <head>
@@ -2192,13 +2206,14 @@ export default function SuperAdminPage() {
                             window.onload = function() {
                               setTimeout(function() {
                                 window.print();
-                              }, 300);
+                              }, 200);
                             };
                           </script>
                         </body>
                       </html>
                     `);
-                    win.document.close();
+                    doc.close();
+                    printIframe.contentWindow?.focus();
                   }
                 }}
                 className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
@@ -2209,15 +2224,34 @@ export default function SuperAdminPage() {
 
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   if (!stickerQrUrl) return;
+                  const fullImg = await generateFullStickerImage(stickerStore.name, stickerQrUrl);
+                  
+                  if (typeof window !== 'undefined' && navigator.share && navigator.canShare) {
+                    try {
+                      const response = await fetch(fullImg);
+                      const blob = await response.blob();
+                      const file = new File([blob], `sticker-qr-${stickerStore.slug}-5x5cm.png`, { type: 'image/png' });
+                      if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                          title: `Sticker QR - ${stickerStore.name}`,
+                          files: [file]
+                        });
+                        return;
+                      }
+                    } catch (_) {}
+                  }
+
                   const a = document.createElement('a');
-                  a.href = stickerQrUrl;
+                  a.href = fullImg;
                   a.download = `sticker-qr-${stickerStore.slug}-5x5cm.png`;
+                  document.body.appendChild(a);
                   a.click();
+                  document.body.removeChild(a);
                 }}
                 className="h-10 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center gap-1 transition-all cursor-pointer"
-                title="Descargar imagen PNG para Fun Print"
+                title="Guardar imagen / Descargar PNG para Fun Print"
               >
                 <Download size={15} />
               </button>

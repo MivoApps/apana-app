@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { generateQrWithLogo } from '@/lib/qr-generator';
-import { ArrowLeft, Download, Share2, Copy, Check, Printer, Sparkles, QrCode, Store as StoreIcon } from 'lucide-react';
+import { generateQrWithLogo, generateFullStickerImage } from '@/lib/qr-generator';
+import { ArrowLeft, Download, Share2, Copy, Check, Printer, Sparkles, QrCode, Store as StoreIcon, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useAuth } from '@/lib/firebase/auth-context';
@@ -79,7 +79,9 @@ export default function QRPage() {
   const brandColor = store?.primaryColor || '#059669';
 
   const [qrUrl, setQrUrl] = useState<string>('');
+  const [fullStickerUrl, setFullStickerUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
+  const [isSavingPhoto, setIsSavingPhoto] = useState(false);
 
   // URL dinámica e inmutable en el QR (permite cambiar de nombre/slug sin reimprimir)
   const qrDynamicUrl = typeof window !== 'undefined'
@@ -102,9 +104,14 @@ export default function QRPage() {
       lightColor: '#ffffff',
       logoSizeRatio: 0.22,
     })
-      .then(setQrUrl)
+      .then(async (qrData) => {
+        setQrUrl(qrData);
+        // Generar la imagen completa del sticker 5x5 cm para descarga / galería
+        const fullSticker = await generateFullStickerImage(storeName || 'Mi Tienda', qrData);
+        setFullStickerUrl(fullSticker);
+      })
       .catch(console.error);
-  }, [qrDynamicUrl, storeId, targetSlug]);
+  }, [qrDynamicUrl, storeId, targetSlug, storeName]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(publicStoreUrl);
@@ -112,138 +119,187 @@ export default function QRPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Impresión Directa en la Misma Ventana (sin abrir pestañas nuevas)
   const handlePrint = () => {
-    // Si el navegador soporta Web Share API con imagen o archivo (especialmente en móviles Android / iOS)
-    if (typeof window !== 'undefined') {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      
-      if (isMobile) {
-        // En móviles, abrir ventana limpia enfocada únicamente en el sticker para diálogo nativo de impresión / guardar PDF
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-          printWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Sticker QR APANA</title>
-                <style>
-                  @page {
-                    size: 5cm 5cm;
-                    margin: 0;
-                  }
-                  body {
-                    margin: 0;
-                    padding: 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    min-height: 100vh;
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    background-color: #ffffff;
-                  }
-                  .sticker-card {
-                    width: 5cm;
-                    height: 5cm;
-                    box-sizing: border-box;
-                    padding: 0.35cm;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: space-between;
-                    text-align: center;
-                    border: 1px dashed #cbd5e1;
-                    border-radius: 12px;
-                    color: #0b1c30;
-                  }
-                  .header-eyebrow {
-                    font-size: 8px;
-                    font-weight: 800;
-                    color: #475569;
-                    letter-spacing: 0.5px;
-                    text-transform: uppercase;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 4px;
-                  }
-                  .header-eyebrow span {
-                    display: inline-block;
-                    width: 12px;
-                    height: 1px;
-                    background: #cbd5e1;
-                  }
-                  .header-title {
-                    font-size: 13px;
-                    font-weight: 900;
-                    color: #020617;
-                    margin-top: 1px;
-                    max-width: 4.2cm;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                  }
-                  .qr-image {
-                    width: 3.1cm;
-                    height: 3.1cm;
-                    object-fit: contain;
-                  }
-                  .footer-cta {
-                    font-size: 9px;
-                    font-weight: 900;
-                    color: #020617;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 4px;
-                  }
-                  .footer-brand {
-                    font-size: 7.5px;
-                    font-weight: 600;
-                    color: #64748b;
-                    margin-top: 1px;
-                  }
-                  .footer-brand strong {
-                    color: #020617;
-                    font-weight: 900;
-                  }
-                </style>
-              </head>
-              <body>
-                <div class="sticker-card">
-                  <div>
-                    <div class="header-eyebrow">
-                      <span></span>MIRA Y PIDE AQUÍ<span></span>
-                    </div>
-                    <div class="header-title">${storeName || 'Mi Tienda'}</div>
-                  </div>
-                  <img src="${qrUrl}" class="qr-image" alt="QR" />
-                  <div>
-                    <div class="footer-cta">
-                      📱 Escanea para pedir
-                    </div>
-                    <div class="footer-brand">
-                      Una tienda online de <strong>APANA</strong>
-                    </div>
-                  </div>
+    if (typeof window === 'undefined') return;
+
+    // Crear un iframe oculto para lanzar la impresión en la misma página
+    let printIframe = document.getElementById('apana-print-frame') as HTMLIFrameElement;
+    if (!printIframe) {
+      printIframe = document.createElement('iframe');
+      printIframe.id = 'apana-print-frame';
+      printIframe.style.position = 'fixed';
+      printIframe.style.right = '0';
+      printIframe.style.bottom = '0';
+      printIframe.style.width = '0';
+      printIframe.style.height = '0';
+      printIframe.style.border = '0';
+      document.body.appendChild(printIframe);
+    }
+
+    const doc = printIframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Sticker QR - ${storeName || 'APANA'}</title>
+            <style>
+              @page {
+                size: 5cm 5cm;
+                margin: 0;
+              }
+              body {
+                margin: 0;
+                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background-color: #ffffff;
+              }
+              .sticker-card {
+                width: 5cm;
+                height: 5cm;
+                box-sizing: border-box;
+                padding: 0.35cm;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: space-between;
+                text-align: center;
+                border: 1px dashed #cbd5e1;
+                border-radius: 12px;
+                color: #0b1c30;
+              }
+              .header-eyebrow {
+                font-size: 8px;
+                font-weight: 800;
+                color: #475569;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+              }
+              .header-eyebrow span {
+                display: inline-block;
+                width: 12px;
+                height: 1px;
+                background: #cbd5e1;
+              }
+              .header-title {
+                font-size: 13px;
+                font-weight: 900;
+                color: #020617;
+                margin-top: 1px;
+                max-width: 4.2cm;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              }
+              .qr-image {
+                width: 3.1cm;
+                height: 3.1cm;
+                object-fit: contain;
+              }
+              .footer-cta {
+                font-size: 9px;
+                font-weight: 900;
+                color: #020617;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+              }
+              .footer-brand {
+                font-size: 7.5px;
+                font-weight: 600;
+                color: #64748b;
+                margin-top: 1px;
+              }
+              .footer-brand strong {
+                color: #020617;
+                font-weight: 900;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="sticker-card">
+              <div>
+                <div class="header-eyebrow">
+                  <span></span>MIRA Y PIDE AQUÍ<span></span>
                 </div>
-                <script>
-                  window.onload = function() {
-                    setTimeout(function() {
-                      window.print();
-                    }, 300);
-                  };
-                </script>
-              </body>
-            </html>
-          `);
-          printWindow.document.close();
+                <div class="header-title">${storeName || 'Mi Tienda'}</div>
+              </div>
+              <img src="${qrUrl}" class="qr-image" alt="QR" />
+              <div>
+                <div class="footer-cta">
+                  📱 Escanea para pedir
+                </div>
+                <div class="footer-brand">
+                  Una tienda online de <strong>APANA</strong>
+                </div>
+              </div>
+            </div>
+            <script>
+              window.onload = function() {
+                setTimeout(function() {
+                  window.print();
+                }, 200);
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      doc.close();
+      printIframe.contentWindow?.focus();
+    }
+  };
+
+  // Guardar en Galería / Descarga directa como imagen PNG 5x5 cm en móviles y PC
+  const handleSavePhoto = async () => {
+    if (!fullStickerUrl) return;
+    setIsSavingPhoto(true);
+
+    try {
+      // 1. En móviles (iOS / Android), usar Web Share API con archivo para guardar directo en Fotos/Galería
+      if (typeof window !== 'undefined' && navigator.share && navigator.canShare) {
+        const response = await fetch(fullStickerUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `sticker-qr-${targetSlug || 'apana'}-5x5cm.png`, { type: 'image/png' });
+
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `Sticker QR - ${storeName}`,
+            text: `Sticker oficial de ${storeName} para imprimir o compartir`,
+            files: [file],
+          });
+          setIsSavingPhoto(false);
           return;
         }
       }
-      
-      // En Desktop ejecutar print nativo
-      window.print();
+
+      // 2. Fallback estándar de descarga directa como archivo PNG
+      const link = document.createElement('a');
+      link.href = fullStickerUrl;
+      link.download = `sticker-qr-${targetSlug || 'apana'}-5x5cm.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.warn('Error al compartir/guardar foto:', err);
+      // Fallback directo a descarga de archivo
+      const link = document.createElement('a');
+      link.href = fullStickerUrl;
+      link.download = `sticker-qr-${targetSlug || 'apana'}-5x5cm.png`;
+      link.click();
+    } finally {
+      setIsSavingPhoto(false);
     }
   };
 
@@ -364,24 +420,37 @@ export default function QRPage() {
         </div>
 
         {/* Botones de Acción */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 w-full gap-2.5 pt-1 no-print">
+        <div className="flex flex-col w-full gap-2.5 pt-1 no-print">
+          {/* Botón Principal para Móviles: Guardar Sticker Completo en Galería / Fotos */}
           <button
             type="button"
-            onClick={handlePrint}
-            className="h-11 bg-slate-900 hover:bg-black active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+            onClick={handleSavePhoto}
+            disabled={!fullStickerUrl || isSavingPhoto}
+            className="w-full h-12 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-extrabold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
           >
-            <Printer size={16} />
-            <span>Imprimir Sticker</span>
+            <ImageIcon size={18} />
+            <span>{isSavingPhoto ? 'Procesando imagen...' : 'Guardar Sticker en Fotos / Galería (5x5 cm)'}</span>
           </button>
 
-          {qrUrl && (
-            <a href={qrUrl} download={`qr-apana-${targetSlug || 'tienda'}-hd.png`} className="w-full">
-              <Button variant="primary" fullWidth className="h-11 flex items-center justify-center gap-2 text-xs font-bold">
-                <Download size={16} />
-                <span>Descargar HD (1024px)</span>
-              </Button>
-            </a>
-          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 w-full gap-2.5">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="h-11 bg-slate-900 hover:bg-black active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <Printer size={16} />
+              <span>Imprimir Sticker</span>
+            </button>
+
+            {fullStickerUrl ? (
+              <a href={fullStickerUrl} download={`sticker-qr-${targetSlug || 'tienda'}-5x5cm.png`} className="w-full">
+                <Button variant="outline" fullWidth className="h-11 flex items-center justify-center gap-2 text-xs font-bold border-slate-300 hover:bg-slate-50">
+                  <Download size={16} />
+                  <span>Descargar Archivo PNG</span>
+                </Button>
+              </a>
+            ) : null}
+          </div>
         </div>
       </Card>
     </div>
