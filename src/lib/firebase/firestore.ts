@@ -555,25 +555,24 @@ export const getAllStoresForAdminFromFS = async (): Promise<AdminStoreItem[]> =>
   try {
     const storesRef = collection(db, 'stores');
     const querySnapshot = await getDocs(storesRef);
-    const stores: AdminStoreItem[] = [];
 
-    for (const docSnap of querySnapshot.docs) {
-      const data = docSnap.data() as Store;
-      
-      // Contar productos de la subcolección
-      let prodCount = 0;
-      try {
-        const prodsRef = collection(db, 'stores', docSnap.id, 'products');
-        const prodsSnap = await getDocs(prodsRef);
-        prodCount = prodsSnap.size;
-      } catch (e) {}
+    const stores = await Promise.all(
+      querySnapshot.docs.map(async (docSnap) => {
+        const data = docSnap.data() as Store;
+        let prodCount = 0;
+        try {
+          const prodsRef = collection(db, 'stores', docSnap.id, 'products');
+          const prodsSnap = await getDocs(prodsRef);
+          prodCount = prodsSnap.size;
+        } catch (e) {}
 
-      stores.push({
-        ...data,
-        id: docSnap.id,
-        productCount: prodCount,
-      });
-    }
+        return {
+          ...data,
+          id: docSnap.id,
+          productCount: prodCount,
+        } as AdminStoreItem;
+      })
+    );
 
     // Ordenar tiendas por más recientes primero
     return stores.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));

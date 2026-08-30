@@ -182,12 +182,13 @@ export default function SuperAdminPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
+      // Tareas de mantenimiento en segundo plano (sin bloquear la carga de la vista)
       if (user?.uid) {
-        await adminCleanSuperAdminStoresInFS(user.uid);
+        adminCleanSuperAdminStoresInFS(user.uid).catch(() => {});
       }
-      // Limpiar automáticamente OTPs expirados
       cleanupExpiredOtpRequestsInFS().catch(() => {});
 
+      // Carga en paralelo de datos esenciales
       const [storesData, usersData, paymentsData, reclamacionesData, globalAnn] = await Promise.all([
         getAllStoresForAdminFromFS(),
         getAllUsersForAdminFromFS(),
@@ -2076,152 +2077,8 @@ export default function SuperAdminPage() {
             </div>
 
             {/* Acciones */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  let printIframe = document.getElementById('apana-admin-print-frame') as HTMLIFrameElement;
-                  if (!printIframe) {
-                    printIframe = document.createElement('iframe');
-                    printIframe.id = 'apana-admin-print-frame';
-                    printIframe.style.position = 'fixed';
-                    printIframe.style.right = '0';
-                    printIframe.style.bottom = '0';
-                    printIframe.style.width = '0';
-                    printIframe.style.height = '0';
-                    printIframe.style.border = '0';
-                    document.body.appendChild(printIframe);
-                  }
-
-                  const doc = printIframe.contentWindow?.document;
-                  if (doc) {
-                    doc.open();
-                    doc.write(`
-                      <!DOCTYPE html>
-                      <html>
-                        <head>
-                          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                          <title>Sticker Térmico - ${stickerStore.name}</title>
-                          <style>
-                            @page {
-                              size: 5cm 5cm;
-                              margin: 0;
-                            }
-                            body {
-                              margin: 0;
-                              padding: 0;
-                              display: flex;
-                              align-items: center;
-                              justify-content: center;
-                              min-height: 100vh;
-                              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                              background-color: #ffffff;
-                            }
-                            .sticker {
-                              width: 5cm;
-                              height: 5cm;
-                              border: 1px dashed #cbd5e1;
-                              padding: 0.35cm;
-                              box-sizing: border-box;
-                              display: flex;
-                              flex-direction: column;
-                              align-items: center;
-                              justify-content: space-between;
-                              text-align: center;
-                              border-radius: 12px;
-                              color: #0b1c30;
-                            }
-                            .header-eyebrow {
-                              font-size: 8px;
-                              font-weight: 800;
-                              color: #475569;
-                              letter-spacing: 0.5px;
-                              text-transform: uppercase;
-                              display: flex;
-                              align-items: center;
-                              justify-content: center;
-                              gap: 4px;
-                            }
-                            .header-eyebrow span {
-                              display: inline-block;
-                              width: 12px;
-                              height: 1px;
-                              background: #cbd5e1;
-                            }
-                            .header-title {
-                              font-size: 13px;
-                              font-weight: 900;
-                              color: #020617;
-                              margin-top: 1px;
-                              max-width: 4.2cm;
-                              overflow: hidden;
-                              text-overflow: ellipsis;
-                              white-space: nowrap;
-                            }
-                            .qr-image {
-                              width: 3.1cm;
-                              height: 3.1cm;
-                              object-fit: contain;
-                            }
-                            .footer-cta {
-                              font-size: 9px;
-                              font-weight: 900;
-                              color: #020617;
-                              display: flex;
-                              align-items: center;
-                              justify-content: center;
-                              gap: 4px;
-                            }
-                            .footer-brand {
-                              font-size: 7.5px;
-                              font-weight: 600;
-                              color: #64748b;
-                              margin-top: 1px;
-                            }
-                            .footer-brand strong {
-                              color: #020617;
-                              font-weight: 900;
-                            }
-                          </style>
-                        </head>
-                        <body>
-                          <div class="sticker">
-                            <div>
-                              <div class="header-eyebrow">
-                                <span></span>MIRA Y PIDE AQUÍ<span></span>
-                              </div>
-                              <div class="header-title">${stickerStore.name}</div>
-                            </div>
-                            <img src="${stickerQrUrl}" class="qr-image" />
-                            <div>
-                              <div class="footer-cta">
-                                📱 Escanea para pedir
-                              </div>
-                              <div class="footer-brand">
-                                Una tienda online de <strong>APANA</strong>
-                              </div>
-                            </div>
-                          </div>
-                          <script>
-                            window.onload = function() {
-                              setTimeout(function() {
-                                window.print();
-                              }, 200);
-                            };
-                          </script>
-                        </body>
-                      </html>
-                    `);
-                    doc.close();
-                    printIframe.contentWindow?.focus();
-                  }
-                }}
-                className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
-              >
-                <Printer size={15} />
-                <span>Imprimir Sticker (5x5 cm)</span>
-              </button>
-
+            <div className="flex flex-col w-full gap-2 mt-1">
+              {/* Botón Principal para Celulares: Guardar en Fotos / Galería */}
               <button
                 type="button"
                 onClick={async () => {
@@ -2250,25 +2107,173 @@ export default function SuperAdminPage() {
                   a.click();
                   document.body.removeChild(a);
                 }}
-                className="h-10 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center gap-1 transition-all cursor-pointer"
-                title="Guardar imagen / Descargar PNG para Fun Print"
+                className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
               >
-                <Download size={15} />
+                <Download size={16} />
+                <span>Guardar en Fotos / Galería (5x5 cm)</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  const url = `https://beapana.com/s/${stickerStore.slug}`;
-                  navigator.clipboard.writeText(url);
-                  setStickerCopied(true);
-                  setTimeout(() => setStickerCopied(false), 2000);
-                }}
-                className="h-10 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center gap-1 transition-all cursor-pointer"
-                title="Copiar URL"
-              >
-                {stickerCopied ? <Check size={15} className="text-emerald-400" /> : <Copy size={15} />}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    let printIframe = document.getElementById('apana-admin-print-frame') as HTMLIFrameElement;
+                    if (!printIframe) {
+                      printIframe = document.createElement('iframe');
+                      printIframe.id = 'apana-admin-print-frame';
+                      printIframe.style.position = 'fixed';
+                      printIframe.style.right = '0';
+                      printIframe.style.bottom = '0';
+                      printIframe.style.width = '0';
+                      printIframe.style.height = '0';
+                      printIframe.style.border = '0';
+                      document.body.appendChild(printIframe);
+                    }
+
+                    const doc = printIframe.contentWindow?.document;
+                    if (doc) {
+                      doc.open();
+                      doc.write(`
+                        <!DOCTYPE html>
+                        <html>
+                          <head>
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <title>Sticker Térmico - ${stickerStore.name}</title>
+                            <style>
+                              @page {
+                                size: 5cm 5cm;
+                                margin: 0;
+                              }
+                              body {
+                                margin: 0;
+                                padding: 0;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                min-height: 100vh;
+                                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                                background-color: #ffffff;
+                              }
+                              .sticker {
+                                width: 5cm;
+                                height: 5cm;
+                                border: 1px dashed #cbd5e1;
+                                padding: 0.35cm;
+                                box-sizing: border-box;
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                justify-content: space-between;
+                                text-align: center;
+                                border-radius: 12px;
+                                color: #0b1c30;
+                              }
+                              .header-eyebrow {
+                                font-size: 8px;
+                                font-weight: 800;
+                                color: #475569;
+                                letter-spacing: 0.5px;
+                                text-transform: uppercase;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                gap: 4px;
+                              }
+                              .header-eyebrow span {
+                                display: inline-block;
+                                width: 12px;
+                                height: 1px;
+                                background: #cbd5e1;
+                              }
+                              .header-title {
+                                font-size: 13px;
+                                font-weight: 900;
+                                color: #020617;
+                                margin-top: 1px;
+                                max-width: 4.2cm;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                white-space: nowrap;
+                              }
+                              .qr-image {
+                                width: 3.1cm;
+                                height: 3.1cm;
+                                object-fit: contain;
+                              }
+                              .footer-cta {
+                                font-size: 9px;
+                                font-weight: 900;
+                                color: #020617;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                gap: 4px;
+                              }
+                              .footer-brand {
+                                font-size: 7.5px;
+                                font-weight: 600;
+                                color: #64748b;
+                                margin-top: 1px;
+                              }
+                              .footer-brand strong {
+                                color: #020617;
+                                font-weight: 900;
+                              }
+                            </style>
+                          </head>
+                          <body>
+                            <div class="sticker">
+                              <div>
+                                <div class="header-eyebrow">
+                                  <span></span>MIRA Y PIDE AQUÍ<span></span>
+                                </div>
+                                <div class="header-title">${stickerStore.name}</div>
+                              </div>
+                              <img src="${stickerQrUrl}" class="qr-image" />
+                              <div>
+                                <div class="footer-cta">
+                                  📱 Escanea para pedir
+                                </div>
+                                <div class="footer-brand">
+                                  Una tienda online de <strong>APANA</strong>
+                                </div>
+                              </div>
+                            </div>
+                            <script>
+                              window.onload = function() {
+                                setTimeout(function() {
+                                  window.print();
+                                }, 200);
+                              };
+                            </script>
+                          </body>
+                        </html>
+                      `);
+                      doc.close();
+                      printIframe.contentWindow?.focus();
+                    }
+                  }}
+                  className="flex-1 h-10 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-slate-700 transition-all cursor-pointer"
+                >
+                  <Printer size={15} />
+                  <span>Imprimir</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = `https://beapana.com/s/${stickerStore.slug}`;
+                    navigator.clipboard.writeText(url);
+                    setStickerCopied(true);
+                    setTimeout(() => setStickerCopied(false), 2000);
+                  }}
+                  className="h-10 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                  title="Copiar URL"
+                >
+                  {stickerCopied ? <Check size={15} className="text-emerald-400" /> : <Copy size={15} />}
+                  <span className="text-[11px]">Copiar</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
