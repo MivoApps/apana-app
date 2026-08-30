@@ -2085,6 +2085,7 @@ export default function SuperAdminPage() {
                   if (!stickerQrUrl) return;
                   const fullImg = await generateFullStickerImage(stickerStore.name, stickerQrUrl);
                   
+                  // En iOS / Android con HTTPS (Producción), Web Share API abre el menú oficial "Guardar Imagen"
                   if (typeof window !== 'undefined' && navigator.share && navigator.canShare) {
                     try {
                       const response = await fetch(fullImg);
@@ -2095,11 +2096,15 @@ export default function SuperAdminPage() {
                           title: `Sticker QR - ${stickerStore.name}`,
                           files: [file]
                         });
-                        return;
+                        return; // Si se compartió/guardó exitosamente, terminar aquí
                       }
-                    } catch (_) {}
+                    } catch (err: any) {
+                      // Si el usuario canceló el menú nativo (AbortError), no forzar descarga secundaria
+                      if (err?.name === 'AbortError') return;
+                    }
                   }
 
+                  // Fallback para HTTP local o navegadores de escritorio sin Web Share API
                   const a = document.createElement('a');
                   a.href = fullImg;
                   a.download = `sticker-qr-${stickerStore.slug}-5x5cm.png`;
