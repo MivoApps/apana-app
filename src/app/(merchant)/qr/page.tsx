@@ -113,7 +113,138 @@ export default function QRPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    // Si el navegador soporta Web Share API con imagen o archivo (especialmente en móviles Android / iOS)
+    if (typeof window !== 'undefined') {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        // En móviles, abrir ventana limpia enfocada únicamente en el sticker para diálogo nativo de impresión / guardar PDF
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Sticker QR APANA</title>
+                <style>
+                  @page {
+                    size: 5cm 5cm;
+                    margin: 0;
+                  }
+                  body {
+                    margin: 0;
+                    padding: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 100vh;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    background-color: #ffffff;
+                  }
+                  .sticker-card {
+                    width: 5cm;
+                    height: 5cm;
+                    box-sizing: border-box;
+                    padding: 0.35cm;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: space-between;
+                    text-align: center;
+                    border: 1px dashed #cbd5e1;
+                    border-radius: 12px;
+                    color: #0b1c30;
+                  }
+                  .header-eyebrow {
+                    font-size: 8px;
+                    font-weight: 800;
+                    color: #475569;
+                    letter-spacing: 0.5px;
+                    text-transform: uppercase;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 4px;
+                  }
+                  .header-eyebrow span {
+                    display: inline-block;
+                    width: 12px;
+                    height: 1px;
+                    background: #cbd5e1;
+                  }
+                  .header-title {
+                    font-size: 13px;
+                    font-weight: 900;
+                    color: #020617;
+                    margin-top: 1px;
+                    max-width: 4.2cm;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                  }
+                  .qr-image {
+                    width: 3.1cm;
+                    height: 3.1cm;
+                    object-fit: contain;
+                  }
+                  .footer-cta {
+                    font-size: 9px;
+                    font-weight: 900;
+                    color: #020617;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 4px;
+                  }
+                  .footer-brand {
+                    font-size: 7.5px;
+                    font-weight: 600;
+                    color: #64748b;
+                    margin-top: 1px;
+                  }
+                  .footer-brand strong {
+                    color: #020617;
+                    font-weight: 900;
+                  }
+                </style>
+              </head>
+              <body>
+                <div class="sticker-card">
+                  <div>
+                    <div class="header-eyebrow">
+                      <span></span>MIRA Y PIDE AQUÍ<span></span>
+                    </div>
+                    <div class="header-title">${storeName || 'Mi Tienda'}</div>
+                  </div>
+                  <img src="${qrUrl}" class="qr-image" alt="QR" />
+                  <div>
+                    <div class="footer-cta">
+                      📱 Escanea para pedir
+                    </div>
+                    <div class="footer-brand">
+                      Una tienda online de <strong>APANA</strong>
+                    </div>
+                  </div>
+                </div>
+                <script>
+                  window.onload = function() {
+                    setTimeout(function() {
+                      window.print();
+                    }, 300);
+                  };
+                </script>
+              </body>
+            </html>
+          `);
+          printWindow.document.close();
+          return;
+        }
+      }
+      
+      // En Desktop ejecutar print nativo
+      window.print();
+    }
   };
 
   return (
@@ -134,11 +265,12 @@ export default function QRPage() {
             transform: translate(-50%, -50%);
             width: 5cm !important;
             height: 5cm !important;
-            padding: 0 !important;
+            padding: 0.35cm !important;
             margin: 0 !important;
             border: 1px dashed #ccc !important;
             box-shadow: none !important;
             page-break-inside: avoid;
+            background: white !important;
           }
         }
       `}</style>
@@ -161,7 +293,7 @@ export default function QRPage() {
         <div className="flex items-center justify-between w-full no-print">
           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
             <Sparkles size={16} className="text-[#059669]" />
-            <span>Plantilla de Sticker (5x5 cm)</span>
+            <span>Plantilla de Sticker Reutilizable (5x5 cm)</span>
           </div>
           <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">
             Troquel 4x4 cm
@@ -171,60 +303,52 @@ export default function QRPage() {
         {/* PLANTILLA DE STICKER FÍSICO (Área que se imprime) */}
         <div
           id="sticker-print-area"
-          className="w-64 h-64 sm:w-72 sm:h-72 bg-white rounded-3xl p-4 border-2 border-dashed border-slate-300 flex flex-col items-center justify-between shadow-xs relative transition-all"
+          className="w-64 h-64 sm:w-72 sm:h-72 bg-white rounded-3xl p-3 sm:p-4 border-2 border-dashed border-slate-300 flex flex-col items-center justify-between shadow-xs relative transition-all text-slate-900"
         >
           {/* Cabecera del Sticker */}
-          <div className="flex flex-col items-center gap-0.5">
-            {isLoading && !store ? (
-              <div className="h-5 w-32 bg-slate-100 rounded-full animate-pulse my-1" />
-            ) : (
-              <div className="flex items-center gap-1.5">
-                {store?.logoUrl ? (
-                  <img src={store.logoUrl} alt={storeName} className="w-5 h-5 rounded-full object-cover shadow-2xs" />
-                ) : (
-                  <div
-                    style={{ backgroundColor: brandColor }}
-                    className="w-4 h-4 rounded-full text-white flex items-center justify-center text-[9px] font-bold"
-                  >
-                    {(storeName || 'M').substring(0, 1).toUpperCase()}
-                  </div>
-                )}
-                <h2 className="font-extrabold text-sm text-[#0b1c30] tracking-tight truncate max-w-[190px]">
-                  {storeName || 'Mi Tienda'}
-                </h2>
-              </div>
-            )}
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              Catálogo Digital
-            </span>
+          <div className="flex flex-col items-center gap-0.5 text-center w-full">
+            <div className="flex items-center justify-center gap-1.5 w-full">
+              <span className="h-[1px] w-5 bg-slate-300 inline-block" />
+              <span className="text-[10px] font-extrabold tracking-wider text-slate-700 uppercase">
+                MIRA Y PIDE AQUÍ
+              </span>
+              <span className="h-[1px] w-5 bg-slate-300 inline-block" />
+            </div>
+            <h2 className="font-extrabold text-base sm:text-lg text-slate-950 tracking-tight truncate max-w-[210px] leading-tight">
+              {storeName || 'Mi Tienda'}
+            </h2>
           </div>
 
-          {/* Imagen QR de Alta Definición con Logo de APANA */}
+          {/* Imagen QR Dinámico con Logo de APANA en el centro */}
           {qrUrl ? (
-            <div className="p-2 bg-white rounded-2xl border border-slate-100 shadow-2xs">
-              <img src={qrUrl} alt={`QR ${storeName}`} className="w-36 h-36 sm:w-40 sm:h-40 object-contain" />
+            <div className="p-1.5 bg-white rounded-2xl border border-slate-100 shadow-2xs">
+              <img src={qrUrl} alt={`QR ${storeName}`} className="w-32 h-32 sm:w-36 sm:h-36 object-contain" />
             </div>
           ) : (
-            <div className="w-36 h-36 sm:w-40 sm:h-40 bg-slate-100 rounded-2xl flex flex-col items-center justify-center gap-2 animate-pulse">
+            <div className="w-32 h-32 sm:w-36 sm:h-36 bg-slate-100 rounded-2xl flex flex-col items-center justify-center gap-2 animate-pulse">
               <QrCode size={32} className="text-slate-300" />
               <span className="text-[10px] text-slate-400 font-medium">Generando QR...</span>
             </div>
           )}
 
           {/* Pie del Sticker */}
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] font-extrabold text-[#059669] flex items-center gap-1">
-              <span>📲 Escanea y Pide por WhatsApp</span>
-            </span>
-            <span className="text-[8px] text-slate-400 font-mono">
-              {isLoading && !targetSlug ? '...' : `/s/${targetSlug}`}
+          <div className="flex flex-col items-center gap-0.5 w-full text-center">
+            <div className="inline-flex items-center justify-center gap-1.5 text-slate-950 font-extrabold text-xs sm:text-sm">
+              <div className="w-5 h-5 rounded-full bg-slate-950 text-white flex items-center justify-center text-[10px]">
+                📱
+              </div>
+              <span>Escanea para pedir</span>
+            </div>
+            <div className="w-8 h-[1px] bg-slate-200 my-0.5" />
+            <span className="text-[8px] sm:text-[9px] font-semibold text-slate-500">
+              Una tienda online de <strong className="text-slate-900 font-black tracking-tight">APANA</strong>
             </span>
           </div>
         </div>
 
         {/* Guía Informativa de Impresión */}
         <p className="text-[11px] text-slate-500 leading-snug no-print max-w-sm">
-          💡 <strong>Guía de Impresión:</strong> Diseñado en formato cuadrado 1:1. Imprime en papel sticker de <strong>5x5 cm</strong> con área útil para troquelado/corte de <strong>4x4 cm</strong>.
+          💡 <strong>QR Dinámico & Permanente:</strong> Puedes cambiar el nombre o productos de tu tienda en cualquier momento; este QR nunca quedará obsoleto.
         </p>
 
         {/* Enlace y Copia */}
@@ -251,7 +375,7 @@ export default function QRPage() {
           </button>
 
           {qrUrl && (
-            <a href={qrUrl} download={`qr-sticker-${targetSlug}-hd.png`} className="w-full">
+            <a href={qrUrl} download={`qr-apana-${targetSlug || 'tienda'}-hd.png`} className="w-full">
               <Button variant="primary" fullWidth className="h-11 flex items-center justify-center gap-2 text-xs font-bold">
                 <Download size={16} />
                 <span>Descargar HD (1024px)</span>

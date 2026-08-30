@@ -19,15 +19,20 @@ import {
 import { db } from './config';
 import { Store, Product } from '@/types/store';
 
-// Helper para Sanitizar Slugs
+// Helper para Sanitizar Slugs (convierte "José Tienda" => "jose-tienda", "Año Nuevo" => "ano-nuevo")
 export const slugify = (text: string): string => {
+  if (!text) return '';
   return text
     .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Elimina tildes y diacríticos (é => e, á => a, ó => o, etc.)
+    .replace(/ñ/gi, 'n') // Reemplaza ñ por n
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-');
+    .replace(/\s+/g, '-') // Espacios a guiones
+    .replace(/[^\w\-]+/g, '') // Elimina caracteres especiales
+    .replace(/\-\-+/g, '-') // Evita guiones dobles
+    .replace(/^-+|-+$/g, ''); // Elimina guiones al inicio o final
 };
 
 // --- SERVICIOS DE USUARIOS (USERS) ---

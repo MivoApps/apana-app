@@ -6,15 +6,18 @@ import { Store, Product, StoreStyle } from '@/types/store';
 
 // Helper para convertir cualquier nombre a un slug amigable de URL (ej. "Panadería Don José!" => "panaderia-don-jose")
 export function slugify(text: string): string {
+  if (!text) return '';
   return text
     .toString()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ñ/gi, 'n')
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '-')
     .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-');
+    .replace(/\-\-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 interface MultiStoreState {

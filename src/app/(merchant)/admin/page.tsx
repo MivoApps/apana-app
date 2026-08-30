@@ -2029,36 +2029,49 @@ export default function SuperAdminPage() {
             <div className="flex flex-col items-center justify-center p-6 bg-slate-900/60 rounded-2xl border border-slate-800">
               <div
                 id="printable-admin-sticker"
-                className="w-56 h-56 bg-white rounded-2xl p-4 flex flex-col items-center justify-between shadow-lg text-slate-900 border border-slate-200"
+                className="w-60 h-60 bg-white rounded-2xl p-3.5 flex flex-col items-center justify-between shadow-lg text-slate-950 border border-slate-200"
               >
                 {/* Header Sticker */}
-                <div className="text-center">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">
-                    Escanea y Pide
-                  </span>
-                  <span className="text-xs font-bold text-slate-900 truncate max-w-[190px] block">
+                <div className="flex flex-col items-center gap-0.5 text-center w-full">
+                  <div className="flex items-center justify-center gap-1.5 w-full">
+                    <span className="h-[1px] w-4 bg-slate-300 inline-block" />
+                    <span className="text-[9px] font-extrabold tracking-wider text-slate-700 uppercase">
+                      MIRA Y PIDE AQUÍ
+                    </span>
+                    <span className="h-[1px] w-4 bg-slate-300 inline-block" />
+                  </div>
+                  <span className="text-sm font-black text-slate-950 truncate max-w-[200px] block leading-tight">
                     {stickerStore.name}
                   </span>
                 </div>
 
-                {/* QR Code */}
+                {/* QR Code con logo central */}
                 {stickerQrUrl ? (
-                  <img src={stickerQrUrl} alt="QR Tienda" className="w-32 h-32 object-contain" />
+                  <div className="p-1 bg-white rounded-xl border border-slate-100 shadow-2xs">
+                    <img src={stickerQrUrl} alt="QR Tienda" className="w-32 h-32 object-contain" />
+                  </div>
                 ) : (
-                  <div className="w-32 h-32 bg-slate-100 flex items-center justify-center text-slate-400 text-xs">
+                  <div className="w-32 h-32 bg-slate-100 flex items-center justify-center text-slate-400 text-xs rounded-xl">
                     Generando...
                   </div>
                 )}
 
                 {/* Footer Sticker */}
-                <div className="text-center">
-                  <span className="text-[9px] font-mono text-slate-500 block">
-                    beapana.com/s/{stickerStore.slug}
+                <div className="flex flex-col items-center gap-0.5 w-full text-center">
+                  <div className="inline-flex items-center justify-center gap-1 text-slate-950 font-black text-xs">
+                    <div className="w-4 h-4 rounded-full bg-slate-950 text-white flex items-center justify-center text-[9px]">
+                      📱
+                    </div>
+                    <span>Escanea para pedir</span>
+                  </div>
+                  <div className="w-7 h-[1px] bg-slate-200 my-0.5" />
+                  <span className="text-[8px] font-semibold text-slate-500">
+                    Una tienda online de <strong className="text-slate-900 font-black">APANA</strong>
                   </span>
                 </div>
               </div>
-              <span className="text-[10px] text-slate-400 mt-2 font-medium">
-                Formato cuadrado 5x5 cm para vitrina, mostrador o empaque
+              <span className="text-[10px] text-slate-400 mt-2.5 font-medium text-center">
+                Plantilla 5x5 cm optimizada para impresión en mini impresora térmica (Fun Print / 200 DPI)
               </span>
             </div>
 
@@ -2067,45 +2080,131 @@ export default function SuperAdminPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const printContent = document.getElementById('printable-admin-sticker');
-                  if (!printContent) return;
-                  const win = window.open('', '', 'width=600,height=600');
+                  const win = window.open('', '', 'width=500,height=500');
                   if (win) {
                     win.document.write(`
+                      <!DOCTYPE html>
                       <html>
                         <head>
-                          <title>Sticker QR - ${stickerStore.name}</title>
+                          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                          <title>Sticker Térmico - ${stickerStore.name}</title>
                           <style>
-                            body { margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
-                            .sticker { width: 5cm; height: 5cm; border: 1px dashed #ccc; padding: 0.3cm; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; }
-                            .title { font-size: 11px; font-weight: bold; color: #047857; text-transform: uppercase; }
-                            .name { font-size: 13px; font-weight: bold; }
-                            .url { font-size: 9px; color: #666; font-family: monospace; }
-                            img { width: 3.2cm; height: 3.2cm; }
+                            @page {
+                              size: 5cm 5cm;
+                              margin: 0;
+                            }
+                            body {
+                              margin: 0;
+                              padding: 0;
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                              min-height: 100vh;
+                              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                              background-color: #ffffff;
+                            }
+                            .sticker {
+                              width: 5cm;
+                              height: 5cm;
+                              border: 1px dashed #cbd5e1;
+                              padding: 0.35cm;
+                              box-sizing: border-box;
+                              display: flex;
+                              flex-direction: column;
+                              align-items: center;
+                              justify-content: space-between;
+                              text-align: center;
+                              border-radius: 12px;
+                              color: #0b1c30;
+                            }
+                            .header-eyebrow {
+                              font-size: 8px;
+                              font-weight: 800;
+                              color: #475569;
+                              letter-spacing: 0.5px;
+                              text-transform: uppercase;
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                              gap: 4px;
+                            }
+                            .header-eyebrow span {
+                              display: inline-block;
+                              width: 12px;
+                              height: 1px;
+                              background: #cbd5e1;
+                            }
+                            .header-title {
+                              font-size: 13px;
+                              font-weight: 900;
+                              color: #020617;
+                              margin-top: 1px;
+                              max-width: 4.2cm;
+                              overflow: hidden;
+                              text-overflow: ellipsis;
+                              white-space: nowrap;
+                            }
+                            .qr-image {
+                              width: 3.1cm;
+                              height: 3.1cm;
+                              object-fit: contain;
+                            }
+                            .footer-cta {
+                              font-size: 9px;
+                              font-weight: 900;
+                              color: #020617;
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                              gap: 4px;
+                            }
+                            .footer-brand {
+                              font-size: 7.5px;
+                              font-weight: 600;
+                              color: #64748b;
+                              margin-top: 1px;
+                            }
+                            .footer-brand strong {
+                              color: #020617;
+                              font-weight: 900;
+                            }
                           </style>
                         </head>
                         <body>
                           <div class="sticker">
                             <div>
-                              <div class="title">Escanea y Pide</div>
-                              <div class="name">${stickerStore.name}</div>
+                              <div class="header-eyebrow">
+                                <span></span>MIRA Y PIDE AQUÍ<span></span>
+                              </div>
+                              <div class="header-title">${stickerStore.name}</div>
                             </div>
-                            <img src="${stickerQrUrl}" />
-                            <div class="url">beapana.com/s/${stickerStore.slug}</div>
+                            <img src="${stickerQrUrl}" class="qr-image" />
+                            <div>
+                              <div class="footer-cta">
+                                📱 Escanea para pedir
+                              </div>
+                              <div class="footer-brand">
+                                Una tienda online de <strong>APANA</strong>
+                              </div>
+                            </div>
                           </div>
+                          <script>
+                            window.onload = function() {
+                              setTimeout(function() {
+                                window.print();
+                              }, 300);
+                            };
+                          </script>
                         </body>
                       </html>
                     `);
                     win.document.close();
-                    win.focus();
-                    win.print();
-                    win.close();
                   }
                 }}
                 className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
               >
                 <Printer size={15} />
-                <span>Imprimir (5x5 cm)</span>
+                <span>Imprimir Sticker (5x5 cm)</span>
               </button>
 
               <button
@@ -2114,11 +2213,11 @@ export default function SuperAdminPage() {
                   if (!stickerQrUrl) return;
                   const a = document.createElement('a');
                   a.href = stickerQrUrl;
-                  a.download = `qr-${stickerStore.slug}-5x5cm.png`;
+                  a.download = `sticker-qr-${stickerStore.slug}-5x5cm.png`;
                   a.click();
                 }}
                 className="h-10 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center gap-1 transition-all cursor-pointer"
-                title="Descargar imagen PNG"
+                title="Descargar imagen PNG para Fun Print"
               >
                 <Download size={15} />
               </button>
