@@ -1,18 +1,18 @@
 'use client';
 
 import React from 'react';
-import { 
-  Check, 
-  Sparkles, 
-  Smartphone, 
-  Layers, 
-  Eye, 
-  Palette, 
-  Zap, 
-  QrCode, 
-  CreditCard, 
-  Percent, 
-  ShieldCheck, 
+import {
+  Check,
+  Sparkles,
+  Smartphone,
+  Layers,
+  Eye,
+  Palette,
+  Zap,
+  QrCode,
+  CreditCard,
+  Percent,
+  ShieldCheck,
   CheckCheck,
   TrendingUp
 } from 'lucide-react';
@@ -42,7 +42,7 @@ export const LandingFeaturesMatrix: React.FC = () => {
 
         {/* Bento Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
-          
+
           {/* Bento Card 1 (Large 8 cols): Catálogo Móvil & Variantes */}
           <div className="md:col-span-7 lg:col-span-8 bg-white rounded-3xl p-7 sm:p-9 border border-slate-200 shadow-xl shadow-slate-200/40 flex flex-col justify-between relative overflow-hidden group hover:border-[#059669]/40 transition-all">
             <div className="relative z-10">
@@ -133,7 +133,7 @@ export const LandingFeaturesMatrix: React.FC = () => {
               </p>
             </div>
             <div className="mt-6 flex items-center gap-2 text-xs font-bold text-rose-700 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
-              <span>🔥 Aumenta la tasa de conversión en 35%</span>
+              <span>🔥 Haz que comprar sea más sencillo</span>
             </div>
           </div>
 

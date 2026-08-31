@@ -4,11 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Script from 'next/script';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { 
-  ArrowLeft, 
-  Rocket, 
-  CheckCircle, 
-  Stars, 
+import {
+  ArrowLeft,
+  Rocket,
+  CheckCircle,
+  Stars,
   User,
   CreditCard,
   Wallet,
@@ -344,25 +344,22 @@ export default function PlansPage() {
 
         {/* Tarjeta de Gestión de Suscripción Activa (Presente para cualquier plan de pago) */}
         {isPaidPlan && (
-          <div className={`p-5 rounded-2xl border shadow-xs flex flex-col gap-3.5 transition-all ${
-            isCancelled 
+          <div className={`p-5 rounded-2xl border shadow-xs flex flex-col gap-3.5 transition-all ${isCancelled
               ? 'bg-amber-50/70 border-amber-200 text-amber-950'
               : 'bg-white border-[#059669]/40 ring-2 ring-[#059669]/10'
-          }`}>
+            }`}>
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2.5">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                  isCancelled ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-[#059669]'
-                }`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isCancelled ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-[#059669]'
+                  }`}>
                   <ShieldCheck size={20} />
                 </div>
                 <div>
                   <h3 className="font-extrabold text-sm text-[#0b1c30]">
                     {planDisplayName}
                   </h3>
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 ${
-                    isCancelled ? 'bg-amber-200/60 text-amber-900' : 'bg-emerald-100 text-[#059669]'
-                  }`}>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 ${isCancelled ? 'bg-amber-200/60 text-amber-900' : 'bg-emerald-100 text-[#059669]'
+                    }`}>
                     {isCancelled ? 'Cancelación Programada' : 'Suscripción Activa'}
                   </span>
                 </div>
@@ -407,11 +404,10 @@ export default function PlansPage() {
 
         {/* 3 Plans Container */}
         <div className="flex flex-col gap-5">
-          
+
           {/* 1. Plan Gratis */}
-          <div className={`flex flex-col gap-4 bg-white shadow-xs border rounded-2xl p-5 transition-all ${
-            currentPlan === 'gratis' ? 'border-[#059669] ring-2 ring-[#059669]/10' : 'border-[#bccac0]/40'
-          }`}>
+          <div className={`flex flex-col gap-4 bg-white shadow-xs border rounded-2xl p-5 transition-all ${currentPlan === 'gratis' ? 'border-[#059669] ring-2 ring-[#059669]/10' : 'border-[#bccac0]/40'
+            }`}>
             <div className="flex justify-between items-start">
               <div className="flex flex-col gap-0.5">
                 <h3 className="font-bold text-xl text-[#0b1c30]">Gratis</h3>
@@ -472,9 +468,8 @@ export default function PlansPage() {
           </div>
 
           {/* 2. Plan Emprendedor (Highlighted) */}
-          <div className={`flex flex-col gap-4 bg-linear-to-b from-[#f5fff7] via-white to-white shadow-sm border rounded-2xl p-5 relative overflow-hidden transition-all ${
-            currentPlan === 'emprendedor' ? 'border-[#059669] ring-2 ring-[#059669]/10' : 'border-slate-200'
-          }`}>
+          <div className={`flex flex-col gap-4 bg-linear-to-b from-[#f5fff7] via-white to-white shadow-sm border rounded-2xl p-5 relative overflow-hidden transition-all ${currentPlan === 'emprendedor' ? 'border-[#059669] ring-2 ring-[#059669]/10' : 'border-slate-200'
+            }`}>
             {/* Subtle Decorative Background */}
             <div className="absolute -top-16 -right-16 w-48 h-48 bg-[#059669]/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -577,9 +572,8 @@ export default function PlansPage() {
           </div>
 
           {/* 3. Plan Negocio Pro (VIP) */}
-          <div className={`flex flex-col gap-4 bg-white shadow-md border-2 rounded-2xl p-5 relative overflow-hidden transition-all ${
-            currentPlan === 'negocio' ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-amber-200'
-          }`}>
+          <div className={`flex flex-col gap-4 bg-white shadow-md border-2 rounded-2xl p-5 relative overflow-hidden transition-all ${currentPlan === 'negocio' ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-amber-200'
+            }`}>
             {/* Subtle Decorative Background */}
             <div className="absolute -top-16 -right-16 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -587,7 +581,7 @@ export default function PlansPage() {
             <div className="flex justify-between items-start relative z-10">
               <div className="flex flex-col gap-0.5">
                 <h3 className="font-bold text-xl text-[#0b1c30]">Negocio Pro</h3>
-                <p className="text-xs text-[#6d7a72]">Para marcas consolidadas y escala total</p>
+                <p className="text-xs text-[#6d7a72]">Para negocios que ya están creciendo.</p>
               </div>
               <div className="px-3 py-1 bg-amber-600 text-white text-xs font-semibold rounded-full shadow-xs flex items-center gap-1">
                 <Sparkles size={14} />
@@ -729,7 +723,7 @@ export default function PlansPage() {
       {/* Modal de Cancelación de Suscripción */}
       {isCancelModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div 
+          <div
             className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-[#bccac0]/30 flex flex-col gap-5 animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >

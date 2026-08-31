@@ -85,8 +85,8 @@ export default function SuperAdminPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
   
-  // Estado Principal (4 Pestañas)
-  const [activeTab, setActiveTab] = useState<'stores' | 'subscriptions' | 'users' | 'reclamaciones'>('stores');
+  // Estado Principal (5 Pestañas: Tiendas, Suscripciones, Usuarios, Seguimiento/Leads, Reclamaciones)
+  const [activeTab, setActiveTab] = useState<'stores' | 'subscriptions' | 'users' | 'leads' | 'reclamaciones'>('stores');
   const [stores, setStores] = useState<AdminStoreItem[]>([]);
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -639,6 +639,65 @@ export default function SuperAdminPage() {
     return matchesSearch && matchesPlan && matchesStatus;
   });
 
+  // 🎯 Detección Inteligente de Leads y Onboarding Incompleto
+  const incompleteLeads = users.map((u) => {
+    const userStore = stores.find((s) => s.ownerId === u.uid || s.ownerId === u.email || s.name === u.storeName || s.slug === u.storeSlug);
+    const hasStore = Boolean(userStore);
+    const hasWhatsapp = Boolean(userStore?.whatsappPhone && userStore?.isWhatsappVerified);
+    const productCount = userStore?.productCount || 0;
+    const phoneToContact = userStore?.whatsappPhone || (u as any).phone || '';
+
+    // Estado del embudo (funnel)
+    let funnelStatus: 'sin_tienda' | 'sin_whatsapp' | 'sin_productos' | 'completo' = 'completo';
+    let funnelLabel = 'Tienda Activa';
+    let funnelBadge = 'bg-emerald-950/60 text-emerald-400 border-emerald-800';
+    let missingAction = 'Todo configurado';
+
+    if (!hasStore) {
+      funnelStatus = 'sin_tienda';
+      funnelLabel = '1. Registrado sin Tienda';
+      funnelBadge = 'bg-red-950/60 text-red-400 border-red-800';
+      missingAction = 'Abandonó el asistente de creación de tienda';
+    } else if (!hasWhatsapp) {
+      funnelStatus = 'sin_whatsapp';
+      funnelLabel = '2. Tienda sin WhatsApp';
+      funnelBadge = 'bg-amber-950/60 text-amber-400 border-amber-800';
+      missingAction = 'No puede recibir pedidos por WhatsApp aún';
+    } else if (productCount === 0) {
+      funnelStatus = 'sin_productos';
+      funnelLabel = '3. Tienda con 0 Productos';
+      funnelBadge = 'bg-orange-950/60 text-orange-400 border-orange-800';
+      missingAction = 'Catálogo vacío, no hay productos para mostrar';
+    }
+
+    return {
+      user: u,
+      store: userStore,
+      hasStore,
+      hasWhatsapp,
+      productCount,
+      phoneToContact,
+      funnelStatus,
+      funnelLabel,
+      funnelBadge,
+      missingAction,
+      isIncomplete: funnelStatus !== 'completo'
+    };
+  });
+
+  const totalIncompleteLeads = incompleteLeads.filter((l) => l.isIncomplete).length;
+
+  const filteredLeads = incompleteLeads.filter((l) => {
+    const term = searchQuery.toLowerCase();
+    const matchesSearch =
+      l.user.email.toLowerCase().includes(term) ||
+      l.user.name.toLowerCase().includes(term) ||
+      (l.store?.name && l.store.name.toLowerCase().includes(term)) ||
+      (l.phoneToContact && l.phoneToContact.includes(term));
+
+    return matchesSearch;
+  });
+
   const filteredUsers = users.filter((u) => {
     const term = searchQuery.toLowerCase();
     return (
@@ -866,6 +925,23 @@ export default function SuperAdminPage() {
           >
             <Users size={16} />
             <span>Usuarios & Comerciantes ({users.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('leads')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              activeTab === 'leads'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-xs'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+            }`}
+          >
+            <Sparkles size={16} className="text-amber-400" />
+            <span>Seguimiento / Onboarding ({totalIncompleteLeads})</span>
+            {totalIncompleteLeads > 0 && (
+              <span className="px-1.5 py-0.2 bg-amber-500 text-amber-950 font-black text-[10px] rounded-full">
+                {totalIncompleteLeads}
+              </span>
+            )}
           </button>
 
           <button
@@ -1426,7 +1502,126 @@ export default function SuperAdminPage() {
           </section>
         )}
 
-        {/* 📖 TAB 4: LIBRO DE RECLAMACIONES INDECOPI */}
+        {/* 🎯 TAB: SEGUIMIENTO & ONBOARDING INCOMPLETO (LEADS) */}
+        {activeTab === 'leads' && (
+          <section className="bg-[#0e1e33] border border-slate-800 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+            <div className="p-4 px-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Sparkles size={17} className="text-amber-400" />
+                  Embudo de Onboarding & Usuarios por Reactivar ({filteredLeads.length})
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Contacta a comerciantes que necesitan ayuda para terminar su tienda o configurar su WhatsApp.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-300 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800">
+                <span>Leads Incompletos:</span>
+                <span className="text-amber-400 font-bold">{totalIncompleteLeads}</span>
+              </div>
+            </div>
+
+            {filteredLeads.length === 0 ? (
+              <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
+                <CheckCircle2 size={32} className="text-emerald-500/50" />
+                <span>¡Excelente! No hay usuarios con onboarding pendiente o no coinciden con la búsqueda.</span>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#071220] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-800 text-[10px]">
+                    <tr>
+                      <th className="py-3 px-4">Usuario / Email</th>
+                      <th className="py-3 px-4">Tienda Asociada</th>
+                      <th className="py-3 px-4">Estado del Embudo</th>
+                      <th className="py-3 px-4">Falta Para Vender</th>
+                      <th className="py-3 px-4 text-right">Contacto WhatsApp</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {filteredLeads.map((lead) => {
+                      const cleanPhone = lead.phoneToContact ? lead.phoneToContact.replace(/\D/g, '') : '';
+                      const contactName = lead.user.name || lead.store?.name || 'comerciante';
+                      const storeName = lead.store?.name || 'tu negocio';
+                      
+                      // Mensaje personalizado según el paso pendiente
+                      let customMsg = `Hola ${contactName} 👋, vimos que te registraste en APANA. ¿Te gustaría que te ayudemos a configurar tu tienda online en 2 minutos para que empieces a vender por internet?`;
+                      if (lead.funnelStatus === 'sin_whatsapp') {
+                        customMsg = `Hola ${contactName} 👋, vimos que ya creaste tu tienda *${storeName}* en APANA 🚀. Solo te falta conectar tu WhatsApp para que los pedidos de tus clientes te lleguen directo. ¿Deseas que te guiemos?`;
+                      } else if (lead.funnelStatus === 'sin_productos') {
+                        customMsg = `Hola ${contactName} 👋, tu tienda *${storeName}* en APANA está casi lista 🛍️. Vimos que aún no has agregado productos. ¿Te gustaría que te ayudemos a subir tus primeras fotos y precios?`;
+                      }
+
+                      const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(customMsg)}` : '';
+
+                      return (
+                        <tr key={lead.user.uid} className="hover:bg-slate-800/30 transition-colors">
+                          <td className="py-3.5 px-4 font-medium text-white">
+                            <div className="flex flex-col">
+                              <span className="font-bold">{lead.user.name || 'Sin nombre'}</span>
+                              <span className="text-[11px] text-slate-400 font-mono">{lead.user.email}</span>
+                              <span className="text-[10px] text-slate-500 mt-0.5">
+                                Reg: {new Date(lead.user.createdAt).toLocaleDateString('es-PE')}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            {lead.store ? (
+                              <div className="flex flex-col">
+                                <span className="font-bold text-slate-200">{lead.store.name}</span>
+                                <span className="text-[11px] text-slate-500 font-mono">/s/{lead.store.slug}</span>
+                              </div>
+                            ) : (
+                              <span className="text-red-400 text-[11px] italic font-semibold">❌ No creó tienda</span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${lead.funnelBadge}`}>
+                              {lead.funnelLabel}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-300">
+                            <span className="text-[11px] block">{lead.missingAction}</span>
+                            {lead.store && (
+                              <span className="text-[10px] text-slate-500 block mt-0.5">
+                                WhatsApp: {lead.hasWhatsapp ? '✅ Verificado' : '⏳ Pendiente'} • Prods: {lead.productCount}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            {cleanPhone ? (
+                              <a
+                                href={waUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#25d366]/20 hover:bg-[#25d366]/30 text-[#25d366] font-bold text-xs rounded-xl border border-[#25d366]/40 transition-all cursor-pointer shadow-xs active:scale-95"
+                                title="Contactar por WhatsApp con mensaje de reactivación"
+                              >
+                                <MessageCircle size={14} />
+                                <span>Contactar (+{cleanPhone})</span>
+                              </a>
+                            ) : (
+                              <a
+                                href={`mailto:${lead.user.email}?subject=Bienvenido%20a%20APANA%20-%20%C2%A1Tu%20tienda%20est%C3%A1%20casi%20lista!&body=${encodeURIComponent(customMsg)}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs rounded-xl border border-slate-700 transition-all cursor-pointer shadow-xs"
+                                title="Enviar correo de seguimiento"
+                              >
+                                <Mail size={14} />
+                                <span>Enviar Email</span>
+                              </a>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* 📖 TAB: LIBRO DE RECLAMACIONES INDECOPI */}
         {activeTab === 'reclamaciones' && (
           <section className="bg-[#0e1e33] border border-slate-800 rounded-2xl overflow-hidden shadow-sm flex flex-col">
             <div className="p-4 px-5 border-b border-slate-800 flex items-center justify-between">

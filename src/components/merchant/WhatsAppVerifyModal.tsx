@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  ShieldCheck, 
-  CheckCircle2, 
-  X, 
-  ExternalLink, 
+import {
+  ShieldCheck,
+  CheckCircle2,
+  X,
+  ExternalLink,
   AlertCircle,
   MessageSquare,
   Sparkles,
@@ -26,7 +26,7 @@ interface Props {
   onSuccess?: () => void;
 }
 
-const APANA_OFFICIAL_WHATSAPP = '51937700049';
+const APANA_OFFICIAL_WHATSAPP = '51920030074';
 
 export const WhatsAppVerifyModal: React.FC<Props> = ({
   isOpen,
@@ -124,7 +124,7 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
       setGeneratedCode(code);
       await createOtpRequestInFS(fullPhone, code, storeId, storeName, user.uid);
       setHasOpenedWhatsApp(true);
-      
+
       // Abrir WhatsApp en la misma pestaña en móvil para evitar bloqueo de Safari
       window.location.href = standardWhatsAppUrl;
     } catch (e) {
@@ -175,7 +175,7 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
             sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(updated));
             sessionStorage.setItem('apana_active_store', JSON.stringify(updated));
           }
-        } catch (_) {}
+        } catch (_) { }
       }
 
       if (onSuccess) onSuccess();
@@ -192,7 +192,7 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div 
+      <div
         className="bg-white rounded-3xl p-6 max-w-md w-full relative z-10 border border-slate-100 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
@@ -311,11 +311,10 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
                   target={displayPhone.length === 9 ? '_blank' : undefined}
                   rel="noopener noreferrer"
                   onClick={() => triggerOtpGeneration()}
-                  className={`h-11 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all select-none no-underline ${
-                    displayPhone.length !== 9
+                  className={`h-11 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all select-none no-underline ${displayPhone.length !== 9
                       ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                       : 'bg-[#059669] hover:bg-[#00855d] active:scale-[0.98] text-white shadow-emerald-700/20 cursor-pointer'
-                  }`}
+                    }`}
                 >
                   <WhatsAppIcon size={17} />
                   <span>WhatsApp Personal</span>
@@ -328,11 +327,10 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
                   target={displayPhone.length === 9 ? '_blank' : undefined}
                   rel="noopener noreferrer"
                   onClick={() => triggerOtpGeneration()}
-                  className={`h-11 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all select-none no-underline ${
-                    displayPhone.length !== 9
+                  className={`h-11 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all select-none no-underline ${displayPhone.length !== 9
                       ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                       : 'bg-[#0b1c30] hover:bg-[#162a45] active:scale-[0.98] text-emerald-300 border border-emerald-500/30 cursor-pointer'
-                  }`}
+                    }`}
                 >
                   <Briefcase size={15} />
                   <span>WhatsApp Business</span>

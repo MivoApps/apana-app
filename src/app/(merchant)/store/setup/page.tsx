@@ -14,7 +14,8 @@ import {
   QrCode,
   ExternalLink,
   LogOut,
-  AlertCircle
+  AlertCircle,
+  Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { slugify } from '@/lib/app-store';
@@ -300,6 +301,23 @@ export default function OnboardingWizardPage() {
           {/* PASO 1: Bienvenido */}
           {step === 1 && (
             <div className="flex flex-col items-center text-center gap-6 p-6 pt-8 pb-8 bg-white rounded-2xl border border-[#bccac0]/40 shadow-xs">
+              {/* Notificación Toast Informativa de Correo de Confirmación */}
+              {user && !user.emailVerified && (
+                <div className="w-full bg-linear-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 rounded-2xl p-3.5 flex items-start gap-3 text-left shadow-2xs animate-in fade-in slide-in-from-top-2">
+                  <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                    <Mail size={14} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-emerald-950">
+                      ¡Cuenta creada con éxito! 🎉
+                    </p>
+                    <p className="text-[11px] text-emerald-800/90 mt-0.5 leading-snug">
+                      Te enviamos un enlace de confirmación a <strong className="font-semibold text-emerald-950">{user.email}</strong>. Revisa tu bandeja de entrada o spam cuando termines de crear tu tienda.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="w-20 h-20 bg-white border border-[#bccac0]/40 rounded-3xl p-3.5 flex items-center justify-center shadow-md mt-1">
                 <img src="/logo.svg" alt="APANA Logo" className="w-full h-full object-contain" />
               </div>

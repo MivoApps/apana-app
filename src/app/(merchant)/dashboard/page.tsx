@@ -32,6 +32,7 @@ import { useAppStore } from '@/lib/app-store';
 import { getStoreByUserIdFromFS, getProductsByStoreIdFromFS, createOrUpdateStoreInFS } from '@/lib/firebase/firestore';
 import { StorePreviewModal } from '@/components/ui/StorePreviewModal';
 import { WhatsAppVerifyModal } from '@/components/merchant/WhatsAppVerifyModal';
+import { DashboardProgressChecklist } from '@/components/merchant/DashboardProgressChecklist';
 import { Store, Product } from '@/types/store';
 
 export default function DashboardPage() {
@@ -365,151 +366,21 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Banner de Onboarding de Bienvenida para Tiendas con 0 productos */}
-        {totalProductsCount === 0 && (
-          <div className="bg-linear-to-br from-[#059669] to-[#006c49] text-white p-5 sm:p-6 rounded-3xl shadow-md flex flex-col gap-3.5 relative overflow-hidden animate-in fade-in">
-            <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-            
-            <div className="flex items-center gap-3.5 relative z-10">
-              <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0 shadow-xs">
-                <Sparkles size={22} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-extrabold text-base leading-tight">¡Tu tienda está lista para comenzar!</h3>
-                <p className="text-xs text-emerald-100 mt-0.5 leading-relaxed">
-                  Agrega tu primer artículo para que tus clientes puedan ver tu catálogo y enviarte pedidos por WhatsApp.
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-1 flex flex-col sm:flex-row items-center gap-2 relative z-10">
-              <Link href="/products/new" className="w-full sm:w-auto flex-1">
-                <button
-                  type="button"
-                  className="w-full h-11 bg-white hover:bg-emerald-50 text-[#006c49] font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
-                >
-                  <Plus size={16} />
-                  <span>Publicar Mi Primer Producto</span>
-                </button>
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {/* Banner Unificado de Seguridad Inteligente (Email + WhatsApp) */}
-        {(() => {
-          const needsEmail = user && !user.emailVerified;
-          const needsWhatsapp = fsStore && (!fsStore.isWhatsappVerified || !fsStore.whatsappPhone);
-
-          if (!needsEmail && !needsWhatsapp) return null;
-
-          const hasPhoneSet = Boolean(fsStore?.whatsappPhone);
-
-          // CASO 1: Faltan AMBOS (Consolidado en 1 solo banner)
-          if (needsEmail && needsWhatsapp) {
-            return (
-              <div className="bg-linear-to-r from-amber-50 via-orange-50/70 to-blue-50/70 border border-amber-300/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                    <ShieldAlert size={20} />
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-xs text-amber-950">Pasos pendientes para recibir pedidos</span>
-                      <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">Atención</span>
-                    </div>
-                    <span className="text-[11px] text-amber-900/80 mt-0.5 leading-snug">
-                      {hasPhoneSet 
-                        ? 'Valida tu correo y tu línea de WhatsApp para blindar tu tienda y recibir pedidos.'
-                        : 'Configura tu número de WhatsApp y confirma tu correo para recibir pedidos de clientes.'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0 pt-1 sm:pt-0">
-                  <button
-                    type="button"
-                    onClick={() => setIsVerifyModalOpen(true)}
-                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    <ShieldCheck size={14} />
-                    <span>{hasPhoneSet ? 'Validar WhatsApp' : 'Conectar WhatsApp'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleResendEmail}
-                    disabled={isResendingEmail}
-                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                  >
-                    <Mail size={14} />
-                    <span>{isResendingEmail ? 'Enviando...' : 'Reenviar Email'}</span>
-                  </button>
-                </div>
-              </div>
-            );
-          }
-
-          // CASO 2: Solo falta Email
-          if (needsEmail) {
-            return (
-              <div className="bg-blue-50/90 border border-blue-200 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-xs animate-in fade-in">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                    <Mail size={16} />
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="font-bold text-xs text-blue-950 truncate">Confirma tu correo ({user?.email})</span>
-                    <span className="text-[11px] text-blue-800/80">Revisa tu bandeja de entrada o spam para activar tu cuenta.</span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleResendEmail}
-                  disabled={isResendingEmail}
-                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all shrink-0 cursor-pointer disabled:opacity-50"
-                >
-                  {isResendingEmail ? 'Enviando...' : 'Reenviar enlace'}
-                </button>
-              </div>
-            );
-          }
-
-          // CASO 3: Solo falta WhatsApp
-          return (
-            <div className="bg-amber-50/90 border border-amber-300/80 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-xs animate-in fade-in">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                  <ShieldCheck size={18} />
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="font-bold text-xs text-amber-950 truncate">
-                    {hasPhoneSet ? 'WhatsApp pendiente de validación' : 'WhatsApp no configurado'}
-                  </span>
-                  <span className="text-[11px] text-amber-900/80">
-                    {hasPhoneSet 
-                      ? 'Valida la titularidad de tu número para recibir pedidos con el sello oficial.'
-                      : 'Conecta tu celular para que tus clientes puedan enviarte pedidos por WhatsApp.'}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsVerifyModalOpen(true)}
-                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all shrink-0 cursor-pointer"
-              >
-                {hasPhoneSet ? 'Validar titularidad' : 'Conectar WhatsApp'}
-              </button>
-            </div>
-          );
-        })()}
+        {/* Checklist Inteligente de Onboarding (Progreso de la Tienda) */}
+        <DashboardProgressChecklist
+          user={user}
+          store={activeStore}
+          products={fsProducts}
+          onOpenVerifyModal={() => setIsVerifyModalOpen(true)}
+          onResendEmail={handleResendEmail}
+          isResendingEmail={isResendingEmail}
+        />
 
         {/* Toast Flotante de Correo Enviado */}
         {emailSentToast && (
           <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3">
             <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
-            <span>Enlace de verificación enviado. Revisa tu bandeja de entrada o spam.</span>
+            <span>Enlace de confirmación enviado. Revisa tu bandeja de entrada o spam.</span>
           </div>
         )}
 

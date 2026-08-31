@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { 
-  ArrowRight, 
-  Sparkles, 
-  CheckCircle2, 
-  Zap, 
-  Smartphone, 
+import {
+  ArrowRight,
+  Sparkles,
+  CheckCircle2,
+  Zap,
+  Smartphone,
   CreditCard,
   ChevronDown
 } from 'lucide-react';
@@ -59,7 +59,7 @@ export const LandingHero: React.FC = () => {
   };
 
   return (
-    <div 
+    <div
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       className="relative overflow-hidden"
@@ -105,21 +105,21 @@ export const LandingHero: React.FC = () => {
           {/* Transparency / Micro-tag */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[#059669]/30 shadow-xs mb-4 text-xs font-semibold text-[#006c49] animate-in fade-in slide-in-from-bottom-2 duration-500">
             <Sparkles size={14} className="text-[#059669] animate-spin-slow" />
-            <span>La forma más rápida y moderna de vender por internet</span>
+            <span>Una forma más sencilla de llevar tu negocio al mundo digital.</span>
           </div>
 
           {/* Hero Title */}
           <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-[#0b1c30] tracking-tight leading-[1.14] max-w-4xl text-balance">
-            Tu catálogo digital para vender por{' '}
+            Tu tienda online para vender por {' '}
             <span className="bg-linear-to-r from-[#059669] via-[#00855d] to-[#006c49] bg-clip-text text-transparent underline decoration-[#6cf8bb]/80 decoration-wavy decoration-2">
-              WhatsApp
+              internet
             </span>{' '}
-            y cobrar online, fácil y sin enredos.
+            fácil y sin enredos.
           </h1>
 
           {/* Hero Subtitle */}
           <p className="mt-4 sm:mt-6 text-sm sm:text-lg md:text-xl text-[#3d4a42] max-w-2xl leading-relaxed text-balance">
-            Tu tienda online <strong className="text-[#0b1c30] font-bold">lista en 3 minutos*</strong>. Sube tus productos, genera tu código QR para tu local o redes, y recibe pedidos con cálculo exacto listos para despachar por WhatsApp.
+            Crea tu tienda en minutos, muestra tus productos, recibe pedidos por WhatsApp y comparte tu negocio con un enlace o código QR.
           </p>
 
           {/* Action Buttons */}

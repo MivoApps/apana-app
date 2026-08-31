@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Smartphone, 
-  ShoppingBag, 
+import {
+  Smartphone,
+  ShoppingBag,
   ArrowLeft,
   ArrowRight,
   Trash2,
@@ -50,7 +50,7 @@ export const LandingDevicePreview: React.FC = () => {
   const customImages = {
     // Banner superior opcional de la tienda (deja null para ver el banner diseñado en código)
     storeBannerUrl: null as string | null,
-    
+
     // Captura completa opcional del catálogo si prefieres mostrar un screenshot directo
     customCatalogScreenshot: null as string | null,
 
@@ -81,16 +81,15 @@ export const LandingDevicePreview: React.FC = () => {
         {/* View Switcher Tabs - Chips Mejorados con Ancho Completo */}
         <div className="flex justify-center mb-8 px-2">
           <div className="inline-flex items-center p-1.5 bg-white/95 backdrop-blur-md rounded-full border border-[#bccac0]/40 shadow-xs gap-1 sm:gap-2 max-w-full overflow-x-auto relative z-20">
-            
+
             {/* Chip 1: Catálogo */}
             <button
               type="button"
               onClick={() => handleTabChange('catalog')}
-              className={`shrink-0 cursor-pointer touch-manipulation whitespace-nowrap flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-200 ${
-                activeTab === 'catalog'
+              className={`shrink-0 cursor-pointer touch-manipulation whitespace-nowrap flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-200 ${activeTab === 'catalog'
                   ? 'bg-[#059669] text-white shadow-xs'
                   : 'text-[#3d4a42] hover:text-[#0b1c30] hover:bg-slate-100/80'
-              }`}
+                }`}
             >
               <Smartphone size={16} />
               <span>1. Catálogo Web</span>
@@ -100,11 +99,10 @@ export const LandingDevicePreview: React.FC = () => {
             <button
               type="button"
               onClick={() => handleTabChange('cart')}
-              className={`shrink-0 cursor-pointer touch-manipulation whitespace-nowrap flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-200 ${
-                activeTab === 'cart'
+              className={`shrink-0 cursor-pointer touch-manipulation whitespace-nowrap flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-200 ${activeTab === 'cart'
                   ? 'bg-[#059669] text-white shadow-xs'
                   : 'text-[#3d4a42] hover:text-[#0b1c30] hover:bg-slate-100/80'
-              }`}
+                }`}
             >
               <ShoppingBag size={16} />
               <span>2. Carrito y Total</span>
@@ -114,11 +112,10 @@ export const LandingDevicePreview: React.FC = () => {
             <button
               type="button"
               onClick={() => handleTabChange('whatsapp')}
-              className={`shrink-0 cursor-pointer touch-manipulation whitespace-nowrap flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-200 ${
-                activeTab === 'whatsapp'
+              className={`shrink-0 cursor-pointer touch-manipulation whitespace-nowrap flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-200 ${activeTab === 'whatsapp'
                   ? 'bg-linear-to-r from-[#25d366] to-[#128c7e] text-white shadow-md shadow-[#25d366]/25'
                   : 'text-[#3d4a42] hover:text-[#006c49] hover:bg-emerald-50/70'
-              }`}
+                }`}
             >
               <div className="w-4 h-4 flex items-center justify-center shrink-0">
                 <WhatsAppIcon size={16} />
@@ -133,7 +130,7 @@ export const LandingDevicePreview: React.FC = () => {
 
         {/* Interactive Device Mockup Container */}
         <div className="relative max-w-4xl mx-auto flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12">
-          
+
           {/* Phone Frame Device */}
           <div className="w-[320px] sm:w-[350px] h-[670px] bg-[#0b1c30] rounded-[48px] p-3.5 shadow-2xl ring-1 ring-white/20 relative shrink-0">
             {/* Phone Speaker & Camera Notch */}
@@ -144,7 +141,7 @@ export const LandingDevicePreview: React.FC = () => {
 
             {/* Phone Screen Container */}
             <div className="w-full h-full bg-[#f8f9ff] rounded-[36px] overflow-hidden flex flex-col relative text-[#0b1c30] text-xs shadow-inner">
-              
+
               {/* Browser Address Bar (Shown only on web tabs: Catalog & Cart) */}
               {activeTab !== 'whatsapp' && (
                 <div className="bg-white border-b border-slate-100 pt-7 pb-2 px-3 flex items-center gap-2 shrink-0">
@@ -276,7 +273,7 @@ export const LandingDevicePreview: React.FC = () => {
               {/* ========================================================================= */}
               {activeTab === 'cart' && (
                 <div className="flex-1 flex flex-col justify-between bg-[#f8f9ff] overflow-y-auto">
-                  
+
                   {/* Top Bar with Back Arrow */}
                   <div className="p-3.5 flex items-center gap-2.5 border-b border-slate-100 bg-white shrink-0">
                     <ArrowLeft size={16} className="text-slate-800" />
@@ -285,7 +282,7 @@ export const LandingDevicePreview: React.FC = () => {
 
                   {/* Cart Body */}
                   <div className="p-3 space-y-3 flex-1 overflow-y-auto">
-                    
+
                     {/* Header Icon + Title */}
                     <div className="flex flex-col items-center justify-center text-center py-2">
                       <div className="w-12 h-12 rounded-full bg-[#dcfce7] text-[#059669] flex items-center justify-center mb-1.5 shadow-2xs">
@@ -307,7 +304,7 @@ export const LandingDevicePreview: React.FC = () => {
                           Croissant Francés de Mantequilla
                         </p>
                         <p className="text-[#059669] font-bold text-xs mt-0.5">S/ 5.00</p>
-                        
+
                         <div className="mt-2 flex items-center justify-between">
                           <div className="inline-flex items-center gap-2.5 bg-slate-100 px-2 py-0.5 rounded-full text-[11px] font-semibold text-slate-700">
                             <span className="text-slate-400 cursor-pointer">−</span>
@@ -331,7 +328,7 @@ export const LandingDevicePreview: React.FC = () => {
                           Baguette Rústica Tradicional
                         </p>
                         <p className="text-[#059669] font-bold text-xs mt-0.5">S/ 4.50</p>
-                        
+
                         <div className="mt-2 flex items-center justify-between">
                           <div className="inline-flex items-center gap-2.5 bg-slate-100 px-2 py-0.5 rounded-full text-[11px] font-semibold text-slate-700">
                             <span className="text-slate-400 cursor-pointer">−</span>
@@ -384,9 +381,9 @@ export const LandingDevicePreview: React.FC = () => {
               {/* ========================================================================= */}
               {activeTab === 'whatsapp' && (
                 <div className="flex-1 bg-[#efeae2] flex flex-col justify-between overflow-hidden relative font-sans">
-                  
+
                   {/* WhatsApp Doodle Wallpaper Pattern */}
-                  <div 
+                  <div
                     className="absolute inset-0 opacity-[0.06] pointer-events-none bg-repeat"
                     style={{
                       backgroundImage: `radial-gradient(#128c7e 1px, transparent 1px)`,
@@ -426,7 +423,7 @@ export const LandingDevicePreview: React.FC = () => {
 
                   {/* WhatsApp Chat Message Scroll Area */}
                   <div className="p-3 overflow-y-auto space-y-2 flex-1 flex flex-col justify-end relative z-10">
-                    
+
                     {/* WhatsApp Timestamp Badge */}
                     <div className="self-center bg-white/90 text-[#54656f] px-2.5 py-0.5 rounded-md text-[9px] font-medium shadow-2xs uppercase tracking-wider">
                       HOY
@@ -434,7 +431,7 @@ export const LandingDevicePreview: React.FC = () => {
 
                     {/* WhatsApp Authentic Sent Message Bubble */}
                     <div className="bg-[#d9fdd3] text-[#111b21] rounded-2xl rounded-tr-xs p-3 shadow-xs border border-[#c4ebbe] max-w-[94%] self-end space-y-1 text-[11px] leading-[1.35] relative">
-                      
+
                       {/* Header Line */}
                       <p className="font-bold text-[#111b21]">
                         🛒 NUEVO PEDIDO - PANADERÍA DON JOSÉ
@@ -513,23 +510,21 @@ export const LandingDevicePreview: React.FC = () => {
 
           {/* Interactive 3-Step Selector Cards on the Side of the Phone */}
           <div className="flex-1 space-y-3.5 max-w-lg w-full">
-            
+
             {/* Step Card 1: Catálogo */}
             <button
               type="button"
               onClick={() => handleTabChange('catalog')}
-              className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
-                activeTab === 'catalog'
+              className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${activeTab === 'catalog'
                   ? 'bg-white border-[#059669] shadow-md shadow-[#059669]/10 ring-2 ring-[#059669]/20'
                   : 'bg-white/80 hover:bg-white border-[#bccac0]/40 hover:border-[#bccac0]/80 shadow-xs'
-              }`}
+                }`}
             >
               <div className="flex items-start gap-3.5">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                  activeTab === 'catalog'
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${activeTab === 'catalog'
                     ? 'bg-[#059669] text-white shadow-xs'
                     : 'bg-[#059669]/10 text-[#059669]'
-                }`}>
+                  }`}>
                   <Smartphone size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -554,18 +549,16 @@ export const LandingDevicePreview: React.FC = () => {
             <button
               type="button"
               onClick={() => handleTabChange('cart')}
-              className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
-                activeTab === 'cart'
+              className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${activeTab === 'cart'
                   ? 'bg-white border-[#059669] shadow-md shadow-[#059669]/10 ring-2 ring-[#059669]/20'
                   : 'bg-white/80 hover:bg-white border-[#bccac0]/40 hover:border-[#bccac0]/80 shadow-xs'
-              }`}
+                }`}
             >
               <div className="flex items-start gap-3.5">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                  activeTab === 'cart'
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${activeTab === 'cart'
                     ? 'bg-[#059669] text-white shadow-xs'
                     : 'bg-[#059669]/10 text-[#059669]'
-                }`}>
+                  }`}>
                   <ShoppingBag size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -580,7 +573,7 @@ export const LandingDevicePreview: React.FC = () => {
                     )}
                   </div>
                   <p className="text-xs sm:text-sm text-[#3d4a42] mt-1 leading-relaxed">
-                    Suma automáticamente los montos, calcula envíos y recopila los datos del cliente sin errores de cálculo manual.
+                    Calcula automáticamente el total de la compra según la configuración del negocio.
                   </p>
                 </div>
               </div>
@@ -590,18 +583,16 @@ export const LandingDevicePreview: React.FC = () => {
             <button
               type="button"
               onClick={() => handleTabChange('whatsapp')}
-              className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
-                activeTab === 'whatsapp'
+              className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${activeTab === 'whatsapp'
                   ? 'bg-white border-[#25d366] shadow-md shadow-[#25d366]/15 ring-2 ring-[#25d366]/30'
                   : 'bg-white/80 hover:bg-white border-[#bccac0]/40 hover:border-[#bccac0]/80 shadow-xs'
-              }`}
+                }`}
             >
               <div className="flex items-start gap-3.5">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                  activeTab === 'whatsapp'
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${activeTab === 'whatsapp'
                     ? 'bg-linear-to-r from-[#25d366] to-[#128c7e] text-white shadow-xs'
                     : 'bg-[#25d366]/10 text-[#128c7e]'
-                }`}>
+                  }`}>
                   <WhatsAppIcon size={20} />
                 </div>
                 <div className="flex-1 min-w-0">

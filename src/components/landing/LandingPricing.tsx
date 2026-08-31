@@ -2,12 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { 
-  Check, 
-  ArrowRight, 
-  Sparkles, 
-  ShieldCheck, 
-  Crown, 
+import {
+  Check,
+  ArrowRight,
+  Sparkles,
+  ShieldCheck,
+  Crown,
   Zap,
   Lock
 } from 'lucide-react';
@@ -32,7 +32,7 @@ export const LandingPricing: React.FC = () => {
 
       {/* 3 Main Subscription Plans Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto items-stretch mb-16">
-        
+
         {/* 1. PLAN GRATIS */}
         <div className="bg-white rounded-3xl p-7 sm:p-9 border border-slate-200 shadow-lg shadow-slate-200/30 flex flex-col justify-between relative hover:border-slate-300 transition-all">
           <div>
@@ -234,7 +234,7 @@ export const LandingPricing: React.FC = () => {
               <span className="text-sm text-slate-500">/ mes</span>
             </div>
             <p className="text-xs text-[#3d4a42] mb-6">
-              Para marcas consolidadas y escala total.
+              Para negocios que ya están creciendo.
             </p>
 
             <div className="pt-6 border-t border-slate-100 space-y-3.5 text-xs sm:text-sm text-[#0b1c30]">
