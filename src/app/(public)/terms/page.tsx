@@ -159,8 +159,8 @@ export default function TermsPage() {
               </div>
               <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-2xs">
                 <span className="text-slate-500 block text-[11px]">WhatsApp Oficial de Atención:</span>
-                <a href="https://wa.me/51920030074" target="_blank" className="text-[#059669] font-bold hover:underline">
-                  +51 920 030 074
+                <a href="https://wa.me/51937700049?text=Hola%20APANA%20%F0%9F%91%8B%2C%20deseo%20informaci%C3%B3n" target="_blank" rel="noopener noreferrer" className="text-[#059669] font-bold hover:underline">
+                  +51 937 700 049
                 </a>
               </div>
             </div>

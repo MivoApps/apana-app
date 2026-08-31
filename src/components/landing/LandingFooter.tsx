@@ -82,8 +82,8 @@ export const LandingFooter: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Phone size={14} className="text-[#059669] shrink-0" />
-                <a href="https://wa.me/51920030074" target="_blank" className="hover:text-[#059669] hover:underline">
-                  +51 920 030 074 (WhatsApp)
+                <a href="https://wa.me/51937700049?text=Hola%20APANA%20%F0%9F%91%8B%2C%20deseo%20informaci%C3%B3n" target="_blank" rel="noopener noreferrer" className="hover:text-[#059669] hover:underline">
+                  +51 937 700 049 (WhatsApp)
                 </a>
               </div>
               <div className="flex items-center gap-2">

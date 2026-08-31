@@ -26,7 +26,7 @@ interface Props {
   onSuccess?: () => void;
 }
 
-const APANA_OFFICIAL_WHATSAPP = '51920030074';
+const APANA_OFFICIAL_WHATSAPP = '51937700049';
 
 export const WhatsAppVerifyModal: React.FC<Props> = ({
   isOpen,
