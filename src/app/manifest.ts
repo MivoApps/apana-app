@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'APANA | Catálogo Digital y Ventas por WhatsApp',
+    name: 'APANA | Tienda online y Ventas por WhatsApp',
     short_name: 'APANA',
-    description: 'La plataforma más rápida para crear tu tienda online, catálogo con QR y recibir pedidos directos a WhatsApp.',
+    description: 'Una forma más sencilla de llevar tu negocio al mundo digital.',
     start_url: '/',
     display: 'standalone',
     background_color: '#f8f9ff',

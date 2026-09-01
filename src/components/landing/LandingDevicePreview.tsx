@@ -87,8 +87,8 @@ export const LandingDevicePreview: React.FC = () => {
               type="button"
               onClick={() => handleTabChange('catalog')}
               className={`shrink-0 cursor-pointer touch-manipulation whitespace-nowrap flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-200 ${activeTab === 'catalog'
-                  ? 'bg-[#059669] text-white shadow-xs'
-                  : 'text-[#3d4a42] hover:text-[#0b1c30] hover:bg-slate-100/80'
+                ? 'bg-[#059669] text-white shadow-xs'
+                : 'text-[#3d4a42] hover:text-[#0b1c30] hover:bg-slate-100/80'
                 }`}
             >
               <Smartphone size={16} />
@@ -100,8 +100,8 @@ export const LandingDevicePreview: React.FC = () => {
               type="button"
               onClick={() => handleTabChange('cart')}
               className={`shrink-0 cursor-pointer touch-manipulation whitespace-nowrap flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-200 ${activeTab === 'cart'
-                  ? 'bg-[#059669] text-white shadow-xs'
-                  : 'text-[#3d4a42] hover:text-[#0b1c30] hover:bg-slate-100/80'
+                ? 'bg-[#059669] text-white shadow-xs'
+                : 'text-[#3d4a42] hover:text-[#0b1c30] hover:bg-slate-100/80'
                 }`}
             >
               <ShoppingBag size={16} />
@@ -113,8 +113,8 @@ export const LandingDevicePreview: React.FC = () => {
               type="button"
               onClick={() => handleTabChange('whatsapp')}
               className={`shrink-0 cursor-pointer touch-manipulation whitespace-nowrap flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-200 ${activeTab === 'whatsapp'
-                  ? 'bg-linear-to-r from-[#25d366] to-[#128c7e] text-white shadow-md shadow-[#25d366]/25'
-                  : 'text-[#3d4a42] hover:text-[#006c49] hover:bg-emerald-50/70'
+                ? 'bg-linear-to-r from-[#25d366] to-[#128c7e] text-white shadow-md shadow-[#25d366]/25'
+                : 'text-[#3d4a42] hover:text-[#006c49] hover:bg-emerald-50/70'
                 }`}
             >
               <div className="w-4 h-4 flex items-center justify-center shrink-0">
@@ -516,14 +516,14 @@ export const LandingDevicePreview: React.FC = () => {
               type="button"
               onClick={() => handleTabChange('catalog')}
               className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${activeTab === 'catalog'
-                  ? 'bg-white border-[#059669] shadow-md shadow-[#059669]/10 ring-2 ring-[#059669]/20'
-                  : 'bg-white/80 hover:bg-white border-[#bccac0]/40 hover:border-[#bccac0]/80 shadow-xs'
+                ? 'bg-white border-[#059669] shadow-md shadow-[#059669]/10 ring-2 ring-[#059669]/20'
+                : 'bg-white/80 hover:bg-white border-[#bccac0]/40 hover:border-[#bccac0]/80 shadow-xs'
                 }`}
             >
               <div className="flex items-start gap-3.5">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${activeTab === 'catalog'
-                    ? 'bg-[#059669] text-white shadow-xs'
-                    : 'bg-[#059669]/10 text-[#059669]'
+                  ? 'bg-[#059669] text-white shadow-xs'
+                  : 'bg-[#059669]/10 text-[#059669]'
                   }`}>
                   <Smartphone size={20} />
                 </div>
@@ -550,14 +550,14 @@ export const LandingDevicePreview: React.FC = () => {
               type="button"
               onClick={() => handleTabChange('cart')}
               className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${activeTab === 'cart'
-                  ? 'bg-white border-[#059669] shadow-md shadow-[#059669]/10 ring-2 ring-[#059669]/20'
-                  : 'bg-white/80 hover:bg-white border-[#bccac0]/40 hover:border-[#bccac0]/80 shadow-xs'
+                ? 'bg-white border-[#059669] shadow-md shadow-[#059669]/10 ring-2 ring-[#059669]/20'
+                : 'bg-white/80 hover:bg-white border-[#bccac0]/40 hover:border-[#bccac0]/80 shadow-xs'
                 }`}
             >
               <div className="flex items-start gap-3.5">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${activeTab === 'cart'
-                    ? 'bg-[#059669] text-white shadow-xs'
-                    : 'bg-[#059669]/10 text-[#059669]'
+                  ? 'bg-[#059669] text-white shadow-xs'
+                  : 'bg-[#059669]/10 text-[#059669]'
                   }`}>
                   <ShoppingBag size={20} />
                 </div>
@@ -584,14 +584,14 @@ export const LandingDevicePreview: React.FC = () => {
               type="button"
               onClick={() => handleTabChange('whatsapp')}
               className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer ${activeTab === 'whatsapp'
-                  ? 'bg-white border-[#25d366] shadow-md shadow-[#25d366]/15 ring-2 ring-[#25d366]/30'
-                  : 'bg-white/80 hover:bg-white border-[#bccac0]/40 hover:border-[#bccac0]/80 shadow-xs'
+                ? 'bg-white border-[#25d366] shadow-md shadow-[#25d366]/15 ring-2 ring-[#25d366]/30'
+                : 'bg-white/80 hover:bg-white border-[#bccac0]/40 hover:border-[#bccac0]/80 shadow-xs'
                 }`}
             >
               <div className="flex items-start gap-3.5">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${activeTab === 'whatsapp'
-                    ? 'bg-linear-to-r from-[#25d366] to-[#128c7e] text-white shadow-xs'
-                    : 'bg-[#25d366]/10 text-[#128c7e]'
+                  ? 'bg-linear-to-r from-[#25d366] to-[#128c7e] text-white shadow-xs'
+                  : 'bg-[#25d366]/10 text-[#128c7e]'
                   }`}>
                   <WhatsAppIcon size={20} />
                 </div>
@@ -619,7 +619,7 @@ export const LandingDevicePreview: React.FC = () => {
                 href="/register"
                 className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#059669] hover:bg-[#00855d] text-white font-bold text-sm shadow-md shadow-[#059669]/25 transition-all hover:scale-[1.01] active:scale-[0.99]"
               >
-                <span>Crear mi catálogo digital gratis</span>
+                <span>Crear mi tienda gratis</span>
                 <ArrowRight size={16} />
               </Link>
             </div>

@@ -2,7 +2,7 @@
   <img src="public/logo_lockup.svg" alt="APANA" width="220" />
   <br /><br />
   <p align="center">
-    <strong>La plataforma más rápida y completa para crear catálogos móviles, generar códigos QR y recibir pedidos estructurados directos a WhatsApp en Perú.</strong>
+    <strong>Una forma más sencilla de llevar tu negocio al mundo digital. </strong>
   </p>
 
   <p align="center">
@@ -24,7 +24,7 @@
 
 **APANA** (`beapana.com`) es una plataforma SaaS móvil de comercio conversacional de alto rendimiento, diseñada específicamente para emprendedores, marcas de moda, restaurantes, cafeterías, bodegas y negocios de retail.
 
-Permite a los comerciantes crear su catálogo digital en menos de 2 minutos, personalizar su identidad visual, exhibir variantes complejas de producto y recibir pedidos directos a su **WhatsApp** con cálculo automático de totales y entrega, cobrando el **100% de las ventas sin comisiones por intermediación** (vía Yape, Plin, Efectivo o Transferencia).
+Permite a los comerciantes crear su tienda online en menos de 2 minutos, personalizar su identidad visual, exhibir variantes complejas de producto y recibir pedidos directos a su **WhatsApp** con cálculo automático de totales y entrega, cobrando el **100% de las ventas sin comisiones por intermediación** (vía Yape, Plin, Efectivo o Transferencia).
 
 ---
 
@@ -32,7 +32,7 @@ Permite a los comerciantes crear su catálogo digital en menos de 2 minutos, per
 
 ### 🛍️ Para los Clientes (Experiencia de Compra)
 - **Cero descargas**: Experiencia web ultrarrápida sin requerir instalar aplicaciones móviles pesadas.
-- **Catálogo interactivo con selector de estilos**: Lookbook Minimalista, Vista Moderna dinámica o Estilo Elegante según el rubro.
+- **Tienda online interactiva con selector de estilos**: Lookbook Minimalista, Vista Moderna dinámica o Estilo Elegante según el rubro.
 - **Variantes y opciones de producto**: Selección intuitiva de tallas, colores, sabores, toppings y extras con ajuste de precio en tiempo real.
 - **Carrito inteligente y cálculo automático**: Desglose transparente de subtotales y opciones de envío.
 - **Checkout conversacional a WhatsApp**: Genera un mensaje formateado con la lista de productos, total exacto y datos de despacho.
@@ -40,8 +40,8 @@ Permite a los comerciantes crear su catálogo digital en menos de 2 minutos, per
 ### 💼 Para los Comerciantes (Panel de Gestión)
 - **Onboarding asistido**: Creación y personalización de la tienda en 4 sencillos pasos con previsualizador móvil interactivo.
 - **Editor de variantes de producto**: Soporte para hasta 4 imágenes optimizadas por producto, control de inventario y opciones personalizables.
-- **Validación Anti-Fraude de WhatsApp**: Sistema de verificación asistida y autenticación de titularidad enlazado a la línea oficial (`+51 920030074`).
-- **Analíticas y Embudo de Conversión Comercial**: Métricas en tiempo real con gráfico de embudo (Vistas de Catálogo ➔ Productos Explorados ➔ Carritos ➔ Pedidos WhatsApp) y exportación de reportes a **Excel (.xlsx)**.
+- **Validación Anti-Fraude de WhatsApp**: Sistema de verificación asistida y autenticación de titularidad enlazado a la línea oficial (`+51 937 700 049`).
+- **Analíticas y Embudo de Conversión Comercial**: Métricas en tiempo real con gráfico de embudo (Vistas de Tienda Online ➔ Productos Explorados ➔ Carritos ➔ Pedidos WhatsApp) y exportación de reportes a **Excel (.xlsx)**.
 - **Generador y Descarga de Código QR**: QR exclusivo de alta resolución listo para imprimir en vitrinas, mesas o compartir en redes sociales.
 - **Suscripciones y Planes**: Plan Gratis, Plan Emprendedor y Plan Negocio Pro con pasarela de pago Culqi integrada.
 
@@ -87,7 +87,7 @@ apana-app/
 │   ├── app/                    # Rutas de Next.js App Router
 │   │   ├── (auth)/             # Login, Registro y Recuperación de Contraseña
 │   │   ├── (merchant)/         # Panel privado (Dashboard, Productos, Analíticas, Admin, QR, Planes, Ajustes)
-│   │   ├── (public)/           # Catálogo del cliente (/s/[storeSlug]), Carrito y Términos Legales
+│   │   ├── (public)/           # Tienda online del cliente (/s/[storeSlug]), Carrito y Términos Legales
 │   │   ├── api/                # API Routes (Culqi charges, cancelación y webhooks)
 │   │   ├── globals.css         # Tokens de diseño y utilidades CSS móviles
 │   │   ├── layout.tsx          # Layout raíz con AuthProvider y Metadata SEO

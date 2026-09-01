@@ -3,16 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { 
-  ShieldCheck, 
-  Store as StoreIcon, 
-  Package, 
-  Crown, 
-  Search, 
-  ExternalLink, 
-  RefreshCw, 
-  CheckCircle, 
-  PauseCircle, 
+import {
+  ShieldCheck,
+  Store as StoreIcon,
+  Package,
+  Crown,
+  Search,
+  ExternalLink,
+  RefreshCw,
+  CheckCircle,
+  PauseCircle,
   PlayCircle,
   Phone,
   Sparkles,
@@ -51,10 +51,10 @@ import {
 } from 'lucide-react';
 import { generateQrWithLogo, generateFullStickerImage } from '@/lib/qr-generator';
 import { useAuth } from '@/lib/firebase/auth-context';
-import { 
-  getAllStoresForAdminFromFS, 
-  adminUpdateStorePlanInFS, 
-  adminUpdateStoreStatusInFS, 
+import {
+  getAllStoresForAdminFromFS,
+  adminUpdateStorePlanInFS,
+  adminUpdateStoreStatusInFS,
   adminCleanSuperAdminStoresInFS,
   adminUpdateStoreDetailsInFS,
   adminDeleteStoreAndProductsFromFS,
@@ -84,7 +84,7 @@ const SUPERADMIN_EMAILS = [
 export default function SuperAdminPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
-  
+
   // Estado Principal (5 Pestañas: Tiendas, Suscripciones, Usuarios, Seguimiento/Leads, Reclamaciones)
   const [activeTab, setActiveTab] = useState<'stores' | 'subscriptions' | 'users' | 'leads' | 'reclamaciones'>('stores');
   const [stores, setStores] = useState<AdminStoreItem[]>([]);
@@ -96,15 +96,15 @@ export default function SuperAdminPage() {
     active: false,
     type: 'info'
   });
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
-  
+
   // Filtros
   const [searchQuery, setSearchQuery] = useState('');
   const [planFilter, setPlanFilter] = useState<'todos' | 'gratis' | 'emprendedor' | 'negocio'>('todos');
   const [statusFilter, setStatusFilter] = useState<'todos' | 'activa' | 'pausada'>('todos');
-  
+
   // Feedback
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
@@ -184,9 +184,9 @@ export default function SuperAdminPage() {
     try {
       // Tareas de mantenimiento en segundo plano (sin bloquear la carga de la vista)
       if (user?.uid) {
-        adminCleanSuperAdminStoresInFS(user.uid).catch(() => {});
+        adminCleanSuperAdminStoresInFS(user.uid).catch(() => { });
       }
-      cleanupExpiredOtpRequestsInFS().catch(() => {});
+      cleanupExpiredOtpRequestsInFS().catch(() => { });
 
       // Carga en paralelo de datos esenciales
       const [storesData, usersData, paymentsData, reclamacionesData, globalAnn] = await Promise.all([
@@ -433,14 +433,14 @@ export default function SuperAdminPage() {
         prev.map((s) =>
           s.id === editingStore.id
             ? {
-                ...s,
-                name: editForm.name,
-                slug: editForm.slug.toLowerCase().trim().replace(/\s+/g, '-'),
-                whatsappPhone: fullPhone,
-                plan: editForm.plan,
-                status: editForm.status,
-                isWhatsappVerified: editForm.isWhatsappVerified,
-              }
+              ...s,
+              name: editForm.name,
+              slug: editForm.slug.toLowerCase().trim().replace(/\s+/g, '-'),
+              whatsappPhone: fullPhone,
+              plan: editForm.plan,
+              status: editForm.status,
+              isWhatsappVerified: editForm.isWhatsappVerified,
+            }
             : s
         )
       );
@@ -481,11 +481,11 @@ export default function SuperAdminPage() {
         prev.map((u) =>
           u.uid === editingUser.uid || u.email === editingUser.email
             ? {
-                ...u,
-                name: editUserForm.name,
-                phone: editUserForm.phone,
-                role: editUserForm.role,
-              }
+              ...u,
+              name: editUserForm.name,
+              phone: editUserForm.phone,
+              role: editUserForm.role,
+            }
             : u
         )
       );
@@ -574,7 +574,7 @@ export default function SuperAdminPage() {
   const totalActiveStores = stores.filter((s) => s.status !== 'pausada').length;
   const totalProducts = stores.reduce((sum, s) => sum + (s.productCount || 0), 0);
   const totalRegisteredUsers = users.length;
-  
+
   // MRR REAL Recaudado (Pagos Culqi)
   const approvedPayments = payments.filter((p) => p.status === 'approved');
   const realCulqiRevenue = approvedPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -667,7 +667,7 @@ export default function SuperAdminPage() {
       funnelStatus = 'sin_productos';
       funnelLabel = '3. Tienda con 0 Productos';
       funnelBadge = 'bg-orange-950/60 text-orange-400 border-orange-800';
-      missingAction = 'Catálogo vacío, no hay productos para mostrar';
+      missingAction = 'Tienda vacía, no hay productos para mostrar';
     }
 
     return {
@@ -893,11 +893,10 @@ export default function SuperAdminPage() {
         <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('stores')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'stores'
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === 'stores'
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            }`}
+              }`}
           >
             <StoreIcon size={16} />
             <span>Directorio de Tiendas ({stores.length})</span>
@@ -905,11 +904,10 @@ export default function SuperAdminPage() {
 
           <button
             onClick={() => setActiveTab('subscriptions')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'subscriptions'
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === 'subscriptions'
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            }`}
+              }`}
           >
             <DollarSign size={16} />
             <span>Suscripciones & Cobros ({paidStoresCount})</span>
@@ -917,11 +915,10 @@ export default function SuperAdminPage() {
 
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'users'
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === 'users'
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            }`}
+              }`}
           >
             <Users size={16} />
             <span>Usuarios & Comerciantes ({users.length})</span>
@@ -929,11 +926,10 @@ export default function SuperAdminPage() {
 
           <button
             onClick={() => setActiveTab('leads')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'leads'
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === 'leads'
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-xs'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            }`}
+              }`}
           >
             <Sparkles size={16} className="text-amber-400" />
             <span>Seguimiento / Onboarding ({totalIncompleteLeads})</span>
@@ -946,11 +942,10 @@ export default function SuperAdminPage() {
 
           <button
             onClick={() => setActiveTab('reclamaciones')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'reclamaciones'
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === 'reclamaciones'
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            }`}
+              }`}
           >
             <BookOpen size={16} />
             <span>Reclamaciones ({reclamaciones.length})</span>
@@ -972,10 +967,10 @@ export default function SuperAdminPage() {
                 activeTab === 'stores'
                   ? "Buscar por nombre, slug o teléfono..."
                   : activeTab === 'subscriptions'
-                  ? "Buscar por tienda o ID de pago Culqi..."
-                  : activeTab === 'users'
-                  ? "Buscar por correo, nombre o tienda..."
-                  : "Buscar por código de reclamación, DNI o cliente..."
+                    ? "Buscar por tienda o ID de pago Culqi..."
+                    : activeTab === 'users'
+                      ? "Buscar por correo, nombre o tienda..."
+                      : "Buscar por código de reclamación, DNI o cliente..."
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -1104,11 +1099,10 @@ export default function SuperAdminPage() {
                                   type="button"
                                   onClick={() => handleToggleWhatsappVerified(store)}
                                   disabled={isBusy}
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold w-fit transition-all cursor-pointer ${
-                                    store.isWhatsappVerified
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold w-fit transition-all cursor-pointer ${store.isWhatsappVerified
                                       ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-700/60 hover:bg-emerald-900'
                                       : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white hover:border-slate-500'
-                                  }`}
+                                    }`}
                                   title={store.isWhatsappVerified ? "WhatsApp verificado oficialmente (Clic para desvalidar)" : "Clic para validar WhatsApp manualmente"}
                                 >
                                   {store.isWhatsappVerified ? (
@@ -1134,13 +1128,12 @@ export default function SuperAdminPage() {
                                 value={currentStorePlan}
                                 disabled={isBusy}
                                 onChange={(e) => handleSelectPlan(store, e.target.value as any)}
-                                className={`w-full appearance-none px-2.5 py-1.5 rounded-xl text-[11px] font-bold border focus:outline-none transition-all cursor-pointer ${
-                                  currentStorePlan === 'negocio'
+                                className={`w-full appearance-none px-2.5 py-1.5 rounded-xl text-[11px] font-bold border focus:outline-none transition-all cursor-pointer ${currentStorePlan === 'negocio'
                                     ? 'bg-emerald-950/70 text-emerald-300 border-emerald-600/60'
                                     : currentStorePlan === 'emprendedor'
-                                    ? 'bg-amber-950/70 text-amber-300 border-amber-600/60'
-                                    : 'bg-slate-800 text-slate-300 border-slate-700'
-                                }`}
+                                      ? 'bg-amber-950/70 text-amber-300 border-amber-600/60'
+                                      : 'bg-slate-800 text-slate-300 border-slate-700'
+                                  }`}
                               >
                                 <option value="gratis">⚡ Plan Gratis</option>
                                 <option value="emprendedor">👑 Emprendedor (S/ 19.90)</option>
@@ -1158,11 +1151,10 @@ export default function SuperAdminPage() {
                           {/* Estado */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
-                                isActive
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${isActive
                                   ? 'text-emerald-400 bg-emerald-950/60 border border-emerald-800'
                                   : 'text-amber-400 bg-amber-950/60 border border-amber-800'
-                              }`}
+                                }`}
                             >
                               <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                               {isActive ? 'Activa' : 'Pausada'}
@@ -1207,11 +1199,10 @@ export default function SuperAdminPage() {
                                 type="button"
                                 disabled={isBusy}
                                 onClick={() => handleToggleStatus(store)}
-                                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                                  isActive
+                                className={`p-1.5 rounded-lg transition-all cursor-pointer ${isActive
                                     ? 'text-amber-400 hover:bg-amber-950/40'
                                     : 'text-emerald-400 hover:bg-emerald-950/40'
-                                }`}
+                                  }`}
                                 title={isActive ? 'Pausar Tienda' : 'Activar Tienda'}
                               >
                                 {isActive ? <PauseCircle size={17} /> : <PlayCircle size={17} />}
@@ -1279,18 +1270,17 @@ export default function SuperAdminPage() {
                             </div>
                           </td>
                           <td className="py-3.5 px-4">
-                            <span className={`font-bold ${
-                              store.plan === 'negocio'
+                            <span className={`font-bold ${store.plan === 'negocio'
                                 ? 'text-emerald-400'
                                 : store.plan === 'emprendedor'
-                                ? 'text-amber-300'
-                                : 'text-slate-400'
-                            }`}>
+                                  ? 'text-amber-300'
+                                  : 'text-slate-400'
+                              }`}>
                               {store.plan === 'negocio'
                                 ? '⭐ Plan Negocio Pro'
                                 : store.plan === 'emprendedor'
-                                ? '👑 Plan Emprendedor'
-                                : '⚡ Plan Gratis'}
+                                  ? '👑 Plan Emprendedor'
+                                  : '⚡ Plan Gratis'}
                             </span>
                           </td>
                           <td className="py-3.5 px-4 font-mono text-slate-300">
@@ -1390,11 +1380,10 @@ export default function SuperAdminPage() {
                               {p.createdAt ? new Date(p.createdAt).toLocaleString('es-PE') : '—'}
                             </td>
                             <td className="py-3.5 px-4 text-right">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                isApproved
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isApproved
                                   ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
                                   : 'bg-red-950/60 text-red-400 border border-red-800'
-                              }`}>
+                                }`}>
                                 {isApproved ? 'Aprobado' : p.status}
                               </span>
                             </td>
@@ -1446,11 +1435,10 @@ export default function SuperAdminPage() {
                             {u.email}
                           </td>
                           <td className="py-3.5 px-4">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                              isAdmin
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isAdmin
                                 ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
                                 : 'bg-slate-800 text-slate-300 border border-slate-700'
-                            }`}>
+                              }`}>
                               {isAdmin ? '👑 SuperAdmin' : '🏬 Comerciante'}
                             </span>
                           </td>
@@ -1543,7 +1531,7 @@ export default function SuperAdminPage() {
                       const cleanPhone = lead.phoneToContact ? lead.phoneToContact.replace(/\D/g, '') : '';
                       const contactName = lead.user.name || lead.store?.name || 'comerciante';
                       const storeName = lead.store?.name || 'tu negocio';
-                      
+
                       // Mensaje personalizado según el paso pendiente
                       let customMsg = `Hola ${contactName} 👋, vimos que te registraste en APANA. ¿Te gustaría que te ayudemos a configurar tu tienda online en 2 minutos para que empieces a vender por internet?`;
                       if (lead.funnelStatus === 'sin_whatsapp') {
@@ -1668,11 +1656,10 @@ export default function SuperAdminPage() {
                             </div>
                           </td>
                           <td className="py-3.5 px-4">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                              rec.claimType === 'queja'
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${rec.claimType === 'queja'
                                 ? 'bg-amber-950/60 text-amber-300 border border-amber-800'
                                 : 'bg-red-950/60 text-red-300 border border-red-800'
-                            }`}>
+                              }`}>
                               {rec.claimType}
                             </span>
                           </td>
@@ -1685,11 +1672,10 @@ export default function SuperAdminPage() {
                             </span>
                           </td>
                           <td className="py-3.5 px-4">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
-                              isPending
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${isPending
                                 ? 'bg-amber-950/60 text-amber-300 border border-amber-800'
                                 : 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
-                            }`}>
+                              }`}>
                               {isPending ? '⏳ Pendiente' : '✅ Atendido'}
                             </span>
                           </td>
@@ -2279,7 +2265,7 @@ export default function SuperAdminPage() {
                 onClick={async () => {
                   if (!stickerQrUrl) return;
                   const fullImg = await generateFullStickerImage(stickerStore.name, stickerQrUrl);
-                  
+
                   // En iOS / Android con HTTPS (Producción), Web Share API abre el menú oficial "Guardar Imagen"
                   if (typeof window !== 'undefined' && navigator.share && navigator.canShare) {
                     try {

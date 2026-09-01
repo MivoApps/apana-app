@@ -33,7 +33,7 @@ export const LandingFeaturesMatrix: React.FC = () => {
             <span>Potencia tus Ventas</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-[#0b1c30] tracking-tight">
-            Herramientas diseñadas para hacerte vender más
+            Herramientas para hacer crecer tu tienda
           </h2>
           <p className="mt-3 text-sm sm:text-base text-[#3d4a42]">
             Todo lo que tu comercio necesita para verse profesional, generar confianza y automatizar pedidos.

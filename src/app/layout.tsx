@@ -40,10 +40,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://beapana.com"),
   title: {
-    default: "APANA | Crea tu Catálogo Digital y Vende por WhatsApp en Perú",
+    default: "APANA | Crea tu Tienda online y Vende por WhatsApp en Perú",
     template: "%s | APANA",
   },
-  description: "La plataforma líder en Perú para que emprendedores, negocios y bodegas creen su tienda online, compartan su catálogo digital y reciban pedidos directos a WhatsApp.",
+  description: "La plataforma líder en Perú para que emprendedores, negocios y bodegas creen su tienda online, la compartan y reciban pedidos directos a WhatsApp.",
   keywords: [
     "catalogo digital",
     "tienda online peru",
@@ -74,7 +74,7 @@ export const metadata: Metadata = {
     canonical: "https://beapana.com",
   },
   openGraph: {
-    title: "APANA | Tu Catálogo Digital en 2 Minutos",
+    title: "APANA | Tu Tienda online en 3 Minutos",
     description: "Crea tu tienda virtual, comparte tus productos y recibe pedidos listos por WhatsApp.",
     url: "https://beapana.com",
     type: "website",
@@ -85,13 +85,13 @@ export const metadata: Metadata = {
         url: "/apana-real-preview.png",
         width: 1200,
         height: 630,
-        alt: "APANA - Catálogo Digital para Vender por WhatsApp",
+        alt: "APANA - Tienda online para Vender por WhatsApp",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "APANA | Tu Catálogo Digital en 2 Minutos",
+    title: "APANA | Tu Tienda online en 3 Minutos",
     description: "Crea tu tienda virtual, comparte tus productos y recibe pedidos listos por WhatsApp.",
     images: ["/apana-real-preview.png"],
   },
@@ -109,7 +109,7 @@ const organizationSchema = {
       "name": "APANA",
       "url": "https://beapana.com",
       "logo": "https://beapana.com/logo.svg",
-      "description": "Software as a Service (SaaS) para la creación de catálogos digitales interactivos y recepción de pedidos por WhatsApp.",
+      "description": "Software as a Service (SaaS) para la creación de tiendas online interactivos y recepción de pedidos por WhatsApp.",
       "address": {
         "@type": "PostalAddress",
         "addressCountry": "PE"
@@ -127,7 +127,7 @@ const organizationSchema = {
         "price": "0",
         "priceCurrency": "PEN"
       },
-      "description": "Plataforma de comercio conversacional que permite a emprendedores crear su catálogo digital y recibir pedidos automáticos por WhatsApp."
+      "description": "Plataforma de comercio conversacional que permite a emprendedores crear su tienda online y recibir pedidos automáticos por WhatsApp."
     }
   ]
 };

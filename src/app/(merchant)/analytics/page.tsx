@@ -3,15 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { 
-  ArrowLeft, 
-  Home, 
-  Package, 
-  Settings, 
-  Lock, 
-  Eye, 
-  MessageSquare, 
-  Percent, 
+import {
+  ArrowLeft,
+  Home,
+  Package,
+  Settings,
+  Lock,
+  Eye,
+  MessageSquare,
+  Percent,
   Calendar,
   Sparkles,
   Crown,
@@ -33,7 +33,7 @@ import { Store, Product } from '@/types/store';
 export default function AnalyticsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [store, setStore] = useState<Store | null>(null);
   const [analyticsData, setAnalyticsData] = useState<StoreAnalyticsDay[]>([]);
@@ -116,7 +116,7 @@ export default function AnalyticsPage() {
       [],
       ['RESUMEN GENERAL'],
       ['Métrica', 'Valor'],
-      ['Visitas totales al catálogo', totalVisits.toString()],
+      ['Visitas totales a la tienda', totalVisits.toString()],
       ['Fichas de productos exploradas', totalProductViews.toString()],
       ['Productos agregados al carrito', totalCartAdds.toString()],
       ['Pedidos enviados a WhatsApp', totalClicks.toString()],
@@ -265,7 +265,7 @@ export default function AnalyticsPage() {
             </button>
             <h1 className="font-bold text-lg text-[#0b1c30]">Rendimiento</h1>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {isNegocio ? (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-900 text-xs font-extrabold shadow-2xs">
@@ -288,7 +288,7 @@ export default function AnalyticsPage() {
 
       {/* Main Container */}
       <main className="pt-16 px-4 max-w-[640px] w-full mx-auto flex flex-col gap-6">
-        
+
         {/* ============================================================ */}
         {/* CASO 1: PLAN GRATIS (PANTALLA DE PREVIEW Y DESBLOQUEO) */}
         {/* ============================================================ */}
@@ -305,7 +305,7 @@ export default function AnalyticsPage() {
                   Métricas y Estadísticas
                 </span>
                 <h2 className="text-xl sm:text-2xl font-black text-[#0b1c30]">
-                  Conoce cuántos clientes visitan tu catálogo
+                  Conoce cuántos clientes visitan tu tienda online
                 </h2>
                 <p className="text-xs sm:text-sm text-[#3d4a42] leading-relaxed mt-1">
                   Descubre qué días tienes más visitas, cuántos clientes te contactan por WhatsApp y cuáles son tus productos más vistos.
@@ -402,11 +402,10 @@ export default function AnalyticsPage() {
               <button
                 type="button"
                 onClick={() => handleRangeChange('7d')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  activeRange === '7d'
-                    ? 'bg-emerald-50 text-[#059669] shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeRange === '7d'
+                  ? 'bg-emerald-50 text-[#059669] shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+                  }`}
               >
                 <Calendar size={14} />
                 Últimos 7 días
@@ -415,13 +414,12 @@ export default function AnalyticsPage() {
               <button
                 type="button"
                 onClick={() => handleRangeChange('30d')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  activeRange === '30d'
-                    ? 'bg-amber-50 text-amber-900 shadow-xs ring-1 ring-amber-400/40 font-extrabold'
-                    : isNegocio
-                      ? 'text-slate-600 hover:text-amber-800'
-                      : 'text-slate-400 hover:text-slate-600'
-                }`}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeRange === '30d'
+                  ? 'bg-amber-50 text-amber-900 shadow-xs ring-1 ring-amber-400/40 font-extrabold'
+                  : isNegocio
+                    ? 'text-slate-600 hover:text-amber-800'
+                    : 'text-slate-400 hover:text-slate-600'
+                  }`}
               >
                 {!isNegocio && <Lock size={13} className="text-slate-400" />}
                 {isNegocio && <Crown size={13} className="text-amber-600" />}
@@ -494,7 +492,7 @@ export default function AnalyticsPage() {
               {/* Gráfico de Barras */}
               <div className="flex flex-col gap-4">
                 <div className="h-64 w-full flex justify-between items-end gap-1.5 sm:gap-3 px-1 pt-6 pb-2 border-b border-slate-100 relative overflow-x-auto">
-                  
+
                   {/* Líneas horizontales de guía */}
                   <div className="absolute inset-x-0 top-0 bottom-8 flex flex-col justify-between pointer-events-none opacity-[0.07]">
                     <div className="w-full border-t border-slate-700" />
@@ -526,15 +524,15 @@ export default function AnalyticsPage() {
                         <div className="w-full flex items-end justify-center gap-1 sm:gap-2 h-full max-w-[48px]">
                           {/* Barra Visitas */}
                           <div className="w-2 sm:w-2.5 bg-[#eff4ff] hover:bg-slate-200 transition-all rounded-t-xs relative h-full flex flex-col justify-end">
-                            <div 
+                            <div
                               className="w-full bg-emerald-600 rounded-t-xs shadow-xs transition-all duration-300"
                               style={{ height: `${Math.max(visitsPct, 2)}%` }}
                             />
                           </div>
-                          
+
                           {/* Barra Clics */}
                           <div className="w-2 sm:w-2.5 bg-[#fff8eb] hover:bg-slate-200 transition-all rounded-t-xs relative h-full flex flex-col justify-end">
-                            <div 
+                            <div
                               className="w-full bg-amber-500 rounded-t-xs shadow-xs transition-all duration-300"
                               style={{ height: `${Math.max(clicksPct, 2)}%` }}
                             />
@@ -542,14 +540,12 @@ export default function AnalyticsPage() {
                         </div>
 
                         {/* Leyenda de Fecha */}
-                        <span className={`text-[9px] text-slate-500 font-semibold mt-2 text-center whitespace-nowrap ${
-                          activeRange === '30d' && idx % 3 !== 0 ? 'hidden sm:inline-block' : ''
-                        }`}>
+                        <span className={`text-[9px] text-slate-500 font-semibold mt-2 text-center whitespace-nowrap ${activeRange === '30d' && idx % 3 !== 0 ? 'hidden sm:inline-block' : ''
+                          }`}>
                           {day.label.split(' ')[0]}
                         </span>
-                        <span className={`text-[8px] text-slate-400 font-bold ${
-                          activeRange === '30d' && idx % 3 !== 0 ? 'hidden sm:inline-block' : ''
-                        }`}>
+                        <span className={`text-[8px] text-slate-400 font-bold ${activeRange === '30d' && idx % 3 !== 0 ? 'hidden sm:inline-block' : ''
+                          }`}>
                           {day.label.split(' ')[1]}
                         </span>
                       </div>
@@ -561,7 +557,7 @@ export default function AnalyticsPage() {
                 <div className="flex justify-center gap-6 text-xs text-slate-500 font-medium pt-2">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 bg-emerald-600 rounded-xs inline-block" />
-                    <span>Visitas al catálogo</span>
+                    <span>Visitas la tienda online</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 bg-amber-500 rounded-xs inline-block" />
@@ -751,7 +747,7 @@ export default function AnalyticsPage() {
               <div className="flex items-center justify-between pb-2 border-b border-gray-100">
                 <div className="flex flex-col gap-0.5">
                   <h3 className="font-bold text-base text-[#0b1c30]">Productos más Populares</h3>
-                  <p className="text-xs text-[#6d7a72]">Artículos con mayor interés y visualizaciones en tu catálogo.</p>
+                  <p className="text-xs text-[#6d7a72]">Artículos con mayor interés y visualizaciones en tu tienda online.</p>
                 </div>
                 <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
                   Top Ranking
@@ -775,24 +771,23 @@ export default function AnalyticsPage() {
                       const views = product.views || 0;
 
                       return (
-                        <div 
-                          key={product.id} 
+                        <div
+                          key={product.id}
                           className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-[#f8f9ff]/50 hover:bg-[#f8f9ff] transition-all"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <span className={`w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-extrabold ${
-                              idx === 0 ? 'bg-amber-100 text-amber-700' :
+                            <span className={`w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-extrabold ${idx === 0 ? 'bg-amber-100 text-amber-700' :
                               idx === 1 ? 'bg-slate-100 text-slate-600' :
-                              idx === 2 ? 'bg-orange-100 text-orange-700' :
-                              'bg-gray-100 text-gray-500'
-                            }`}>
+                                idx === 2 ? 'bg-orange-100 text-orange-700' :
+                                  'bg-gray-100 text-gray-500'
+                              }`}>
                               {idx + 1}
                             </span>
-                            
+
                             <div className="w-10 h-10 rounded-lg overflow-hidden border border-slate-200/50 bg-white shrink-0">
-                              <img 
-                                src={imageUrl} 
-                                alt={product.title} 
+                              <img
+                                src={imageUrl}
+                                alt={product.title}
                                 className="w-full h-full object-cover"
                               />
                             </div>

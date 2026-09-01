@@ -337,7 +337,7 @@ export default function OnboardingWizardPage() {
                   <span>Sin comisiones ni configuraciones complejas</span>
                 </div>
                 <p className="text-xs text-[#3d4a42] text-center w-full leading-normal">
-                  Crea tu catálogo, comparte tu QR físico y recibe pedidos directamente a tu celular.
+                  Crea tu tienda online, comparte tu QR físico y recibe pedidos directamente a tu celular.
                 </p>
               </div>
 

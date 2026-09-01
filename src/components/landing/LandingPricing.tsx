@@ -72,7 +72,7 @@ export const LandingPricing: React.FC = () => {
                 <div className="w-5 h-5 rounded-full bg-emerald-100 text-[#059669] flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>Checkout inteligente:</strong> captura datos y método de pago</span>
+                <span><strong>Checkout inteligente:</strong> datos del cliente y pedido</span>
               </div>
 
               <div className="flex items-center gap-3">

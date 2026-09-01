@@ -26,7 +26,7 @@ interface Props {
   onSuccess?: () => void;
 }
 
-const APANA_OFFICIAL_WHATSAPP = '51920030074';
+const APANA_OFFICIAL_WHATSAPP = '51937700049';
 
 export const WhatsAppVerifyModal: React.FC<Props> = ({
   isOpen,
@@ -81,7 +81,7 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
 
   if (!isOpen) return null;
 
-  // Mensaje oficial hacia el bot de APANA (+51 920030074)
+  // Mensaje oficial hacia el bot de APANA (+51 937700049)
   const messageText = `Hola equipo de APANA 👋, solicito mi código de activación para mi tienda *${storeName || 'Mi Tienda'}*.`;
   const encodedText = encodeURIComponent(messageText);
 

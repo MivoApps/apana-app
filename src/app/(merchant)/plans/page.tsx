@@ -438,7 +438,7 @@ export default function PlansPage() {
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />
-                <span><strong>Checkout inteligente:</strong> captura datos y método de pago</span>
+                <span><strong>Checkout inteligente:</strong> datos del cliente y pedido</span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-[#059669]" />

@@ -21,7 +21,7 @@ export const LandingFooter: React.FC = () => {
           </div>
 
           <h2 className="text-2xl sm:text-4xl font-black tracking-tight max-w-2xl text-balance">
-            Crea tu catálogo móvil hoy y transforma la forma en que vendes
+            Crea tu tienda online hoy y transforma la forma en que vendes
           </h2>
 
           <p className="mt-4 text-sm sm:text-base text-emerald-100 max-w-xl leading-relaxed">
@@ -35,7 +35,7 @@ export const LandingFooter: React.FC = () => {
                 type="button"
                 className="w-full sm:w-auto font-extrabold text-sm sm:text-base bg-white text-[#006c49] hover:bg-emerald-50 px-8 py-4 rounded-xl shadow-lg shadow-black/10 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>Crear mi catálogo gratis</span>
+                <span>Crear mi tienda gratis</span>
                 <ArrowRight size={18} className="stroke-[2.5]" />
               </button>
             </Link>
@@ -176,7 +176,7 @@ export const LandingFooter: React.FC = () => {
 
             {/* Libro de Reclamaciones Badge Oficial */}
             <div className="pt-2">
-              <Link 
+              <Link
                 href="/libro-de-reclamaciones"
                 className="inline-flex items-center gap-2 p-2.5 rounded-xl bg-white border border-slate-200 hover:border-[#059669] text-[#0b1c30] hover:text-[#006c49] shadow-2xs transition-all group"
               >
