@@ -240,7 +240,7 @@ export default function ProductGalleryPage() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xs font-bold text-[#0b1c30]">
-                    Catálogo Ilimitado Activo
+                    Tienda con Productos Ilimitados
                   </span>
                   <span className="text-[11px] text-slate-500 font-medium">
                     {products.length} {products.length === 1 ? 'producto' : 'productos'} en total ({inStockCount} activos, {pausedCount} pausados)
@@ -258,7 +258,7 @@ export default function ProductGalleryPage() {
               <div className="flex items-center gap-2">
                 <Package size={18} className="text-[#059669]" />
                 <span className="text-xs font-bold text-[#0b1c30]">
-                  {products.length} / {maxProducts} productos en tu catálogo
+                  {products.length} / {maxProducts} productos en tu tienda
                 </span>
               </div>
               <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
@@ -294,7 +294,7 @@ export default function ProductGalleryPage() {
               <div className="p-3.5 bg-linear-to-r from-amber-50 to-orange-50/80 border border-amber-300/80 rounded-xl text-xs text-amber-950 flex flex-col gap-1.5 mt-1 shadow-2xs">
                 <div className="flex items-center justify-between">
                   <span className="font-bold flex items-center gap-1.5 text-amber-950">
-                    <span>🛡️ Resguardo de Catálogo (6 Meses)</span>
+                    <span>🛡️ Resguardo de Productos (6 Meses)</span>
                   </span>
                   <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-200/90 text-amber-950">
                     {Math.max(1, Math.ceil(((activeStore?.dataRetentionUntil || (Date.now() + 180 * 86400000)) - Date.now()) / (1000 * 60 * 60 * 24)))} días protegidos
@@ -465,7 +465,7 @@ export default function ProductGalleryPage() {
             <p className="text-sm font-semibold text-[#0b1c30]">No se encontraron productos</p>
             <p className="text-xs text-[#6d7a72]">
               {products.length === 0
-                ? 'Comienza a publicar tu catálogo para recibir pedidos.'
+                ? 'Comienza a publicar en tu tienda para recibir pedidos.'
                 : 'Intenta con otro término de búsqueda o cambia los filtros.'}
             </p>
             {products.length === 0 && (
@@ -751,7 +751,7 @@ export default function ProductGalleryPage() {
                 ⭐ Plan Negocio Pro
               </span>
               <h3 className="text-lg font-extrabold text-[#0b1c30]">
-                Exporta tu Catálogo a Excel
+                Exporta tus Productos a Excel
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
                 Descarga todo tu inventario con precios, variantes, stock y enlaces en formato <strong>.CSV / Excel</strong> con 1 solo clic.

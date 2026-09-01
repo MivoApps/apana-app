@@ -721,7 +721,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <span className="text-[10px] text-slate-500 font-medium leading-tight">
-                    Se muestra "Envío Gratis" en el catálogo y carrito.
+                    Se muestra "Envío Gratis" en tu tienda y carrito.
                   </span>
                 </label>
               </div>
@@ -866,7 +866,7 @@ export default function SettingsPage() {
                 <div className="flex flex-col gap-1">
                   <h3 className="text-sm font-bold text-slate-800">Función del Plan Emprendedor y Pro</h3>
                   <p className="text-xs text-slate-500 leading-relaxed max-w-sm">
-                    Las categorías te permiten agrupar tus productos (ej: Panes, Postres, Bebidas) para que tus clientes puedan filtrar tu menú ágilmente en tu catálogo.
+                    Las categorías te permiten agrupar tus productos (ej: Panes, Postres, Bebidas) para que tus clientes puedan filtrar tus productos ágilmente en tu tienda online.
                   </p>
                 </div>
                 <Link href="/plans">

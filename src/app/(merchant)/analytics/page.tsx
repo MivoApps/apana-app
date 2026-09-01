@@ -831,7 +831,7 @@ export default function AnalyticsPage() {
                 ¿Deseas ver el mes completo?
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                El historial detallado de 30 días, analíticas completas del mes y catálogo ilimitado están disponibles en el <strong>Plan Negocio Pro</strong>.
+                El historial detallado de 30 días, analíticas completas del mes y productos ilimitados están disponibles en el <strong>Plan Negocio Pro</strong>.
               </p>
             </div>
 

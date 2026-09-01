@@ -93,7 +93,7 @@ export const LandingStoreSimulator: React.FC = () => {
             Tu tienda y tu código QR listos al instante
           </h2>
           <p className="mt-3 text-sm sm:text-base md:text-lg text-[#3d4a42]">
-            Creamos tu enlace personalizado y tu código QR automáticamente para que empieces a compartir tu catálogo.
+            Creamos tu enlace personalizado y tu código QR automáticamente para que empieces a compartir tu tienda.
           </p>
         </div>
 

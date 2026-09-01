@@ -159,7 +159,7 @@ export default function OrdersPage() {
               <div className="flex flex-col gap-0.5">
                 <h4 className="font-bold text-sm text-[#0b1c30]">Aún no hay pedidos registrados</h4>
                 <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
-                  Cuando tus clientes completen su pedido desde tu catálogo público, aparecerán automáticamente en esta lista.
+                  Cuando tus clientes completen su pedido desde tu tienda online, aparecerán automáticamente en esta lista.
                 </p>
               </div>
               <Link href={`/s/${storeSlug}`} target="_blank" className="w-full max-w-xs mt-1">

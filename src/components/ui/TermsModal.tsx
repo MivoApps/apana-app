@@ -46,7 +46,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
               <span>Declaración Jurada de Titularidad</span>
             </div>
             <p className="text-amber-950/90 text-[11px]">
-              Al utilizar APANA, declaras bajo juramento que eres el titular legítimo o representante legal autorizado del número de WhatsApp y del comercio registrado, asumiendo total responsabilidad legal por las actividades del catálogo.
+              Al utilizar APANA, declaras bajo juramento que eres el titular legítimo o representante legal autorizado del número de WhatsApp y del comercio registrado, asumiendo total responsabilidad legal por las actividades de la tienda online.
             </p>
           </div>
 
@@ -56,7 +56,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
               1. Naturaleza de la Plataforma y Titularidad
             </h4>
             <p>
-              La plataforma tecnológica, marca y software denominado <strong>APANA</strong> es de titularidad, desarrollo y operación exclusiva de <strong>MIVO (Mivo E.I.R.L.)</strong>. Es una herramienta SaaS de catálogo digital que no intermedia en cobros ni procesa pagos.
+              La plataforma tecnológica, marca y software denominado <strong>APANA</strong> es de titularidad, desarrollo y operación exclusiva de <strong>MIVO (Mivo E.I.R.L.)</strong>. Es una herramienta SaaS de tiendas online que no intermedia en cobros ni procesa pagos.
             </p>
           </div>
 

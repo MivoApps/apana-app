@@ -480,7 +480,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-[#6d7a72]">Productos en Catálogo</span>
+                  <span className="text-xs font-medium text-[#6d7a72]">Productos en tu Tienda</span>
                   {isProPlan && (
                     <span className="text-[10px] font-extrabold bg-amber-100/80 border border-amber-300 text-amber-900 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
                       <span>♾️ Ilimitado</span>
@@ -719,7 +719,7 @@ export default function DashboardPage() {
                 <Plus size={18} />
               </div>
               <span className="text-xs font-bold text-[#0b1c30] leading-tight">Nuevo Producto</span>
-              <span className="text-[10px] text-[#6d7a72] leading-tight">Publicar catálogo</span>
+              <span className="text-[10px] text-[#6d7a72] leading-tight">Agregar a tienda</span>
             </Link>
 
             <Link href="/settings" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-[#059669] transition-all flex flex-col gap-1.5 shadow-2xs group">

@@ -93,7 +93,7 @@ export const LiveStorePreview: React.FC<LiveStorePreviewProps> = ({
               {displayName}
             </span>
             <span className={`text-[9px] leading-tight line-clamp-1 ${isElegant ? 'text-stone-500 font-sans' : 'text-slate-500'}`}>
-              Catálogo oficial en WhatsApp
+              Tienda oficial en WhatsApp
             </span>
           </div>
 

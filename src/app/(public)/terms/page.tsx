@@ -62,7 +62,7 @@ export default function TermsPage() {
                 Toda la información proporcionada (nombre de comercio, productos, descripciones, precios y datos de contacto) es verídica, lícita y no vulnera derechos de propiedad de terceros.
               </li>
               <li>
-                Asume plena responsabilidad legal, civil y penal por el uso que se le dé al catálogo digital y al número telefónico vinculado.
+                Asume plena responsabilidad legal, civil y penal por el uso que se le dé a la tienda online y al número telefónico vinculado.
               </li>
             </ul>
           </section>
@@ -77,7 +77,7 @@ export default function TermsPage() {
               La plataforma tecnológica, marca y software denominado <strong>APANA</strong> es de titularidad, desarrollo y operación exclusiva de <strong>MIVO (Mivo E.I.R.L.)</strong> con domicilio legal en Lima, Perú.
             </p>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              APANA es un proveedor de tecnología en la nube (Software as a Service - SaaS) que facilita a emprendedores y comercios la creación de catálogos digitales interactivos y la generación de enlaces de contacto directo hacia la aplicación WhatsApp.
+              APANA es un proveedor de tecnología en la nube (Software as a Service - SaaS) que facilita a emprendedores y comercios la creación de tiendas online interactivas y la generación de enlaces de contacto directo hacia la aplicación WhatsApp.
             </p>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               <strong>APANA no es una pasarela de pagos ni un intermediario financiero.</strong> Las transacciones comerciales, cobros de productos, acuerdos de entrega, calidad de los artículos comercializados y obligaciones tributarias son de entera y exclusiva responsabilidad entre el comercio vendedor y su cliente comprador final.
@@ -99,7 +99,7 @@ export default function TermsPage() {
               <li>Publicar o comercializar bienes o servicios prohibidos por la ley peruana, incluyendo sustancias ilícitas, armas, productos falsificados o contenido que atente contra el orden público y las buenas costumbres.</li>
             </ul>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              APANA se reserva el derecho de <strong>cancelar, suspender o bloquear de manera inmediata y sin previo aviso</strong> cualquier cuenta o catálogo que infrinja estas disposiciones, así como cooperar plenamente con las autoridades judiciales y policiales competentes.
+              APANA se reserva el derecho de <strong>cancelar, suspender o bloquear de manera inmediata y sin previo aviso</strong> cualquier cuenta o tienda que infrinja estas disposiciones, así como cooperar plenamente con las autoridades judiciales y policiales competentes.
             </p>
           </section>
 

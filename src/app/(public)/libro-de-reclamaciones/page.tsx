@@ -423,7 +423,7 @@ export default function LibroReclamacionesPage() {
                       required
                       value={formData.goodDescription}
                       onChange={handleChange}
-                      placeholder="ej. Suscripción mensual Plan Emprendedor / Catálogo virtual"
+                      placeholder="ej. Suscripción mensual Plan Emprendedor / Tienda online"
                       className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669]"
                     />
                   </div>

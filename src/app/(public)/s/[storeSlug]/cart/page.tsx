@@ -159,7 +159,7 @@ export default function PublicCartPage({ params }: Props) {
               <h3 className={`font-bold text-lg ${isElegant ? 'font-playfair text-stone-900' : 'text-[#0b1c30]'}`}>
                 El carrito está vacío
               </h3>
-              <p className="text-xs text-[#6d7a72]">Regresa al catálogo y añade tus productos favoritos.</p>
+              <p className="text-xs text-[#6d7a72]">Regresa a la tienda y añade tus productos favoritos.</p>
               <Link href={`/s/${resolvedParams.storeSlug}`}>
                 <Button variant="primary" size="sm" className="mt-2 h-10 px-4">
                   Explorar Productos

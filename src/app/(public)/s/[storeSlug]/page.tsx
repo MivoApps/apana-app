@@ -174,7 +174,7 @@ export default function PublicStorePage({ params }: Props) {
               "@context": "https://schema.org",
               "@type": "LocalBusiness",
               "name": store.name,
-              "description": store.description || `Catálogo digital de ${store.name}. Realiza tus pedidos por WhatsApp.`,
+              "description": store.description || `Tienda online oficial de ${store.name}. Realiza tus pedidos por WhatsApp.`,
               "url": `https://beapana.com/s/${store.slug}`,
               ...(store.logoUrl ? { "image": store.logoUrl } : {}),
               ...(store.whatsappPhone ? { "telephone": store.whatsappPhone } : {}),
@@ -213,7 +213,7 @@ export default function PublicStorePage({ params }: Props) {
             </span>
             <span className="text-emerald-100 hidden sm:inline">•</span>
             <span className="text-emerald-50">
-              Así verán tus clientes tu catálogo y harán pedidos directos a tu WhatsApp.
+              Así verán tus clientes tu tienda online y harán pedidos directos a tu WhatsApp.
             </span>
             <Link
               href="/login"

@@ -94,7 +94,7 @@ export default function DynamicQrResolverPage() {
               Código QR Pausado
             </span>
             <h1 className="text-2xl font-bold text-[#0b1c30] tracking-tight">
-              Catálogo no disponible
+              Tienda no disponible
             </h1>
             <p className="text-sm text-[#3d4a42] leading-relaxed">
               Este código QR ya no está disponible temporalmente o la tienda ha pausado sus actividades.

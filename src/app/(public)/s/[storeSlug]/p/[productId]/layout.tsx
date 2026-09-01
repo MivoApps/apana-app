@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ storeSlug
   if (!product) {
     return {
       title: `Producto no disponible | ${store.name}`,
-      description: `El producto que buscas ya no está disponible en el catálogo de ${store.name}.`,
+      description: `El producto que buscas ya no está disponible en la tienda de ${store.name}.`,
     };
   }
 

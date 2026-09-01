@@ -25,7 +25,7 @@ export const LandingFAQ: React.FC = () => {
     {
       question: '¿Cómo cobro las ventas de mis productos?',
       answer:
-        'El cliente arma su carrito en tu catálogo web y te envía el pedido detallado a tu WhatsApp. Tú cobras el 100% de tus ventas directamente a través de Yape, Plin, transferencia bancaria o contra entrega, sin ninguna comisión por venta.',
+        'El cliente arma su carrito en tu tienda online y te envía el pedido detallado a tu WhatsApp. Tú cobras el 100% de tus ventas directamente a través de Yape, Plin, transferencia bancaria o contra entrega, sin ninguna comisión por venta.',
     },
     {
       question: '¿Cuánto tiempo toma tener mi tienda online lista?',
@@ -35,12 +35,12 @@ export const LandingFAQ: React.FC = () => {
     {
       question: '¿Qué es APANA Pagos y cuándo estará activo?',
       answer:
-        'APANA Pagos es una funcionalidad complementaria de cobros online con tarjeta que se habilitará próximamente para quienes deseen procesar pagos con tarjeta dentro del catálogo. Mientras tanto, el 100% de pedidos se atiende de forma rápida y directa por WhatsApp.',
+        'APANA Pagos es una funcionalidad complementaria de cobros online con tarjeta que se habilitará próximamente para quienes deseen procesar pagos con tarjeta dentro de su tienda. Mientras tanto, el 100% de pedidos se atiende de forma rápida y directa por WhatsApp.',
     },
     {
-      question: '¿Mis clientes necesitan instalar alguna aplicación para ver mi catálogo?',
+      question: '¿Mis clientes necesitan instalar alguna aplicación para ver mi tienda?',
       answer:
-        'No. Tu catálogo funciona como una página web ultrarrápida que abre directamente en el navegador del celular de tus clientes (Chrome, Safari, etc.). Solo deben tocar tu enlace o escanear tu código QR.',
+        'No. Tu tienda online funciona como una página web ultrarrápida que abre directamente en el navegador del celular de tus clientes (Chrome, Safari, etc.). Solo deben tocar tu enlace o escanear tu código QR.',
     },
   ];
 

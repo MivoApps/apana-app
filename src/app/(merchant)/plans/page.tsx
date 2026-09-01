@@ -607,7 +607,7 @@ export default function PlansPage() {
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-amber-600" />
-                <span><strong>📊 Exportación a Excel</strong> (Catálogo y Pedidos)</span>
+                <span><strong>📊 Exportación a Excel</strong> (Productos y Pedidos)</span>
               </li>
               <li className="flex items-center gap-2 text-[#0b1c30]">
                 <CheckCircle size={18} className="text-amber-600" />
@@ -675,7 +675,7 @@ export default function PlansPage() {
               Cobros Online con Tarjeta (APANA Pagos)
             </h3>
             <p className="text-xs text-[#3d4a42]">
-              Actualmente todas las ventas se procesan por WhatsApp. Muy pronto podrás activar cobros con tarjeta en tu catálogo.
+              Actualmente todas las ventas se procesan por WhatsApp. Muy pronto podrás activar cobros con tarjeta en tu tienda online.
             </p>
           </div>
 
@@ -756,7 +756,7 @@ export default function PlansPage() {
                 Mantendrás <strong>todos los beneficios activos</strong> hasta el <strong>{formatDate(store?.nextBillingDate)}</strong>.
               </p>
               <p className="text-[11px] text-amber-900/80">
-                Al llegar esa fecha, no se te cobrará nada adicional y tu catálogo pasará al <strong>Plan Gratis</strong> (límite de 25 productos y 1 imagen por producto).
+                Al llegar esa fecha, no se te cobrará nada adicional y tu tienda pasará al <strong>Plan Gratis</strong> (límite de 25 productos y 1 imagen por producto).
               </p>
             </div>
 

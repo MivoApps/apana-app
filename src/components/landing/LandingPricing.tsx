@@ -26,7 +26,7 @@ export const LandingPricing: React.FC = () => {
           Elige el plan ideal para tu negocio
         </h2>
         <p className="mt-3 text-sm sm:text-base text-[#3d4a42]">
-          Comienza gratis sin tarjeta de crédito y mejora cuando tu catálogo o tus ventas crezcan.
+          Comienza gratis sin tarjeta de crédito y mejora cuando tu tienda o tus ventas crezcan.
         </p>
       </div>
 
@@ -256,7 +256,7 @@ export const LandingPricing: React.FC = () => {
                 <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0">
                   <Check size={13} className="stroke-[3]" />
                 </div>
-                <span><strong>📊 Exportación a Excel</strong> (Catálogo y Pedidos)</span>
+                <span><strong>📊 Exportación a Excel</strong> (Productos y Pedidos)</span>
               </div>
 
               <div className="flex items-center gap-3">

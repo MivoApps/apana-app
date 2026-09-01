@@ -82,7 +82,7 @@ export const LandingDevicePreview: React.FC = () => {
         <div className="flex justify-center mb-8 px-2">
           <div className="inline-flex items-center p-1.5 bg-white/95 backdrop-blur-md rounded-full border border-[#bccac0]/40 shadow-xs gap-1 sm:gap-2 max-w-full overflow-x-auto relative z-20">
 
-            {/* Chip 1: Catálogo */}
+            {/* Chip 1: Tienda Online */}
             <button
               type="button"
               onClick={() => handleTabChange('catalog')}
@@ -92,7 +92,7 @@ export const LandingDevicePreview: React.FC = () => {
                 }`}
             >
               <Smartphone size={16} />
-              <span>1. Catálogo Web</span>
+              <span>1. Tienda Online</span>
             </button>
 
             {/* Chip 2: Carrito */}
@@ -530,7 +530,7 @@ export const LandingDevicePreview: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="font-bold text-sm sm:text-base text-[#0b1c30]">
-                      1. Catálogo interactivo sin descargas
+                      1. Tienda online sin descargas
                     </h3>
                     {activeTab === 'catalog' && (
                       <span className="px-2 py-0.5 rounded-full bg-[#059669]/10 text-[#00855d] text-[10px] font-bold shrink-0">

@@ -53,7 +53,7 @@ export const LandingFeaturesMatrix: React.FC = () => {
                 Experiencia Ultra Rápida
               </span>
               <h3 className="text-2xl font-black text-[#0b1c30] mt-3 mb-2">
-                Catálogo Web con Opciones y Variantes
+                Tienda Online con Opciones y Variantes
               </h3>
               <p className="text-sm text-[#3d4a42] max-w-md leading-relaxed">
                 Tus clientes seleccionan tallas, sabores, colores o presentaciones con precios diferenciales calculados al segundo.
@@ -90,7 +90,7 @@ export const LandingFeaturesMatrix: React.FC = () => {
                 Cobra con Tarjetas & Yape
               </h3>
               <p className="text-sm text-indigo-200 leading-relaxed">
-                Muy pronto: Integración nativa con Culqi para recibir pagos con tarjeta de crédito/débito y Yape directo en tu catálogo.
+                Muy pronto: Integración nativa con Culqi para recibir pagos con tarjeta de crédito/débito y Yape directo en tu tienda online.
               </p>
             </div>
 
@@ -147,7 +147,7 @@ export const LandingFeaturesMatrix: React.FC = () => {
                 Métricas y Analíticas en Vivo
               </h3>
               <p className="text-xs text-[#3d4a42] leading-relaxed">
-                Monitorea cuántos clientes visitan tu catálogo, qué productos son los más vistos y el valor de tus carritos.
+                Monitorea cuántos clientes visitan tu tienda online, qué productos son los más vistos y el valor de tus carritos.
               </p>
             </div>
             <div className="mt-6 flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">

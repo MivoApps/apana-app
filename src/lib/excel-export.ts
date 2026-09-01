@@ -10,7 +10,7 @@ function escapeCSV(field: any): string {
 }
 
 /**
- * Exporta el catálogo completo de productos a formato CSV optimizado para Microsoft Excel (UTF-8 con BOM).
+ * Exporta el listado completo de productos a formato CSV optimizado para Microsoft Excel (UTF-8 con BOM).
  */
 export function exportProductsToCSV(products: Product[], storeName: string, storeSlug: string) {
   if (!products || products.length === 0) {

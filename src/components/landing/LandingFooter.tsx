@@ -69,7 +69,7 @@ export const LandingFooter: React.FC = () => {
               />
             </Link>
             <p className="text-xs sm:text-sm text-[#3d4a42] max-w-sm leading-relaxed">
-              La plataforma más simple para crear catálogos digitales con código QR y recibir pedidos organizados directamente en WhatsApp.
+              La plataforma más simple para crear tiendas online con código QR y recibir pedidos organizados directamente en WhatsApp.
             </p>
 
             {/* Official Contact Info Box */}

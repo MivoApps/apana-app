@@ -678,7 +678,7 @@ export default function EditProductPage({ params }: Props) {
                     {/* Descuento automático calculado */}
                     {discountPct > 0 && (
                       <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold flex items-center justify-between">
-                        <span>🔥 Etiqueta de descuento en catálogo:</span>
+                        <span>🔥 Etiqueta de descuento en tienda:</span>
                         <span className="bg-red-600 text-white px-2.5 py-0.5 rounded-full text-xs">
                           -{discountPct}% OFF
                         </span>
@@ -688,7 +688,7 @@ export default function EditProductPage({ params }: Props) {
                     {/* Selector de Insignia de Producto */}
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-semibold text-slate-700 ml-1">
-                        Insignia en el Catálogo (Opcional)
+                        Insignia en la Tienda (Opcional)
                       </label>
                       <div className="grid grid-cols-4 gap-2">
                         {[
@@ -740,7 +740,7 @@ export default function EditProductPage({ params }: Props) {
               <div className="flex flex-col">
                 <span className="text-sm font-semibold text-[#0b1c30]">Estado del producto</span>
                 <span className="text-xs text-[#6d7a72]">
-                  {inStock ? 'Disponible en tu catálogo' : 'Agotado / Oculto'}
+                  {inStock ? 'Disponible en tu tienda' : 'Agotado / Oculto'}
                 </span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">

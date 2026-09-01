@@ -86,7 +86,7 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
               </h2>
             </div>
             <p className="text-xs sm:text-sm text-emerald-100 mt-1">
-              Has completado todos los pasos iniciales. Tu catálogo ya está listo para recibir pedidos por WhatsApp. 🚀
+              Has completado todos los pasos iniciales. Tu tienda ya está lista para recibir pedidos por WhatsApp. 🚀
             </p>
           </div>
         </div>
@@ -135,7 +135,7 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
       actionText: step4Product ? `${products.length} productos` : 'Agregar producto',
       href: step4Product ? null : '/products/new',
       onClick: null,
-      description: 'Sube fotos claras, precio y variantes de tu catálogo.',
+      description: 'Sube fotos claras, precio y variantes de tu producto.',
     },
   ];
 
