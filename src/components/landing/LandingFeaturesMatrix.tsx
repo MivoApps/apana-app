@@ -43,7 +43,7 @@ export const LandingFeaturesMatrix: React.FC = () => {
         {/* Bento Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
 
-          {/* Bento Card 1 (Large 8 cols): Catálogo Móvil & Variantes */}
+          {/* Bento Card 1 (Large 8 cols): Tienda online & Variantes */}
           <div className="md:col-span-7 lg:col-span-8 bg-white rounded-3xl p-7 sm:p-9 border border-slate-200 shadow-xl shadow-slate-200/40 flex flex-col justify-between relative overflow-hidden group hover:border-[#059669]/40 transition-all">
             <div className="relative z-10">
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-[#059669] flex items-center justify-center mb-6 shadow-2xs">

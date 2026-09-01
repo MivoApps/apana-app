@@ -39,14 +39,14 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
   const { stores, activeStoreSlug } = useAppStore();
-  
+
   // Rehidratación instantánea (0ms) desde caché de sesión
   const [fsStore, setFsStore] = React.useState<Store | null>(() => {
     if (typeof window !== 'undefined') {
       try {
         const cached = sessionStorage.getItem('apana_active_store');
         if (cached) return JSON.parse(cached);
-      } catch (_) {}
+      } catch (_) { }
     }
     return null;
   });
@@ -56,7 +56,7 @@ export default function DashboardPage() {
       try {
         const cached = sessionStorage.getItem('apana_active_products');
         if (cached) return JSON.parse(cached);
-      } catch (_) {}
+      } catch (_) { }
     }
     return [];
   });
@@ -99,7 +99,7 @@ export default function DashboardPage() {
     import('@/lib/firebase/firestore').then(({ getGlobalAnnouncementFromFS }) => {
       getGlobalAnnouncementFromFS().then((ann) => {
         if (ann && ann.active) setGlobalAnnouncement(ann);
-      }).catch(() => {});
+      }).catch(() => { });
     });
 
     if (typeof window !== 'undefined') {
@@ -126,7 +126,7 @@ export default function DashboardPage() {
             impersonatedStoreData = JSON.parse(imp);
             setIsImpersonating(true);
           }
-        } catch (_) {}
+        } catch (_) { }
       }
 
       // 1. Si no hay usuario autenticado en Firebase y no está impersonando ➔ Redirigir a Login
@@ -149,7 +149,7 @@ export default function DashboardPage() {
         try {
           const prods = await getProductsByStoreIdFromFS(impersonatedStoreData.id);
           if (isMounted) setFsProducts(prods);
-        } catch (_) {}
+        } catch (_) { }
         return;
       }
 
@@ -171,7 +171,7 @@ export default function DashboardPage() {
                 setFsStore(parsed);
                 setIsLoading(false);
               }
-            } catch (_) {}
+            } catch (_) { }
           }
         }
 
@@ -212,7 +212,7 @@ export default function DashboardPage() {
             try {
               const data = await getStoreAnalyticsLast7Days(storeFromFS.id);
               if (isMounted) setAnalyticsData(data);
-            } catch (_) {}
+            } catch (_) { }
           });
         }
       } catch (err) {
@@ -352,13 +352,12 @@ export default function DashboardPage() {
       <main className={`${isImpersonating ? 'pt-8' : 'pt-16'} px-4 max-w-[640px] w-full mx-auto flex flex-col gap-5`}>
         {/* Banner de Anuncio Global del Sistema (Si está activo) */}
         {globalAnnouncement && globalAnnouncement.active && (
-          <div className={`p-4 rounded-2xl border shadow-xs flex items-center gap-3 text-xs animate-in fade-in ${
-            globalAnnouncement.type === 'warning'
-              ? 'bg-amber-50 border-amber-200 text-amber-900'
-              : globalAnnouncement.type === 'success'
+          <div className={`p-4 rounded-2xl border shadow-xs flex items-center gap-3 text-xs animate-in fade-in ${globalAnnouncement.type === 'warning'
+            ? 'bg-amber-50 border-amber-200 text-amber-900'
+            : globalAnnouncement.type === 'success'
               ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
               : 'bg-blue-50 border-blue-200 text-blue-900'
-          }`}>
+            }`}>
             <Sparkles size={18} className="shrink-0 text-emerald-600" />
             <div className="flex-1 font-medium leading-relaxed">
               {globalAnnouncement.message}
@@ -390,9 +389,8 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <div
                 style={activeStore?.logoUrl ? undefined : { backgroundColor: activeStore?.primaryColor || '#059669' }}
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold shadow-xs shrink-0 overflow-hidden ${
-                  activeStore?.logoUrl ? 'bg-white border border-slate-200/80 p-0.5' : 'text-white'
-                }`}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold shadow-xs shrink-0 overflow-hidden ${activeStore?.logoUrl ? 'bg-white border border-slate-200/80 p-0.5' : 'text-white'
+                  }`}
               >
                 {activeStore?.logoUrl ? (
                   <img
@@ -423,11 +421,10 @@ export default function DashboardPage() {
             <button
               onClick={handleToggleStoreStatus}
               disabled={isTogglingStatus}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs border ${
-                isStoreActive
-                  ? 'bg-emerald-50 text-[#059669] border-emerald-200 hover:bg-emerald-100'
-                  : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
-              }`}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs border ${isStoreActive
+                ? 'bg-emerald-50 text-[#059669] border-emerald-200 hover:bg-emerald-100'
+                : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                }`}
               title={isStoreActive ? 'Hacer clic para pausar tienda' : 'Hacer clic para activar tienda'}
             >
               <span className={`w-2 h-2 rounded-full ${isStoreActive ? 'bg-[#059669] animate-pulse' : 'bg-amber-500'}`} />
@@ -469,13 +466,12 @@ export default function DashboardPage() {
           storeSlug={storeSlug}
         />
 
-        {/* Métrica / Resumen de Capacidad del Catálogo */}
+        {/* Métrica / Resumen de Capacidad de la Tienda */}
         <div className="bg-white p-5 rounded-2xl border border-[#bccac0]/40 shadow-xs flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                isProPlan ? 'bg-amber-50 text-amber-700' : 'bg-[#e5eeff] text-[#059669]'
-              }`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isProPlan ? 'bg-amber-50 text-amber-700' : 'bg-[#e5eeff] text-[#059669]'
+                }`}>
                 <Package size={20} />
               </div>
               <div>
@@ -527,9 +523,8 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-1.5 pt-1">
               <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-500 rounded-full ${
-                    totalProductsCount >= maxProducts ? 'bg-amber-500' : 'bg-[#059669]'
-                  }`}
+                  className={`h-full transition-all duration-500 rounded-full ${totalProductsCount >= maxProducts ? 'bg-amber-500' : 'bg-[#059669]'
+                    }`}
                   style={{ width: `${productsPercentage}%` }}
                 />
               </div>

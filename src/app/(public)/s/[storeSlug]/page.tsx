@@ -56,7 +56,7 @@ export default function PublicStorePage({ params }: Props) {
   const [fsStore, setFsStore] = useState<Store | null>(null);
   const [fsProducts, setFsProducts] = useState<Product[]>([]);
   const [isFetchingFS, setIsFetchingFS] = useState(true);
-  
+
   // Desenvolver params de la ruta
   const resolvedParams = React.use(params);
   const targetSlug = resolvedParams.storeSlug;
@@ -91,7 +91,7 @@ export default function PublicStorePage({ params }: Props) {
         if (typeof window !== 'undefined' && !sessionStorage.getItem(sessionVisitKey)) {
           sessionStorage.setItem(sessionVisitKey, 'true');
           const { recordAnalyticsEvent } = await import('@/lib/firebase/firestore');
-          recordAnalyticsEvent(fetchedStore.id, 'visit').catch(() => {});
+          recordAnalyticsEvent(fetchedStore.id, 'visit').catch(() => { });
         }
 
         const prods = await getProductsByStoreIdFromFS(fetchedStore.id);
@@ -129,8 +129,8 @@ export default function PublicStorePage({ params }: Props) {
 
   const isPaidPlan = store?.plan === 'emprendedor' || store?.plan === 'negocio';
   const maxProductsAllowed = store?.plan === 'gratis' ? 25 : store?.plan === 'emprendedor' ? 150 : 99999;
-  
-  // Limitar catálogo público estrictamente según la cuota del plan activo (útil tras downgrade)
+
+  // Limitar tienda pública estrictamente según la cuota del plan activo (útil tras downgrade)
   const allowedProducts = storeProducts.slice(0, maxProductsAllowed);
 
   const filteredProducts = allowedProducts.filter((product) => {
@@ -192,10 +192,10 @@ export default function PublicStorePage({ params }: Props) {
 
       {/* Main Container */}
       <main className={`pt-16 pb-24 min-h-screen transition-colors ${store.themeStyle === 'elegante'
-          ? 'bg-[#FAF8F5] text-stone-900'
-          : store.themeStyle === 'moderna'
-            ? 'bg-slate-50 text-[#0b1c30]'
-            : 'bg-white text-[#0b1c30]'
+        ? 'bg-[#FAF8F5] text-stone-900'
+        : store.themeStyle === 'moderna'
+          ? 'bg-slate-50 text-[#0b1c30]'
+          : 'bg-white text-[#0b1c30]'
         }`}>
         {/* Banner Informativo si la Tienda está Pausada */}
         {store.status === 'pausada' && (
@@ -235,50 +235,48 @@ export default function PublicStorePage({ params }: Props) {
         <div className="flex flex-col w-full max-w-[640px] mx-auto">
           {/* Header Tienda Info Dinámico según Tema */}
           <div className={`px-4 py-6 flex flex-col items-center gap-2 text-center transition-all ${store.themeStyle === 'elegante'
-              ? 'bg-[#FAF8F5] text-stone-900 py-8 border-b border-[#E7E2D9] mb-3'
-              : store.themeStyle === 'moderna'
-                ? 'bg-white text-[#0b1c30] border-b border-slate-200/80 shadow-2xs mb-2 py-7'
-                : 'bg-white text-neutral-900 border-b border-neutral-100 py-6'
+            ? 'bg-[#FAF8F5] text-stone-900 py-8 border-b border-[#E7E2D9] mb-3'
+            : store.themeStyle === 'moderna'
+              ? 'bg-white text-[#0b1c30] border-b border-slate-200/80 shadow-2xs mb-2 py-7'
+              : 'bg-white text-neutral-900 border-b border-neutral-100 py-6'
             }`}>
             {store.logoUrl ? (
-              <div className={`w-20 h-20 overflow-hidden shadow-sm transition-all bg-white flex items-center justify-center p-1 ${
-                store.themeStyle === 'elegante'
-                  ? 'rounded-2xl border border-stone-200/60'
-                  : store.themeStyle === 'moderna'
+              <div className={`w-20 h-20 overflow-hidden shadow-sm transition-all bg-white flex items-center justify-center p-1 ${store.themeStyle === 'elegante'
+                ? 'rounded-2xl border border-stone-200/60'
+                : store.themeStyle === 'moderna'
                   ? 'rounded-3xl shadow-md border border-slate-200/80'
                   : 'rounded-full w-16 h-16 shadow-xs border border-slate-100'
-              }`}>
+                }`}>
                 <img src={store.logoUrl} alt={store.name} className="w-full h-full object-contain" />
               </div>
             ) : (
               <div
                 style={{ backgroundColor: store.primaryColor || '#059669' }}
-                className={`w-20 h-20 text-white flex items-center justify-center font-bold text-2xl shadow-sm transition-all ${
-                  store.themeStyle === 'elegante'
-                    ? 'rounded-2xl border border-stone-200/60 font-playfair'
-                    : store.themeStyle === 'moderna'
+                className={`w-20 h-20 text-white flex items-center justify-center font-bold text-2xl shadow-sm transition-all ${store.themeStyle === 'elegante'
+                  ? 'rounded-2xl border border-stone-200/60 font-playfair'
+                  : store.themeStyle === 'moderna'
                     ? 'rounded-3xl shadow-md'
                     : 'rounded-full w-16 h-16 shadow-xs'
-                }`}
+                  }`}
               >
                 {store.name.substring(0, 2).toUpperCase()}
               </div>
             )}
             <div className="flex items-center justify-center gap-2 flex-wrap">
               <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${store.themeStyle === 'elegante'
-                  ? 'text-stone-900 font-playfair'
-                  : store.themeStyle === 'moderna'
-                    ? 'text-[#0b1c30] font-space-grotesk font-extrabold'
-                    : 'text-neutral-900 font-plus-jakarta'
+                ? 'text-stone-900 font-playfair'
+                : store.themeStyle === 'moderna'
+                  ? 'text-[#0b1c30] font-space-grotesk font-extrabold'
+                  : 'text-neutral-900 font-plus-jakarta'
                 }`}>
                 {store.name}
               </h2>
             </div>
             <p className={`text-xs max-w-sm mx-auto leading-relaxed ${store.themeStyle === 'elegante'
-                ? 'text-stone-600 font-sans'
-                : store.themeStyle === 'moderna'
-                  ? 'text-slate-600 font-sans font-medium'
-                  : 'text-neutral-500 font-plus-jakarta'
+              ? 'text-stone-600 font-sans'
+              : store.themeStyle === 'moderna'
+                ? 'text-slate-600 font-sans font-medium'
+                : 'text-neutral-500 font-plus-jakarta'
               }`}>
               {store.description}
             </p>
@@ -287,10 +285,10 @@ export default function PublicStorePage({ params }: Props) {
             <div className="flex flex-wrap items-center justify-center gap-1.5 mt-1">
               {/* Modalidad de Envíos */}
               <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold border ${store.themeStyle === 'elegante'
-                  ? 'bg-white border-[#E7E2D9] text-stone-700 shadow-2xs'
-                  : store.themeStyle === 'moderna'
-                    ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
-                    : 'bg-neutral-100/70 border-neutral-200/60 text-neutral-600'
+                ? 'bg-white border-[#E7E2D9] text-stone-700 shadow-2xs'
+                : store.themeStyle === 'moderna'
+                  ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
+                  : 'bg-neutral-100/70 border-neutral-200/60 text-neutral-600'
                 }`}>
                 <Truck size={13} className={store.themeStyle === 'elegante' ? 'text-amber-700' : 'text-[#059669]'} />
                 <span>
@@ -303,8 +301,8 @@ export default function PublicStorePage({ params }: Props) {
               {/* Ubicación */}
               {store.city && (
                 <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${store.themeStyle === 'elegante'
-                    ? 'bg-white border-[#E7E2D9] text-stone-600 shadow-2xs'
-                    : 'bg-slate-100 border-slate-200/80 text-slate-700'
+                  ? 'bg-white border-[#E7E2D9] text-stone-600 shadow-2xs'
+                  : 'bg-slate-100 border-slate-200/80 text-slate-700'
                   }`}>
                   <MapPin size={12} className="text-slate-500" />
                   <span>{store.city}</span>
@@ -314,8 +312,8 @@ export default function PublicStorePage({ params }: Props) {
               {/* Horario */}
               {store.schedule && (
                 <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${store.themeStyle === 'elegante'
-                    ? 'bg-white border-[#E7E2D9] text-stone-600 shadow-2xs'
-                    : 'bg-slate-100 border-slate-200/80 text-slate-700'
+                  ? 'bg-white border-[#E7E2D9] text-stone-600 shadow-2xs'
+                  : 'bg-slate-100 border-slate-200/80 text-slate-700'
                   }`}>
                   <Clock size={12} className="text-slate-500" />
                   <span>{store.schedule}</span>
@@ -382,8 +380,8 @@ export default function PublicStorePage({ params }: Props) {
                   type="button"
                   onClick={() => setSelectedCategory('todos')}
                   className={`px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 snap-start ${selectedCategory === 'todos'
-                      ? 'text-white'
-                      : 'bg-white text-[#3d4a42] border border-[#bccac0]/30 hover:bg-slate-50'
+                    ? 'text-white'
+                    : 'bg-white text-[#3d4a42] border border-[#bccac0]/30 hover:bg-slate-50'
                     }`}
                   style={
                     selectedCategory === 'todos'
@@ -402,8 +400,8 @@ export default function PublicStorePage({ params }: Props) {
                       type="button"
                       onClick={() => setSelectedCategory(cat)}
                       className={`px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 snap-start ${isSelected
-                          ? 'text-white'
-                          : 'bg-white text-[#3d4a42] border border-[#bccac0]/30 hover:bg-slate-50'
+                        ? 'text-white'
+                        : 'bg-white text-[#3d4a42] border border-[#bccac0]/30 hover:bg-slate-50'
                         }`}
                       style={
                         isSelected
@@ -437,12 +435,12 @@ export default function PublicStorePage({ params }: Props) {
 
                 const badgeText = (isPaidStore && !isOutOfStock && product.badge)
                   ? (product.badge === 'top'
-                      ? '🔥 Top Ventas'
-                      : product.badge === 'oferta'
+                    ? '🔥 Top Ventas'
+                    : product.badge === 'oferta'
                       ? '🏷️ Oferta'
                       : product.badge === 'nuevo'
-                      ? '✨ Nuevo'
-                      : null)
+                        ? '✨ Nuevo'
+                        : null)
                   : null;
 
                 // MODERNA (Horizontal Cards, High Contrast)

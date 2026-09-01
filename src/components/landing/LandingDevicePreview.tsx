@@ -51,10 +51,10 @@ export const LandingDevicePreview: React.FC = () => {
     // Banner superior opcional de la tienda (deja null para ver el banner diseñado en código)
     storeBannerUrl: null as string | null,
 
-    // Captura completa opcional del catálogo si prefieres mostrar un screenshot directo
+    // Captura completa opcional de la tienda si prefieres mostrar un screenshot directo
     customCatalogScreenshot: null as string | null,
 
-    // Imágenes de productos de muestra en el catálogo y carrito
+    // Imágenes de productos de muestra en la tienda y carrito
     croissant: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400&q=80',
     baguette: 'https://images.unsplash.com/photo-1586444248902-2f64eddc13df?auto=format&fit=crop&w=400&q=80',
     panCampesino: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80',
@@ -511,7 +511,7 @@ export const LandingDevicePreview: React.FC = () => {
           {/* Interactive 3-Step Selector Cards on the Side of the Phone */}
           <div className="flex-1 space-y-3.5 max-w-lg w-full">
 
-            {/* Step Card 1: Catálogo */}
+            {/* Step Card 1: Tienda */}
             <button
               type="button"
               onClick={() => handleTabChange('catalog')}

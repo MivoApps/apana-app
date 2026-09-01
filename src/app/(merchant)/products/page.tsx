@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  Search, 
-  Pencil, 
-  Trash2, 
-  Plus, 
-  Home, 
-  Package, 
+import {
+  Search,
+  Pencil,
+  Trash2,
+  Plus,
+  Home,
+  Package,
   Settings,
   Share2,
   Check,
@@ -70,7 +70,7 @@ export default function ProductGalleryPage() {
           setFsStore(JSON.parse(cachedStore));
           setFsProducts(JSON.parse(cachedProducts));
           setIsLoading(false);
-        } catch (e) {}
+        } catch (e) { }
       } else {
         setIsLoading(true);
       }
@@ -229,7 +229,7 @@ export default function ProductGalleryPage() {
 
       {/* Main Content Area */}
       <main className="pt-16 px-4 max-w-[640px] w-full mx-auto flex flex-col gap-4">
-        
+
         {/* Barra / Tarjeta de Capacidad de Productos o Estatus Pro */}
         {isProPlan ? (
           <div className="bg-white p-4 rounded-2xl border border-amber-200/80 shadow-xs flex flex-col gap-2 relative overflow-hidden">
@@ -261,18 +261,16 @@ export default function ProductGalleryPage() {
                   {products.length} / {maxProducts} productos en tu tienda
                 </span>
               </div>
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                isFreePlan ? 'bg-slate-100 text-slate-700' : 'bg-emerald-100 text-[#059669]'
-              }`}>
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isFreePlan ? 'bg-slate-100 text-slate-700' : 'bg-emerald-100 text-[#059669]'
+                }`}>
                 {isFreePlan ? 'Plan Gratis' : 'Plan Emprendedor'}
               </span>
             </div>
 
             <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
               <div
-                className={`h-full transition-all duration-500 rounded-full ${
-                  isLimitReached ? 'bg-amber-500' : 'bg-[#059669]'
-                }`}
+                className={`h-full transition-all duration-500 rounded-full ${isLimitReached ? 'bg-amber-500' : 'bg-[#059669]'
+                  }`}
                 style={{ width: `${capacityPercentage}%` }}
               />
             </div>
@@ -330,32 +328,29 @@ export default function ProductGalleryPage() {
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           <button
             onClick={() => setSelectedStatusFilter('todos')}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${
-              selectedStatusFilter === 'todos'
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${selectedStatusFilter === 'todos'
                 ? 'bg-[#0b1c30] text-white shadow-2xs'
                 : 'bg-white text-[#6d7a72] border border-[#bccac0]/40 hover:bg-slate-50'
-            }`}
+              }`}
           >
             Todos ({products.length})
           </button>
           <button
             onClick={() => setSelectedStatusFilter('activos')}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-              selectedStatusFilter === 'activos'
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${selectedStatusFilter === 'activos'
                 ? 'bg-[#059669] text-white shadow-2xs'
                 : 'bg-white text-[#6d7a72] border border-[#bccac0]/40 hover:bg-slate-50'
-            }`}
+              }`}
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
             Activos ({activeCount})
           </button>
           <button
             onClick={() => setSelectedStatusFilter('inactivos')}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
-              selectedStatusFilter === 'inactivos'
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${selectedStatusFilter === 'inactivos'
                 ? 'bg-amber-600 text-white shadow-2xs'
                 : 'bg-white text-[#6d7a72] border border-[#bccac0]/40 hover:bg-slate-50'
-            }`}
+              }`}
           >
             <span className="w-2 h-2 rounded-full bg-amber-400" />
             Pausados ({inactiveCount})
@@ -368,11 +363,10 @@ export default function ProductGalleryPage() {
             <span className="text-[11px] font-semibold text-slate-400 shrink-0 mr-1">Categoría:</span>
             <button
               onClick={() => setSelectedCategoryFilter('todas')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 ${
-                selectedCategoryFilter === 'todas'
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 ${selectedCategoryFilter === 'todas'
                   ? 'bg-emerald-50 text-[#059669] border border-[#059669]'
                   : 'bg-white text-slate-600 border border-slate-200'
-              }`}
+                }`}
             >
               Todas
             </button>
@@ -380,11 +374,10 @@ export default function ProductGalleryPage() {
               <button
                 key={cat}
                 onClick={() => setSelectedCategoryFilter(cat)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 ${
-                  selectedCategoryFilter === cat
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 ${selectedCategoryFilter === cat
                     ? 'bg-emerald-50 text-[#059669] border border-[#059669]'
                     : 'bg-white text-slate-600 border border-slate-200'
-                }`}
+                  }`}
               >
                 {cat}
               </button>
@@ -404,11 +397,10 @@ export default function ProductGalleryPage() {
               <button
                 type="button"
                 onClick={() => handleToggleViewMode('list')}
-                className={`p-1.5 rounded-md transition-all ${
-                  viewMode === 'list'
+                className={`p-1.5 rounded-md transition-all ${viewMode === 'list'
                     ? 'bg-[#059669] text-white shadow-xs'
                     : 'text-[#6d7a72] hover:text-[#0b1c30]'
-                }`}
+                  }`}
                 title="Vista en Lista"
               >
                 <List size={15} />
@@ -416,11 +408,10 @@ export default function ProductGalleryPage() {
               <button
                 type="button"
                 onClick={() => handleToggleViewMode('grid')}
-                className={`p-1.5 rounded-md transition-all ${
-                  viewMode === 'grid'
+                className={`p-1.5 rounded-md transition-all ${viewMode === 'grid'
                     ? 'bg-[#059669] text-white shadow-xs'
                     : 'text-[#6d7a72] hover:text-[#0b1c30]'
-                }`}
+                  }`}
                 title="Vista en Cuadrícula"
               >
                 <LayoutGrid size={15} />
@@ -429,7 +420,7 @@ export default function ProductGalleryPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Botón Exportar Catálogo a Excel (Sólo Plan Negocio Pro) */}
+            {/* Botón Exportar Productos a Excel (Sólo Plan Negocio Pro) */}
             {(isProPlan || isSuperAdmin) && (
               <button
                 type="button"
@@ -445,11 +436,10 @@ export default function ProductGalleryPage() {
 
             <Link href={isLimitReached ? '/plans' : '/products/new'}>
               <button
-                className={`text-white text-xs font-semibold px-3.5 h-9 rounded-xl flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer ${
-                  isLimitReached
+                className={`text-white text-xs font-semibold px-3.5 h-9 rounded-xl flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer ${isLimitReached
                     ? 'bg-amber-600 hover:bg-amber-700'
                     : 'bg-[#059669] hover:bg-[#00855d]'
-                }`}
+                  }`}
               >
                 {isLimitReached ? <Zap size={16} /> : <Plus size={16} />}
                 <span>{isLimitReached ? 'Límite alcanzado' : 'Nuevo Producto'}</span>
@@ -513,16 +503,15 @@ export default function ProductGalleryPage() {
                           {product.title}
                         </h3>
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${
-                            product.inStock
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${product.inStock
                               ? 'bg-emerald-50 text-[#059669] border border-emerald-200'
                               : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}
+                            }`}
                         >
                           {product.inStock ? 'Activo' : 'Pausado'}
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center gap-2 mt-1">
                         <p className="text-base font-bold text-[#059669]">
                           {formatCurrency(product.price)}
@@ -616,11 +605,10 @@ export default function ProductGalleryPage() {
                     />
                     {/* Badge de Estado sobre la foto */}
                     <span
-                      className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-[9px] font-bold shadow-xs backdrop-blur-xs ${
-                        product.inStock
+                      className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-[9px] font-bold shadow-xs backdrop-blur-xs ${product.inStock
                           ? 'bg-emerald-500/90 text-white'
                           : 'bg-amber-500/90 text-white'
-                      }`}
+                        }`}
                     >
                       {product.inStock ? 'Activo' : 'Pausado'}
                     </span>

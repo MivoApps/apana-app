@@ -400,13 +400,12 @@ export default function OnboardingWizardPage() {
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                     required
-                    className={`w-full h-12 px-4 rounded-xl bg-white border text-[#0b1c30] text-sm font-semibold placeholder:text-[#6d7a72] focus:outline-none transition-all shadow-xs ${
-                      isSlugAvailable === false
+                    className={`w-full h-12 px-4 rounded-xl bg-white border text-[#0b1c30] text-sm font-semibold placeholder:text-[#6d7a72] focus:outline-none transition-all shadow-xs ${isSlugAvailable === false
                         ? 'border-red-500 ring-2 ring-red-500/10'
                         : isSlugAvailable === true
-                        ? 'border-[#059669] ring-2 ring-[#059669]/10'
-                        : 'border-[#bccac0] focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10'
-                    }`}
+                          ? 'border-[#059669] ring-2 ring-[#059669]/10'
+                          : 'border-[#bccac0] focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10'
+                      }`}
                   />
                   <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center">
                     {isCheckingSlug && (
@@ -532,8 +531,8 @@ export default function OnboardingWizardPage() {
                   type="button"
                   onClick={() => setSelectedStyle('minimalist')}
                   className={`w-full rounded-2xl p-4 border transition-all text-left flex flex-col gap-2 ${selectedStyle === 'minimalist'
-                      ? 'border-[#059669] bg-emerald-50/60 ring-2 ring-[#059669] shadow-sm'
-                      : 'border-[#bccac0]/40 bg-white hover:bg-slate-50'
+                    ? 'border-[#059669] bg-emerald-50/60 ring-2 ring-[#059669] shadow-sm'
+                    : 'border-[#bccac0]/40 bg-white hover:bg-slate-50'
                     }`}
                 >
                   <div className="flex items-center justify-between w-full">
@@ -559,8 +558,8 @@ export default function OnboardingWizardPage() {
                   type="button"
                   onClick={() => setSelectedStyle('modern')}
                   className={`w-full rounded-2xl p-4 border transition-all text-left flex flex-col gap-2 ${selectedStyle === 'modern'
-                      ? 'border-[#059669] bg-emerald-50/60 ring-2 ring-[#059669] shadow-sm'
-                      : 'border-[#bccac0]/40 bg-white hover:bg-slate-50'
+                    ? 'border-[#059669] bg-emerald-50/60 ring-2 ring-[#059669] shadow-sm'
+                    : 'border-[#bccac0]/40 bg-white hover:bg-slate-50'
                     }`}
                 >
                   <div className="flex items-center justify-between w-full">
@@ -586,8 +585,8 @@ export default function OnboardingWizardPage() {
                   type="button"
                   onClick={() => setSelectedStyle('elegant')}
                   className={`w-full rounded-2xl p-4 border transition-all text-left flex flex-col gap-2 ${selectedStyle === 'elegant'
-                      ? 'border-[#059669] bg-emerald-50/60 ring-2 ring-[#059669] shadow-sm'
-                      : 'border-[#bccac0]/40 bg-white hover:bg-slate-50'
+                    ? 'border-[#059669] bg-emerald-50/60 ring-2 ring-[#059669] shadow-sm'
+                    : 'border-[#bccac0]/40 bg-white hover:bg-slate-50'
                     }`}
                 >
                   <div className="flex items-center justify-between w-full">
@@ -625,8 +624,8 @@ export default function OnboardingWizardPage() {
                         onClick={() => setSelectedColorHex(col.hex)}
                         title={col.name}
                         className={`w-10 h-10 rounded-full flex items-center justify-center text-white transition-all ${isSelected
-                            ? 'scale-110 shadow-md ring-2 ring-offset-2 ring-[#059669]'
-                            : 'opacity-85 hover:opacity-100 hover:scale-105'
+                          ? 'scale-110 shadow-md ring-2 ring-offset-2 ring-[#059669]'
+                          : 'opacity-85 hover:opacity-100 hover:scale-105'
                           }`}
                         style={{ backgroundColor: col.hex }}
                       >
@@ -637,7 +636,7 @@ export default function OnboardingWizardPage() {
                 </div>
               </div>
 
-              {/* Live Device Preview del catálogo */}
+              {/* Live Device Preview de la Tienda */}
               <div className="w-full pt-2 flex flex-col items-center">
                 <LiveStorePreview
                   storeName={businessName || 'Mi Tienda'}

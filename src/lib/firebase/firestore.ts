@@ -1,14 +1,14 @@
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  setDoc, 
-  updateDoc, 
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
   addDoc,
-  query, 
-  where, 
-  deleteDoc, 
+  query,
+  where,
+  deleteDoc,
   serverTimestamp,
   increment,
   orderBy,
@@ -199,7 +199,7 @@ export const getStoreByUserIdFromFS = async (userId: string): Promise<Store | nu
     // 1. Intentar consulta por documento directo store_${userId} (instantáneo O(1))
     const directDocRef = doc(db, 'stores', `store_${userId}`);
     const directSnap = await getDoc(directDocRef);
-    
+
     if (directSnap.exists()) {
       return {
         id: directSnap.id,
@@ -227,7 +227,7 @@ export const getStoreByUserIdFromFS = async (userId: string): Promise<Store | nu
 };
 
 export const createOrUpdateStoreInFS = async (
-  userId: string, 
+  userId: string,
   storeData: Partial<Store>
 ): Promise<Store> => {
   const storeId = storeData.id || `store_${userId}`;
@@ -236,7 +236,7 @@ export const createOrUpdateStoreInFS = async (
   const isNew = !existingSnap.exists();
   const existingData = existingSnap.exists() ? existingSnap.data() : null;
 
-  // Garantizar Slug 100% Único (Previene colisión o sobreescritura de catálogos ajenos)
+  // Garantizar Slug 100% Único (Previene colisión o sobreescritura de tiendas ajenos)
   let finalSlug: string;
   if (isNew) {
     finalSlug = await generateUniqueStoreSlugInFS(storeData.slug || storeData.name || 'mi-tienda', storeId);
@@ -356,7 +356,7 @@ export const getProductsByStoreIdFromFS = async (storeId: string): Promise<Produ
 };
 
 export const addProductToFS = async (
-  storeId: string, 
+  storeId: string,
   productData: Omit<Product, 'id' | 'storeId'>
 ): Promise<Product> => {
   const productId = `prod_${Date.now()}`;
@@ -398,8 +398,8 @@ export const getProductByIdFromFS = async (storeId: string, productId: string): 
 };
 
 export const updateProductInFS = async (
-  storeId: string, 
-  productId: string, 
+  storeId: string,
+  productId: string,
   updates: Partial<Product>
 ): Promise<void> => {
   try {
@@ -438,7 +438,7 @@ export interface StoreAnalyticsDay {
 }
 
 export const recordAnalyticsEvent = async (
-  storeId: string, 
+  storeId: string,
   eventType: 'visit' | 'click' | 'product_view' | 'cart_add'
 ) => {
   const today = new Date();
@@ -488,7 +488,7 @@ export const getStoreAnalyticsDays = async (storeId: string, daysCount: number =
       const weekday = d.toLocaleDateString('es-ES', { weekday: 'short' });
       const dayNum = d.getDate();
       const monthShort = d.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
-      const cleanLabel = daysCount > 7 
+      const cleanLabel = daysCount > 7
         ? `${dayNum} ${monthShort}`
         : `${(weekday.charAt(0).toUpperCase() + weekday.slice(1)).replace('.', '')} ${dayNum}`;
 
@@ -564,7 +564,7 @@ export const getAllStoresForAdminFromFS = async (): Promise<AdminStoreItem[]> =>
           const prodsRef = collection(db, 'stores', docSnap.id, 'products');
           const prodsSnap = await getDocs(prodsRef);
           prodCount = prodsSnap.size;
-        } catch (e) {}
+        } catch (e) { }
 
         return {
           ...data,
@@ -679,7 +679,7 @@ export const adminCleanSuperAdminStoresInFS = async (adminUid: string): Promise<
 };
 
 export const adminUpdateStoreDetailsInFS = async (
-  storeId: string, 
+  storeId: string,
   data: { name: string; slug: string; whatsappPhone: string; plan: 'gratis' | 'emprendedor' | 'negocio'; status: 'activa' | 'pausada'; isWhatsappVerified?: boolean }
 ): Promise<string> => {
   try {
@@ -878,7 +878,7 @@ export const createOtpRequestInFS = async (
 ): Promise<boolean> => {
   try {
     // Limpieza pasiva en segundo plano
-    cleanupExpiredOtpRequestsInFS().catch(() => {});
+    cleanupExpiredOtpRequestsInFS().catch(() => { });
 
     const digitsOnly = rawPhone.replace(/\D/g, '');
     const cleanPhone = digitsOnly.startsWith('51') ? digitsOnly : `51${digitsOnly}`;
