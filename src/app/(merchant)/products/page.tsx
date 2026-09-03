@@ -169,13 +169,19 @@ export default function ProductGalleryPage() {
     if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
       setIsDeleting(true);
       deleteProduct(productId);
-      if (activeStore && user) {
+      
+      const effectiveStoreId = activeStore?.id;
+      if (effectiveStoreId && user) {
         try {
-          await deleteProductFromFS(activeStore.id, productId);
+          await deleteProductFromFS(effectiveStoreId, productId);
           setFsProducts((prev) => {
             const updated = prev.filter((p) => p.id !== productId);
             sessionStorage.setItem(`apana_cache_prods_${user.uid}`, JSON.stringify(updated));
-            sessionStorage.removeItem(`apana_public_prods_${activeStore.slug}`);
+            sessionStorage.setItem('apana_active_products', JSON.stringify(updated));
+            if (activeStore?.slug) {
+              sessionStorage.removeItem(`apana_public_prods_${activeStore.slug}`);
+              sessionStorage.removeItem(`apana_public_store_${activeStore.slug}`);
+            }
             return updated;
           });
         } catch (err) {

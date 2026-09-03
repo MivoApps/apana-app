@@ -122,6 +122,7 @@ export default function EditProductPage({ params }: Props) {
         }
 
         if (isMounted) {
+          if (currentStoreId) setStoreId(currentStoreId);
           setStorePlan(targetPlan);
           setStoreCategories(targetCategories);
         }
@@ -372,11 +373,13 @@ export default function EditProductPage({ params }: Props) {
   const handleDelete = async () => {
     if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
       setIsSubmitting(true);
-      if (storeId && user) {
+      const effectiveStoreId = storeId || fsStore?.id;
+      if (effectiveStoreId && user) {
         try {
-          await deleteProductFromFS(storeId, productId);
+          await deleteProductFromFS(effectiveStoreId, productId);
           deleteProduct(productId);
           sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
+          sessionStorage.removeItem('apana_active_products');
           if (fsStore?.slug) {
             sessionStorage.removeItem(`apana_public_prods_${fsStore.slug}`);
             sessionStorage.removeItem(`apana_public_store_${fsStore.slug}`);
