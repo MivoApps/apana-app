@@ -67,8 +67,11 @@ export default function ProductGalleryPage() {
 
       if (cachedStore && cachedProducts) {
         try {
+          const parsedProds: Product[] = JSON.parse(cachedProducts);
+          // Deduplicar estrictamente por id
+          const uniqueCached = Array.from(new Map(parsedProds.map((p) => [p.id, p])).values());
           setFsStore(JSON.parse(cachedStore));
-          setFsProducts(JSON.parse(cachedProducts));
+          setFsProducts(uniqueCached);
           setIsLoading(false);
         } catch (e) { }
       } else {
@@ -92,8 +95,10 @@ export default function ProductGalleryPage() {
       sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(storeFromFS));
 
       const prods = await getProductsByStoreIdFromFS(storeFromFS.id);
-      setFsProducts(prods);
-      sessionStorage.setItem(`apana_cache_prods_${user.uid}`, JSON.stringify(prods));
+      // Deduplicar estrictamente por id antes de guardar
+      const uniqueProds = Array.from(new Map(prods.map((p) => [p.id, p])).values());
+      setFsProducts(uniqueProds);
+      sessionStorage.setItem(`apana_cache_prods_${user.uid}`, JSON.stringify(uniqueProds));
 
       setIsLoading(false);
     };
@@ -113,6 +118,7 @@ export default function ProductGalleryPage() {
   const capacityPercentage = Math.min((products.length / maxProducts) * 100, 100);
 
   const [showProUpgradeModal, setShowProUpgradeModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleExportCatalog = () => {
     const isSuperAdmin = user?.email && ['angelo@mivo.pe', 'angelocastellanos99@gmail.com'].includes(user.email.toLowerCase().trim());
@@ -161,6 +167,7 @@ export default function ProductGalleryPage() {
 
   const handleDeleteProduct = async (productId: string) => {
     if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
+      setIsDeleting(true);
       deleteProduct(productId);
       if (activeStore && user) {
         try {
@@ -173,12 +180,22 @@ export default function ProductGalleryPage() {
           });
         } catch (err) {
           console.error('Error al eliminar producto en Firestore:', err);
+          alert('Hubo un error al eliminar el producto. Inténtalo de nuevo.');
+        } finally {
+          setIsDeleting(false);
         }
+      } else {
+        setIsDeleting(false);
       }
     }
   };
 
-  const filteredProducts = products
+  // Deduplicar la lista por ID de producto de forma garantizada
+  const uniqueProductList = React.useMemo(() => {
+    return Array.from(new Map(products.map((p) => [p.id, p])).values());
+  }, [products]);
+
+  const filteredProducts = uniqueProductList
     .filter((p) => {
       const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus =
@@ -196,8 +213,8 @@ export default function ProductGalleryPage() {
       return timeB - timeA;
     });
 
-  const activeCount = products.filter((p) => p.inStock).length;
-  const inactiveCount = products.filter((p) => !p.inStock).length;
+  const activeCount = uniqueProductList.filter((p) => p.inStock).length;
+  const inactiveCount = uniqueProductList.filter((p) => !p.inStock).length;
 
   if (authLoading || isLoading) {
     return (
@@ -476,9 +493,9 @@ export default function ProductGalleryPage() {
                 key={product.id}
                 className="bg-white rounded-2xl overflow-hidden border border-[#bccac0]/40 shadow-xs flex group relative transition-all hover:border-[#059669]/40"
               >
-                {/* ÁREA CLICABLE: Abre DETALLE de Producto (/products/[id]) */}
+                {/* ÁREA CLICABLE: Abre EDICIÓN directa de Producto (/products/[id]/edit) */}
                 <Link
-                  href={`/products/${product.id}`}
+                  href={`/products/${product.id}/edit`}
                   className="flex-1 flex min-w-0"
                 >
                   {/* Product Thumbnail */}
@@ -591,9 +608,9 @@ export default function ProductGalleryPage() {
                 key={product.id}
                 className="bg-white rounded-2xl overflow-hidden border border-[#bccac0]/40 shadow-xs flex flex-col group relative transition-all hover:border-[#059669]/40"
               >
-                {/* ÁREA CLICABLE: Abre DETALLE de Producto (/products/[id]) */}
+                {/* ÁREA CLICABLE: Abre EDICIÓN directa de Producto (/products/[id]/edit) */}
                 <Link
-                  href={`/products/${product.id}`}
+                  href={`/products/${product.id}/edit`}
                   className="flex flex-col flex-1"
                 >
                   {/* Thumbnail Cuadrado */}
@@ -691,8 +708,19 @@ export default function ProductGalleryPage() {
         )}
       </main>
 
+      {/* Overlay de Carga al Eliminar Producto */}
+      {isDeleting && (
+        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-3 p-4 select-none">
+          <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin shadow-lg" />
+          <div className="flex flex-col items-center text-center gap-1">
+            <span className="font-bold text-base">Eliminando Producto...</span>
+            <span className="text-xs text-white/80">Actualizando tu catálogo.</span>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Nav Bar (Inicio, Productos, Ajustes) */}
-      <nav className="fixed bottom-0 w-full z-50 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)]">
+      <nav className={`fixed bottom-0 w-full z-50 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)] ${isDeleting ? 'pointer-events-none opacity-50' : ''}`}>
         <div className="h-16 flex items-center justify-around max-w-[640px] mx-auto">
           <Link
             href="/dashboard"

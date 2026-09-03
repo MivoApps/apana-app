@@ -859,7 +859,7 @@ export default function CreateProductPage() {
 
             {/* Overlay de carga cuando isSubmitting está activo */}
             {isSubmitting && (
-              <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-3 p-4">
+              <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-3 p-4 select-none">
                 <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin shadow-lg" />
                 <div className="flex flex-col items-center text-center gap-1">
                   <span className="font-bold text-base">Optimizando y Publicando...</span>

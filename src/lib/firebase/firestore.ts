@@ -411,12 +411,13 @@ export const updateProductInFS = async (
       }
     }
 
-    await updateDoc(productRef, {
+    await setDoc(productRef, {
       ...cleanUpdates,
       updatedAt: serverTimestamp(),
-    });
+    }, { merge: true });
   } catch (error) {
     console.error('Error al actualizar producto en Firestore:', error);
+    throw error;
   }
 };
 

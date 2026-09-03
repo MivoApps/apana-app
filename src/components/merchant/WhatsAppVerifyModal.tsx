@@ -63,20 +63,56 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
     }
   }, [phone]);
 
-  // Al abrir el modal o cambiar teléfono, generar código de 6 dígitos y registrar la solicitud en Firestore
+  // Al abrir el modal o cambiar teléfono, primero verificar si ya está validado en Firestore
   useEffect(() => {
-    if (isOpen && user && displayPhone.length === 9 && fullPhone) {
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedCode(code);
-      setInputCode('');
-      setHasOpenedWhatsApp(false);
-      setIsVerifying(false);
-      setErrorMessage('');
-      setIsSuccess(false);
+    let isCancelled = false;
 
-      // Registrar solicitud pendiente en Firestore
-      createOtpRequestInFS(fullPhone, code, storeId, storeName, user.uid);
-    }
+    const checkExistingVerificationAndInit = async () => {
+      if (!isOpen || !user || displayPhone.length !== 9 || !fullPhone) return;
+
+      try {
+        // 1. Consultar en Firestore si la tienda ya fue verificada (ej. aprobación manual desde admin)
+        const { getStoreByUserIdFromFS } = await import('@/lib/firebase/firestore');
+        const currentStore = await getStoreByUserIdFromFS(user.uid);
+        
+        if (currentStore?.isWhatsappVerified && currentStore?.whatsappPhone?.includes(displayPhone)) {
+          if (!isCancelled) {
+            setIsSuccess(true);
+            // Actualizar caché de sesión de inmediato
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(currentStore));
+              sessionStorage.setItem('apana_active_store', JSON.stringify(currentStore));
+            }
+            if (onSuccess) onSuccess();
+            setTimeout(() => {
+              if (!isCancelled) onClose();
+            }, 2000);
+          }
+          return;
+        }
+      } catch (err) {
+        console.warn('Error verificando estatus previo:', err);
+      }
+
+      // 2. Si no está verificado, generar código de 6 dígitos y registrar la solicitud en Firestore
+      if (!isCancelled) {
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        setGeneratedCode(code);
+        setInputCode('');
+        setHasOpenedWhatsApp(false);
+        setIsVerifying(false);
+        setErrorMessage('');
+        setIsSuccess(false);
+
+        createOtpRequestInFS(fullPhone, code, storeId, storeName, user.uid);
+      }
+    };
+
+    checkExistingVerificationAndInit();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [isOpen, user, fullPhone, displayPhone, storeId, storeName]);
 
   if (!isOpen) return null;

@@ -16,7 +16,7 @@ import {
 import { useAppStore } from '@/lib/app-store';
 import { useCartStore } from '@/lib/cart-store';
 import { formatCurrency } from '@/lib/whatsapp';
-import { getStoreBySlugFromFS, getProductsByStoreIdFromFS } from '@/lib/firebase/firestore';
+import { getStoreBySlugFromFS, getProductsByStoreIdFromFS, getProductByIdFromFS } from '@/lib/firebase/firestore';
 import { Store, Product, ProductOptionGroup, SelectedOption, ProductOptionValue } from '@/types/store';
 
 interface Props {
@@ -64,10 +64,20 @@ export default function PublicProductDetailPage({ params }: Props) {
       if (fetchedStore) {
         setFsStore(fetchedStore);
         const prods = await getProductsByStoreIdFromFS(fetchedStore.id);
+        
+        let currentProd = prods.find((p) => p.id === productId);
+        // Si no vino en la lista general, intentar búsqueda directa por ID
+        if (!currentProd) {
+          const directProd = await getProductByIdFromFS(fetchedStore.id, productId);
+          if (directProd) {
+            prods.push(directProd);
+            currentProd = directProd;
+          }
+        }
+        
         setFsProducts(prods);
 
         // Inicializar opciones del producto actual
-        const currentProd = prods.find((p) => p.id === productId);
         if (currentProd && currentProd.options && currentProd.options.length > 0) {
           const initialMap: { [groupId: string]: string } = {};
           currentProd.options.forEach((group) => {

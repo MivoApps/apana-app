@@ -10,7 +10,6 @@ import {
   Trash2, 
   Home, 
   Package, 
-  ShoppingBag, 
   Settings,
   ArrowLeft,
   X
@@ -31,11 +30,12 @@ interface Props {
 
 export default function EditProductPage({ params }: Props) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { stores, activeStoreSlug, updateProduct, deleteProduct } = useAppStore();
   const resolvedParams = React.use(params);
   const productId = resolvedParams.id;
 
+  const [initialProduct, setInitialProduct] = useState<any>(null);
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState('');
   const [productCompareAtPrice, setProductCompareAtPrice] = useState('');
@@ -57,43 +57,108 @@ export default function EditProductPage({ params }: Props) {
 
   React.useEffect(() => {
     let isMounted = true;
-    const safetyTimer = setTimeout(() => {
-      if (isMounted) setIsLoading(false);
-    }, 1500);
 
     const loadProductData = async () => {
+      if (authLoading) return;
       if (!user) {
         if (isMounted) setIsLoading(false);
         return;
       }
 
       try {
-        const activeStore = stores[activeStoreSlug];
-        let currentStoreId = activeStore?.id;
+        let currentStoreId = '';
+        let targetPlan = 'gratis';
+        let targetCategories: string[] = [];
 
+        // 1. Revisar si hay tienda impersonada (SuperAdmin)
+        if (typeof window !== 'undefined') {
+          try {
+            const imp = sessionStorage.getItem('apana_impersonated_store');
+            if (imp) {
+              const parsedImp = JSON.parse(imp);
+              currentStoreId = parsedImp.id;
+              targetPlan = parsedImp.plan || 'gratis';
+              targetCategories = parsedImp.categories || [];
+              if (isMounted) setFsStore(parsedImp);
+            }
+          } catch (_) {}
+        }
+
+        // 2. Revisar caché local del usuario (apana_cache_store_${user.uid})
+        if (!currentStoreId && typeof window !== 'undefined') {
+          try {
+            const userStoreCache = sessionStorage.getItem(`apana_cache_store_${user.uid}`) || sessionStorage.getItem('apana_active_store');
+            if (userStoreCache) {
+              const parsed = JSON.parse(userStoreCache);
+              if (parsed?.id) {
+                currentStoreId = parsed.id;
+                targetPlan = parsed.plan || 'gratis';
+                targetCategories = parsed.categories || [];
+                if (isMounted) setFsStore(parsed);
+              }
+            }
+          } catch (_) {}
+        }
+
+        // 3. Revisar Zustand
+        if (!currentStoreId) {
+          const activeStore = stores[activeStoreSlug];
+          if (activeStore?.id) {
+            currentStoreId = activeStore.id;
+            targetPlan = activeStore.plan || 'gratis';
+            targetCategories = activeStore.categories || [];
+          }
+        }
+
+        // 4. Fallback a Firestore
         if (!currentStoreId) {
           const storeFromFS = await getStoreByUserIdFromFS(user.uid);
           if (storeFromFS && isMounted) {
             setFsStore(storeFromFS);
             currentStoreId = storeFromFS.id;
-            setStorePlan(storeFromFS.plan || 'gratis');
-            setStoreCategories(storeFromFS.categories || []);
-          }
-        } else {
-          const storeFromFS = await getStoreByUserIdFromFS(user.uid);
-          if (storeFromFS && isMounted) {
-            setFsStore(storeFromFS);
-            setStorePlan(storeFromFS.plan || 'gratis');
-            setStoreCategories(storeFromFS.categories || []);
+            targetPlan = storeFromFS.plan || 'gratis';
+            targetCategories = storeFromFS.categories || [];
           }
         }
 
+        if (isMounted) {
+          setStorePlan(targetPlan);
+          setStoreCategories(targetCategories);
+        }
+
+        // 5. Intentar leer producto de caché local rápido primero (0ms)
+        if (typeof window !== 'undefined') {
+          try {
+            const cachedProds = sessionStorage.getItem(`apana_cache_prods_${user.uid}`);
+            if (cachedProds) {
+              const parsedList = JSON.parse(cachedProds);
+              const found = parsedList.find((p: any) => p.id === productId);
+              if (found && isMounted) {
+                setInitialProduct(found);
+                setProductName(found.title || '');
+                setProductPrice(found.price !== undefined ? found.price.toString() : '');
+                setProductCompareAtPrice(found.compareAtPrice ? found.compareAtPrice.toString() : '');
+                setProductBadge((found.badge as any) || '');
+                setProductDesc(found.description || '');
+                setProductOptions(found.options || []);
+                const imgs = found.imageUrls && found.imageUrls.length > 0 ? found.imageUrls : [found.imageUrl || ''];
+                setImagePreviews(imgs);
+                setInStock(found.inStock !== false);
+                setProductCategory(found.category || '');
+                setIsLoading(false);
+              }
+            }
+          } catch (_) {}
+        }
+
+        // 6. Consultar producto en Firestore
         if (currentStoreId && isMounted) {
           setStoreId(currentStoreId);
           const productFromFS = await getProductByIdFromFS(currentStoreId, productId);
           if (productFromFS && isMounted) {
-            setProductName(productFromFS.title);
-            setProductPrice(productFromFS.price.toString());
+            setInitialProduct(productFromFS);
+            setProductName(productFromFS.title || '');
+            setProductPrice(productFromFS.price !== undefined ? productFromFS.price.toString() : '');
             setProductCompareAtPrice(productFromFS.compareAtPrice ? productFromFS.compareAtPrice.toString() : '');
             setProductBadge((productFromFS.badge as any) || '');
             setProductDesc(productFromFS.description || '');
@@ -110,7 +175,6 @@ export default function EditProductPage({ params }: Props) {
         console.warn('Aviso cargando producto para editar:', err);
       } finally {
         if (isMounted) {
-          clearTimeout(safetyTimer);
           setIsLoading(false);
         }
       }
@@ -120,9 +184,8 @@ export default function EditProductPage({ params }: Props) {
 
     return () => {
       isMounted = false;
-      clearTimeout(safetyTimer);
     };
-  }, [user, stores, activeStoreSlug, productId]);
+  }, [user, authLoading, stores, activeStoreSlug, productId]);
 
   const handleImageAppend = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -204,7 +267,7 @@ export default function EditProductPage({ params }: Props) {
 
     const cleanPreviews = imagePreviews.filter(Boolean);
 
-    // Subir imágenes a Firebase Cloud Storage si son base64 (reduce el peso de Firestore en 98%)
+    // Subir imágenes a Firebase Cloud Storage si son base64
     const { uploadImageToStorage, dataURLtoBlob } = await import('@/lib/firebase/storage');
     const uploadedImages: string[] = [];
 
@@ -257,7 +320,6 @@ export default function EditProductPage({ params }: Props) {
         values: group.values
           .map(v => {
             let name = v.name.trim();
-            // Si no tiene precio diferencial o es 0, quitar cualquier " 0" accidental al final
             if (!v.priceDifference || v.priceDifference === 0) {
               name = name.replace(/\s+0+(\.0+)?$/, '').trim();
             }
@@ -290,6 +352,11 @@ export default function EditProductPage({ params }: Props) {
           category: (storePlan === 'emprendedor' || storePlan === 'negocio') ? productCategory : '',
         });
         sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
+        sessionStorage.removeItem('apana_active_products');
+        if (fsStore?.slug) {
+          sessionStorage.removeItem(`apana_public_prods_${fsStore.slug}`);
+          sessionStorage.removeItem(`apana_public_store_${fsStore.slug}`);
+        }
       } catch (err: any) {
         console.error('Error actualizando producto en Firestore:', err);
         alert(`No se pudieron guardar los cambios: ${err?.message || 'Error de Firestore'}`);
@@ -306,8 +373,20 @@ export default function EditProductPage({ params }: Props) {
     if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
       setIsSubmitting(true);
       if (storeId && user) {
-        await deleteProductFromFS(storeId, productId);
-        sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
+        try {
+          await deleteProductFromFS(storeId, productId);
+          deleteProduct(productId);
+          sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
+          if (fsStore?.slug) {
+            sessionStorage.removeItem(`apana_public_prods_${fsStore.slug}`);
+            sessionStorage.removeItem(`apana_public_store_${fsStore.slug}`);
+          }
+        } catch (err) {
+          console.error('Error eliminando producto:', err);
+          alert('Hubo un error al eliminar el producto. Inténtalo nuevamente.');
+          setIsSubmitting(false);
+          return;
+        }
       }
       setIsSubmitting(false);
       router.push('/products');
@@ -321,6 +400,54 @@ export default function EditProductPage({ params }: Props) {
       router.push('/products');
     }
   };
+
+  // Comparación reactiva para verificar si hubo algún cambio en el formulario
+  const hasChanges = React.useMemo(() => {
+    if (!initialProduct) return false;
+    const initialName = initialProduct.title || '';
+    const initialPrice = initialProduct.price !== undefined ? initialProduct.price.toString() : '';
+    const initialCompare = initialProduct.compareAtPrice ? initialProduct.compareAtPrice.toString() : '';
+    const initialBadge = (initialProduct.badge as any) || '';
+    const initialDesc = initialProduct.description || '';
+    const initialStock = initialProduct.inStock !== false;
+    const initialCategory = initialProduct.category || '';
+    const initialImgs = initialProduct.imageUrls && initialProduct.imageUrls.length > 0 
+      ? initialProduct.imageUrls 
+      : [initialProduct.imageUrl || ''];
+
+    const isNameChanged = productName.trim() !== initialName.trim();
+    const isPriceChanged = productPrice !== initialPrice;
+    const isCompareChanged = productCompareAtPrice !== initialCompare;
+    const isBadgeChanged = productBadge !== initialBadge;
+    const isDescChanged = productDesc.trim() !== initialDesc.trim();
+    const isStockChanged = inStock !== initialStock;
+    const isCategoryChanged = productCategory !== initialCategory;
+    const isImgsChanged = JSON.stringify(imagePreviews.filter(Boolean)) !== JSON.stringify(initialImgs.filter(Boolean));
+    const isOptionsChanged = JSON.stringify(productOptions) !== JSON.stringify(initialProduct.options || []);
+
+    return (
+      isNameChanged ||
+      isPriceChanged ||
+      isCompareChanged ||
+      isBadgeChanged ||
+      isDescChanged ||
+      isStockChanged ||
+      isCategoryChanged ||
+      isImgsChanged ||
+      isOptionsChanged
+    );
+  }, [
+    initialProduct,
+    productName,
+    productPrice,
+    productCompareAtPrice,
+    productBadge,
+    productDesc,
+    inStock,
+    productCategory,
+    imagePreviews,
+    productOptions,
+  ]);
 
   if (isLoading) {
     return (
@@ -338,12 +465,17 @@ export default function EditProductPage({ params }: Props) {
         <div className="h-14 flex items-center justify-between px-4 max-w-[640px] mx-auto">
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={handleBack}
-              className="p-1.5 rounded-full hover:bg-gray-100 text-[#0b1c30] transition-colors"
+              disabled={isSubmitting}
+              className="p-2 -ml-2 text-[#0b1c30] hover:bg-slate-100 rounded-full transition-colors cursor-pointer disabled:opacity-40"
+              title="Volver"
             >
               <ArrowLeft size={20} />
             </button>
-            <h1 className="font-bold text-lg text-[#0b1c30]">Editar Producto</h1>
+            <h1 className="font-bold text-base sm:text-lg text-[#0b1c30]">
+              Editar Producto
+            </h1>
           </div>
           <Link href="/settings" title="Ir a Ajustes" className="transition-transform active:scale-95">
             <div className="w-8 h-8 rounded-full bg-[#059669] flex items-center justify-center text-white hover:opacity-90 cursor-pointer shadow-2xs">
@@ -355,8 +487,7 @@ export default function EditProductPage({ params }: Props) {
 
       {/* Main Container Form */}
       <main className="pt-16 px-4 max-w-[640px] w-full mx-auto flex flex-col gap-6">
-        {/* Zona de Carga de Imágenes (Soporta múltiples en Emprendedor) */}
-        {/* Zona de Carga de Imágenes (Diseño escalable y dinámico) */}
+        {/* Zona de Carga de Imágenes */}
         <div className="flex flex-col gap-2">
           {(() => {
             const maxImagesLimit = storePlan === 'gratis' ? 1 : storePlan === 'emprendedor' ? 4 : 8;
@@ -364,12 +495,18 @@ export default function EditProductPage({ params }: Props) {
             
             return (
               <>
-                <label className="text-sm font-semibold text-[#0b1c30] ml-1">
-                  Imágenes del Producto ({cleanPreviews.length} / {maxImagesLimit})
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-[#0b1c30] ml-1">
+                    Imágenes del Producto ({cleanPreviews.length} / {maxImagesLimit})
+                  </label>
+                  {storePlan === 'gratis' && (
+                    <Link href={`/plans?from=/products/${productId}/edit`} className="text-xs text-[#059669] font-bold hover:underline">
+                      Más fotos con Plan Emprendedor ↗
+                    </Link>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {/* Renderizar imágenes cargadas */}
                   {cleanPreviews.map((imgUrl, index) => (
                     <div
                       key={index}
@@ -380,8 +517,6 @@ export default function EditProductPage({ params }: Props) {
                         alt={`Foto ${index + 1}`}
                         className="w-full h-full object-cover"
                       />
-                      
-                      {/* Badge Portada/Adicional */}
                       {index === 0 ? (
                         <span className="absolute bottom-2 left-2 bg-[#059669] text-white text-[9px] font-extrabold px-2.5 py-1 rounded-md uppercase tracking-wider shadow-xs">
                           Portada
@@ -391,12 +526,11 @@ export default function EditProductPage({ params }: Props) {
                           Foto {index + 1}
                         </span>
                       )}
-
-                      {/* Botón de Eliminar */}
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(index)}
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center text-white transition-all shadow-xs z-10"
+                        disabled={isSubmitting}
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center text-white transition-all shadow-xs z-10 cursor-pointer"
                         title="Eliminar foto"
                       >
                         <X size={14} />
@@ -404,13 +538,13 @@ export default function EditProductPage({ params }: Props) {
                     </div>
                   ))}
 
-                  {/* Botón para Añadir Nueva Foto */}
                   {cleanPreviews.length < maxImagesLimit && (
                     <label className="relative aspect-square bg-[#eff4ff] hover:bg-[#e4ecfc] border-2 border-dashed border-[#059669]/40 hover:border-[#059669] rounded-xl flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all">
                       <input
                         type="file"
                         accept="image/*"
                         onChange={handleImageAppend}
+                        disabled={isSubmitting}
                         className="hidden"
                       />
                       <div className="w-10 h-10 rounded-full bg-emerald-50 text-[#059669] flex items-center justify-center">
@@ -438,7 +572,7 @@ export default function EditProductPage({ params }: Props) {
           )}
         </div>
 
-        {/* Form Details Section Stitch */}
+        {/* Form Details Section */}
         <form onSubmit={handleSave} className="flex flex-col gap-6">
           <div className="flex flex-col gap-4">
             {/* Nombre */}
@@ -452,12 +586,12 @@ export default function EditProductPage({ params }: Props) {
                 required
                 value={productName}
                 onChange={(e) => setProductName(e.target.value)}
-                className="h-12 w-full bg-white border border-[#bccac0]/50 rounded-lg px-4 text-sm text-[#0b1c30] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                className="h-12 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
               />
             </div>
 
-            {/* Categoría del Producto (Sólo Plan Emprendedor) */}
-            {storePlan === 'emprendedor' && (
+            {/* Categoría del Producto (Sólo Plan Emprendedor / Negocio) */}
+            {(storePlan === 'emprendedor' || storePlan === 'negocio') && (
               <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between items-center ml-1">
                   <div className="flex items-center gap-2">
@@ -467,12 +601,12 @@ export default function EditProductPage({ params }: Props) {
                     <button
                       type="button"
                       onClick={() => setShowNewCategoryInput(!showNewCategoryInput)}
-                      className="text-xs font-extrabold text-[#059669] hover:underline transition-all"
+                      className="text-xs font-extrabold text-[#059669] hover:underline transition-all cursor-pointer"
                     >
                       {showNewCategoryInput ? 'Cancelar' : '+ Nueva'}
                     </button>
                   </div>
-                  <span className="text-xs text-slate-500">Plan Emprendedor</span>
+                  <span className="text-xs text-slate-500">Plan {storePlan === 'emprendedor' ? 'Emprendedor' : 'Negocio'}</span>
                 </div>
 
                 {showNewCategoryInput ? (
@@ -482,7 +616,7 @@ export default function EditProductPage({ params }: Props) {
                       placeholder="Nombre de la categoría (ej: Bebidas)"
                       value={newCategoryName}
                       onChange={(e) => setNewCategoryName(e.target.value)}
-                      className="h-11 flex-1 bg-white border border-[#bccac0]/50 rounded-lg px-3.5 text-sm text-[#0b1c30] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                      className="h-11 flex-1 bg-white border border-[#bccac0]/50 rounded-xl px-3.5 text-sm text-[#0b1c30] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
@@ -494,7 +628,7 @@ export default function EditProductPage({ params }: Props) {
                     <button
                       type="button"
                       onClick={handleCreateCategoryInline}
-                      className="px-4 bg-[#059669] text-white rounded-lg font-bold text-xs hover:bg-[#00855d] transition-colors"
+                      className="px-4 bg-[#059669] text-white rounded-xl font-bold text-xs hover:bg-[#00855d] transition-colors cursor-pointer"
                     >
                       Crear
                     </button>
@@ -504,7 +638,7 @@ export default function EditProductPage({ params }: Props) {
                     id="productCategory"
                     value={productCategory}
                     onChange={(e) => setProductCategory(e.target.value)}
-                    className="w-full h-12 px-4 bg-white border border-[#bccac0]/50 rounded-lg text-sm text-[#0b1c30] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                    className="w-full h-12 px-4 bg-white border border-[#bccac0]/50 rounded-xl text-sm text-[#0b1c30] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
                   >
                     <option value="">Ninguna (Sin Categoría)</option>
                     {storeCategories.map((cat, idx) => (
@@ -520,7 +654,6 @@ export default function EditProductPage({ params }: Props) {
             {/* Precios: Validación según Plan */}
             {storePlan === 'gratis' ? (
               <div className="flex flex-col gap-3">
-                {/* Precio de Venta (Único en Plan Gratis) */}
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="productPrice" className="text-sm font-semibold text-[#0b1c30] ml-1">
                     Precio
@@ -635,7 +768,7 @@ export default function EditProductPage({ params }: Props) {
                         </div>
                       </div>
 
-                      {/* Precio Antes / Tachado (Opcional) */}
+                      {/* Precio Antes / Tachado */}
                       <div className="flex flex-col gap-1.5">
                         <label htmlFor="productCompareAtPrice" className="text-sm font-semibold text-[#0b1c30] ml-1 flex items-center justify-between">
                           <span>Precio Antes (Tachado)</span>
@@ -675,7 +808,6 @@ export default function EditProductPage({ params }: Props) {
                       </div>
                     </div>
 
-                    {/* Descuento automático calculado */}
                     {discountPct > 0 && (
                       <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold flex items-center justify-between">
                         <span>🔥 Etiqueta de descuento en tienda:</span>
@@ -731,12 +863,12 @@ export default function EditProductPage({ params }: Props) {
                 rows={4}
                 value={productDesc}
                 onChange={(e) => setProductDesc(e.target.value)}
-                className="w-full bg-white border border-[#bccac0]/50 rounded-lg p-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all resize-none shadow-xs"
+                className="w-full bg-white border border-[#bccac0]/50 rounded-xl p-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all resize-none shadow-xs"
               />
             </div>
 
             {/* Interruptor de Estado (Desactivar / Activar) */}
-            <div className="flex items-center justify-between p-3.5 bg-white border border-[#bccac0]/50 rounded-lg shadow-xs">
+            <div className="flex items-center justify-between p-3.5 bg-white border border-[#bccac0]/50 rounded-xl shadow-xs">
               <div className="flex flex-col">
                 <span className="text-sm font-semibold text-[#0b1c30]">Estado del producto</span>
                 <span className="text-xs text-[#6d7a72]">
@@ -764,35 +896,24 @@ export default function EditProductPage({ params }: Props) {
             />
           </div>
 
-          {/* Overlay de carga cuando isSubmitting está activo */}
-          {isSubmitting && (
-            <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-3 p-4">
-              <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin shadow-lg" />
-              <div className="flex flex-col items-center text-center gap-1">
-                <span className="font-bold text-base">Guardando Cambios...</span>
-                <span className="text-xs text-white/80">Actualizando tu producto en la tienda.</span>
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons Stitch */}
+          {/* Action Buttons */}
           <div className="flex flex-col gap-3 pt-2">
             <Button
               type="submit"
               variant="primary"
               fullWidth
-              disabled={isSubmitting}
-              className="h-12 rounded-full flex items-center justify-center gap-2 text-base font-semibold bg-[#059669] hover:bg-[#00855d]"
+              disabled={isSubmitting || !hasChanges}
+              className="h-12 rounded-full flex items-center justify-center gap-2 text-base font-semibold bg-[#059669] hover:bg-[#00855d] disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Save size={18} />
-              Guardar cambios
+              {hasChanges ? 'Guardar cambios' : 'Sin cambios pendientes'}
             </Button>
 
             <button
               type="button"
               disabled={isSubmitting}
               onClick={handleDelete}
-              className="h-12 w-full bg-transparent text-[#ba1a1a] font-semibold text-sm rounded-full hover:bg-red-50 active:bg-red-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              className="h-12 w-full bg-transparent text-[#ba1a1a] font-semibold text-sm rounded-full hover:bg-red-50 active:bg-red-100 transition-all flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
             >
               <Trash2 size={18} />
               Eliminar producto
@@ -801,8 +922,19 @@ export default function EditProductPage({ params }: Props) {
         </form>
       </main>
 
-      {/* Bottom Nav Fija Stitch (Inicio, Productos, Ajustes) */}
-      <nav className="fixed bottom-0 w-full z-50 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)]">
+      {/* Overlay de Carga General Bloqueante (cubre toda la pantalla incluyendo nav bar) */}
+      {isSubmitting && (
+        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-3 p-4 select-none">
+          <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin shadow-lg" />
+          <div className="flex flex-col items-center text-center gap-1">
+            <span className="font-bold text-base">Guardando Cambios...</span>
+            <span className="text-xs text-white/80">Actualizando tu producto en la tienda.</span>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Nav Fija Stitch (Inicio, Productos, Ajustes) - Bloqueada durante guardado */}
+      <nav className={`fixed bottom-0 w-full z-40 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)] ${isSubmitting ? 'pointer-events-none opacity-50' : ''}`}>
         <div className="h-16 flex items-center justify-around max-w-[640px] mx-auto">
           <Link
             href="/dashboard"
