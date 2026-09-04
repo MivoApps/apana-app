@@ -336,8 +336,8 @@ export const getProductsByStoreIdFromFS = async (storeId: string): Promise<Produ
     const products: Product[] = [];
     querySnapshot.forEach((docSnap) => {
       products.push({
-        id: docSnap.id,
         ...docSnap.data(),
+        id: docSnap.id,
       } as Product);
     });
 
@@ -363,9 +363,9 @@ export const addProductToFS = async (
   const productRef = doc(db, 'stores', storeId, 'products', productId);
 
   const newProduct: Product = {
+    ...productData,
     id: productId,
     storeId,
-    ...productData,
   };
 
   const cleanPayload: Record<string, any> = {};
@@ -388,7 +388,7 @@ export const getProductByIdFromFS = async (storeId: string, productId: string): 
     const productRef = doc(db, 'stores', storeId, 'products', productId);
     const docSnap = await getDoc(productRef);
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() } as Product;
+      return { ...docSnap.data(), id: docSnap.id } as Product;
     }
     return null;
   } catch (error) {
