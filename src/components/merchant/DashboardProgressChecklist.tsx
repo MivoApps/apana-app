@@ -89,7 +89,7 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
 
   if (!isLoaded || isFullyDismissed) return null;
 
-  // Modal / Card de Celebración Festiva
+  // Modal / Card de Celebración Festiva (sólo cuando se completa por primera vez)
   if (showCelebration) {
     return (
       <div className="bg-linear-to-r from-emerald-600 via-[#059669] to-teal-700 rounded-3xl p-6 sm:p-7 text-white shadow-xl relative overflow-hidden animate-in zoom-in-95 duration-500 flex flex-col sm:flex-row items-center justify-between gap-5">
@@ -119,6 +119,9 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
       </div>
     );
   }
+
+  // Si ya tiene el 100% completado y no está en animación de celebración, ocultar de inmediato
+  if (isComplete) return null;
 
   const steps = [
     {
