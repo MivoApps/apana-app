@@ -39,6 +39,7 @@ import { Store, Product } from '@/types/store';
 
 import { TermsModal } from '@/components/ui/TermsModal';
 import { ProductOptionsModal } from '@/components/public/ProductOptionsModal';
+import { StoreSkeleton } from '@/components/public/StoreSkeletons';
 import { SelectedOption } from '@/types/store';
 
 export default function PublicStorePage({ params }: Props) {
@@ -112,9 +113,9 @@ export default function PublicStorePage({ params }: Props) {
 
   const store = fsStore;
 
-  // Evitar error de hidratación renderizando cuando se monte el cliente
-  if (!mounted || isFetchingFS) {
-    return <div className="min-h-screen bg-[#f8f9ff]" />;
+  // Renderizar skeleton shimmer durante la carga inicial para máxima velocidad percibida
+  if (!mounted || (isFetchingFS && !store)) {
+    return <StoreSkeleton />;
   }
 
   // Validación: si la tienda no existe en el registro o su estado es 'eliminada'

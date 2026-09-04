@@ -36,10 +36,21 @@ export default function PublicCartPage({ params }: Props) {
   const [store, setStore] = useState<Store | null>(null);
 
   React.useEffect(() => {
+    // 1. Cargar instantáneamente del caché de sesión si existe
+    const cachedPublicStore = sessionStorage.getItem(`apana_public_store_${resolvedParams.storeSlug}`);
+    if (cachedPublicStore) {
+      try {
+        setStore(JSON.parse(cachedPublicStore));
+      } catch (e) { }
+    }
+
     const fetchStore = async () => {
       const { getStoreBySlugFromFS } = await import('@/lib/firebase/firestore');
       const fsStore = await getStoreBySlugFromFS(resolvedParams.storeSlug);
-      if (fsStore) setStore(fsStore);
+      if (fsStore) {
+        setStore(fsStore);
+        sessionStorage.setItem(`apana_public_store_${resolvedParams.storeSlug}`, JSON.stringify(fsStore));
+      }
     };
     fetchStore();
   }, [resolvedParams.storeSlug]);

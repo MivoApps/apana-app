@@ -18,6 +18,7 @@ import { useCartStore } from '@/lib/cart-store';
 import { formatCurrency } from '@/lib/whatsapp';
 import { getStoreBySlugFromFS, getProductsByStoreIdFromFS, getProductByIdFromFS } from '@/lib/firebase/firestore';
 import { Store, Product, ProductOptionGroup, SelectedOption, ProductOptionValue } from '@/types/store';
+import { ProductDetailSkeleton } from '@/components/public/StoreSkeletons';
 
 interface Props {
   params: Promise<{
@@ -58,11 +59,37 @@ export default function PublicProductDetailPage({ params }: Props) {
   const [isLoading, setIsLoading] = useState(true);
 
   React.useEffect(() => {
+    // 1. Carga instantánea de sesión si el usuario navega desde la tienda (0 ms de percepción)
+    const cachedPublicStore = sessionStorage.getItem(`apana_public_store_${storeSlug}`);
+    const cachedPublicProds = sessionStorage.getItem(`apana_public_prods_${storeSlug}`);
+
+    if (cachedPublicStore && cachedPublicProds) {
+      try {
+        const parsedStore = JSON.parse(cachedPublicStore);
+        const parsedProds: Product[] = JSON.parse(cachedPublicProds);
+        setFsStore(parsedStore);
+        setFsProducts(parsedProds);
+        const currentProd = parsedProds.find((p) => p.id === productId);
+        if (currentProd) {
+          setIsLoading(false);
+          if (currentProd.options && currentProd.options.length > 0) {
+            const initialMap: { [groupId: string]: string } = {};
+            currentProd.options.forEach((group) => {
+              if (group.values.length > 0) {
+                initialMap[group.id] = group.values[0].id;
+              }
+            });
+            setSelectedValues(initialMap);
+          }
+        }
+      } catch (e) { }
+    }
+
     const fetchFS = async () => {
-      setIsLoading(true);
       const fetchedStore = await getStoreBySlugFromFS(storeSlug);
       if (fetchedStore) {
         setFsStore(fetchedStore);
+        sessionStorage.setItem(`apana_public_store_${storeSlug}`, JSON.stringify(fetchedStore));
         const prods = await getProductsByStoreIdFromFS(fetchedStore.id);
         
         let currentProd = prods.find((p) => p.id === productId);
@@ -76,16 +103,20 @@ export default function PublicProductDetailPage({ params }: Props) {
         }
         
         setFsProducts(prods);
+        sessionStorage.setItem(`apana_public_prods_${storeSlug}`, JSON.stringify(prods));
 
-        // Inicializar opciones del producto actual
+        // Inicializar opciones del producto actual si aún no estaban definidas
         if (currentProd && currentProd.options && currentProd.options.length > 0) {
-          const initialMap: { [groupId: string]: string } = {};
-          currentProd.options.forEach((group) => {
-            if (group.values.length > 0) {
-              initialMap[group.id] = group.values[0].id;
-            }
+          setSelectedValues((prev) => {
+            if (Object.keys(prev).length > 0) return prev;
+            const initialMap: { [groupId: string]: string } = {};
+            currentProd.options?.forEach((group) => {
+              if (group.values.length > 0) {
+                initialMap[group.id] = group.values[0].id;
+              }
+            });
+            return initialMap;
           });
-          setSelectedValues(initialMap);
         }
 
         // Registrar vista única de producto por sesión
@@ -208,8 +239,30 @@ export default function PublicProductDetailPage({ params }: Props) {
     }
   };
 
+  // Renderizar skeleton shimmer durante la carga
+  if (isLoading && !targetProduct) {
+    return <ProductDetailSkeleton />;
+  }
+
+  // Vista de producto no disponible (si se eliminó o el enlace es erróneo)
   if (!targetProduct) {
-    return <div className="min-h-screen bg-white" />;
+    return (
+      <div className="min-h-screen bg-[#f8f9ff] flex flex-col items-center justify-center p-6 text-center font-sans">
+        <div className="w-16 h-16 bg-emerald-50 text-[#059669] rounded-full flex items-center justify-center mb-4 shadow-2xs">
+          <ShoppingBag size={28} />
+        </div>
+        <h2 className="text-xl font-bold text-[#0b1c30] mb-2 tracking-tight">Producto no disponible</h2>
+        <p className="text-sm text-slate-500 max-w-sm mb-6 leading-relaxed">
+          Este producto ya no se encuentra disponible en el catálogo de la tienda o el enlace ha cambiado.
+        </p>
+        <Link
+          href={`/s/${storeSlug}`}
+          className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#059669] text-white font-semibold text-sm hover:bg-[#047857] transition-all shadow-md shadow-emerald-700/20"
+        >
+          Explorar tienda completa →
+        </Link>
+      </div>
+    );
   }
 
   // Recomendación Inteligente de Productos:
