@@ -12,18 +12,7 @@ import { Store } from '@/types/store';
 
 export default function QRPage() {
   const { user, loading: authLoading } = useAuth();
-  const [store, setStore] = useState<Store | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = sessionStorage.getItem('apana_active_store');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (parsed?.name) return parsed;
-        }
-      } catch (_) {}
-    }
-    return null;
-  });
+  const [store, setStore] = useState<Store | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -39,7 +28,7 @@ export default function QRPage() {
       // 1. Intentar cargar de sessionStorage para renderizado instantáneo sin parpadeo
       if (typeof window !== 'undefined' && !store) {
         try {
-          const userCache = sessionStorage.getItem(`apana_cache_store_${user.uid}`) || sessionStorage.getItem('apana_active_store');
+          const userCache = sessionStorage.getItem(`apana_cache_store_${user.uid}`);
           if (userCache) {
             const parsed = JSON.parse(userCache);
             if (parsed?.name && isMounted) {
@@ -55,7 +44,6 @@ export default function QRPage() {
         if (storeFromFS && isMounted) {
           setStore(storeFromFS);
           if (typeof window !== 'undefined') {
-            sessionStorage.setItem('apana_active_store', JSON.stringify(storeFromFS));
             sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(storeFromFS));
           }
         }

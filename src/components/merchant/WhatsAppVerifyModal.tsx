@@ -81,7 +81,6 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
             // Actualizar caché de sesión de inmediato
             if (typeof window !== 'undefined') {
               sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(currentStore));
-              sessionStorage.setItem('apana_active_store', JSON.stringify(currentStore));
             }
             if (onSuccess) onSuccess();
             setTimeout(() => {
@@ -209,7 +208,6 @@ export const WhatsAppVerifyModal: React.FC<Props> = ({
               isWhatsappVerified: true,
             };
             sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(updated));
-            sessionStorage.setItem('apana_active_store', JSON.stringify(updated));
           }
         } catch (_) { }
       }

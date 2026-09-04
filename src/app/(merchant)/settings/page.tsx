@@ -359,7 +359,6 @@ export default function SettingsPage() {
         setFsStore(updatedStore);
         if (typeof window !== 'undefined') {
           sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(updatedStore));
-          sessionStorage.setItem('apana_active_store', JSON.stringify(updatedStore));
           sessionStorage.removeItem(`apana_public_store_${updatedStore.slug}`);
         }
       } catch (err) {

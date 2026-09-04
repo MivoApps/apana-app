@@ -40,34 +40,10 @@ export default function DashboardPage() {
   const { user, loading: authLoading, logout } = useAuth();
   const { stores, activeStoreSlug } = useAppStore();
 
-  // Rehidratación instantánea (0ms) desde caché de sesión
-  const [fsStore, setFsStore] = React.useState<Store | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = sessionStorage.getItem('apana_active_store');
-        if (cached) return JSON.parse(cached);
-      } catch (_) { }
-    }
-    return null;
-  });
-
-  const [fsProducts, setFsProducts] = React.useState<Product[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = sessionStorage.getItem('apana_active_products');
-        if (cached) return JSON.parse(cached);
-      } catch (_) { }
-    }
-    return [];
-  });
-
-  // Si ya tenemos la tienda en caché, no bloqueamos la vista con un spinner
-  const [isLoading, setIsLoading] = React.useState(() => {
-    if (typeof window !== 'undefined') {
-      return !sessionStorage.getItem('apana_active_store');
-    }
-    return true;
-  });
+  // Estado de la tienda y productos del usuario autenticado
+  const [fsStore, setFsStore] = React.useState<Store | null>(null);
+  const [fsProducts, setFsProducts] = React.useState<Product[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isVerifyModalOpen, setIsVerifyModalOpen] = React.useState(false);
@@ -117,14 +93,22 @@ export default function DashboardPage() {
     const checkAuthAndSync = async () => {
       if (authLoading) return;
 
-      // Verificar si hay una sesión de impersonación activa
+      const userEmail = user?.email?.toLowerCase().trim() || '';
+      const isSuperAdminUser = userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com';
+
+      // Verificar si hay una sesión de impersonación activa (SÓLO para SuperAdmin)
       let impersonatedStoreData: Store | null = null;
       if (typeof window !== 'undefined') {
         try {
           const imp = sessionStorage.getItem('apana_impersonated_store');
           if (imp) {
-            impersonatedStoreData = JSON.parse(imp);
-            setIsImpersonating(true);
+            if (isSuperAdminUser) {
+              impersonatedStoreData = JSON.parse(imp);
+              setIsImpersonating(true);
+            } else {
+              // Si el usuario actual NO es SuperAdmin, purgar residuo
+              sessionStorage.removeItem('apana_impersonated_store');
+            }
           }
         } catch (_) { }
       }
@@ -136,8 +120,7 @@ export default function DashboardPage() {
       }
 
       // Si es el SuperAdmin (Dueño de APANA) y NO está impersonando ➔ Redirigir automáticamente a la consola de administración
-      const userEmail = user?.email?.toLowerCase().trim() || '';
-      if (!impersonatedStoreData && (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com')) {
+      if (!impersonatedStoreData && isSuperAdminUser) {
         window.location.href = '/admin';
         return;
       }
@@ -162,13 +145,17 @@ export default function DashboardPage() {
 
       try {
         // Intentar leer caché específico del usuario
-        if (typeof window !== 'undefined' && !fsStore) {
+        if (typeof window !== 'undefined') {
           const userCache = sessionStorage.getItem(`apana_cache_store_${user.uid}`);
+          const prodsCache = sessionStorage.getItem(`apana_cache_prods_${user.uid}`);
           if (userCache) {
             try {
               const parsed = JSON.parse(userCache);
               if (parsed?.name) {
                 setFsStore(parsed);
+                if (prodsCache) {
+                  setFsProducts(JSON.parse(prodsCache));
+                }
                 setIsLoading(false);
               }
             } catch (_) { }
@@ -181,9 +168,7 @@ export default function DashboardPage() {
         if (!storeFromFS) {
           clearTimeout(safetyTimer);
           if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('apana_active_store');
             sessionStorage.removeItem(`apana_cache_store_${user.uid}`);
-            sessionStorage.removeItem('apana_active_products');
             sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
           }
           setFsStore(null);
@@ -193,7 +178,6 @@ export default function DashboardPage() {
 
         setFsStore(storeFromFS);
         if (typeof window !== 'undefined') {
-          sessionStorage.setItem('apana_active_store', JSON.stringify(storeFromFS));
           sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(storeFromFS));
         }
 
@@ -202,7 +186,7 @@ export default function DashboardPage() {
         if (isMounted) {
           setFsProducts(productsFromFS);
           if (typeof window !== 'undefined') {
-            sessionStorage.setItem('apana_active_products', JSON.stringify(productsFromFS));
+            sessionStorage.setItem(`apana_cache_prods_${user.uid}`, JSON.stringify(productsFromFS));
           }
         }
 

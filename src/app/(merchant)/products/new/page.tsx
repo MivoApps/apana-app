@@ -68,67 +68,74 @@ export default function CreateProductPage() {
   const [imageInfo, setImageInfo] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Inicialización instantánea con caché de sesión (0ms)
-  const [fsStore, setFsStore] = useState<any>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = sessionStorage.getItem('apana_active_store');
-        if (cached) return JSON.parse(cached);
-      } catch (_) {}
-    }
-    return null;
-  });
-
-  const [storePlan, setStorePlan] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = sessionStorage.getItem('apana_active_store');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          return parsed?.plan || 'gratis';
-        }
-      } catch (_) {}
-    }
-    return 'gratis';
-  });
-
-  const [storeCategories, setStoreCategories] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = sessionStorage.getItem('apana_active_store');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          return parsed?.categories || [];
-        }
-      } catch (_) {}
-    }
-    return [];
-  });
-
+  // Estado de la tienda y límites del plan
+  const [fsStore, setFsStore] = useState<any>(null);
+  const [storePlan, setStorePlan] = useState<string>('gratis');
+  const [storeCategories, setStoreCategories] = useState<string[]>([]);
   const [productsCount, setProductsCount] = useState<number>(0);
   const [productCategory, setProductCategory] = useState('');
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-
-  // Si ya tenemos datos en caché, no bloqueamos la vista con un spinner
-  const [checkingLimit, setCheckingLimit] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return !sessionStorage.getItem('apana_active_store');
-    }
-    return true;
-  });
+  const [checkingLimit, setCheckingLimit] = useState(true);
 
   React.useEffect(() => {
     let isMounted = true;
     const safetyTimer = setTimeout(() => {
       if (isMounted) setCheckingLimit(false);
-    }, 1000);
+    }, 1500);
 
     const fetchStoreAndProducts = async () => {
       if (authLoading) return;
       if (!user) {
         if (isMounted) setCheckingLimit(false);
         return;
+      }
+
+      const userEmail = user?.email?.toLowerCase().trim() || '';
+      const isSuperAdminUser = userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com';
+
+      // 0. Revisar si hay tienda impersonada (SÓLO para SuperAdmin)
+      let impersonatedStoreData: any = null;
+      if (typeof window !== 'undefined') {
+        try {
+          const imp = sessionStorage.getItem('apana_impersonated_store');
+          if (imp) {
+            if (isSuperAdminUser) {
+              impersonatedStoreData = JSON.parse(imp);
+            } else {
+              sessionStorage.removeItem('apana_impersonated_store');
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (impersonatedStoreData && isMounted) {
+        setFsStore(impersonatedStoreData);
+        setStorePlan(impersonatedStoreData.plan || 'gratis');
+        setStoreCategories(impersonatedStoreData.categories || []);
+        try {
+          const { getProductsByStoreIdFromFS } = await import('@/lib/firebase/firestore');
+          const prods = await getProductsByStoreIdFromFS(impersonatedStoreData.id);
+          if (isMounted) setProductsCount(prods.length);
+        } catch (_) {}
+        if (isMounted) setCheckingLimit(false);
+        return;
+      }
+
+      // 1. Intentar cargar de caché rápido de usuario
+      if (typeof window !== 'undefined') {
+        try {
+          const cached = sessionStorage.getItem(`apana_cache_store_${user.uid}`);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed?.name && isMounted) {
+              setFsStore(parsed);
+              setStorePlan(parsed.plan || 'gratis');
+              setStoreCategories(parsed.categories || []);
+              setCheckingLimit(false);
+            }
+          }
+        } catch (_) {}
       }
 
       try {
@@ -139,7 +146,6 @@ export default function CreateProductPage() {
           setStorePlan(storeFromFS.plan || 'gratis');
           setStoreCategories(storeFromFS.categories || []);
           if (typeof window !== 'undefined') {
-            sessionStorage.setItem('apana_active_store', JSON.stringify(storeFromFS));
             sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(storeFromFS));
           }
           const prods = await getProductsByStoreIdFromFS(storeFromFS.id);

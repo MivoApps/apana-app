@@ -39,11 +39,12 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
   const [showCelebration, setShowCelebration] = React.useState(false);
   const [isFullyDismissed, setIsFullyDismissed] = React.useState(false);
 
-  // 1. Validar los 4 pasos esenciales
+  // 1. Validar que tengamos usuario y tienda antes de renderizar
+  const isLoaded = Boolean(user && store);
   const step1StoreCreated = Boolean(store?.name && store?.slug);
   const step2EmailVerified = Boolean(user?.emailVerified);
-  const step3Whatsapp = Boolean(store?.whatsappPhone && store?.isWhatsappVerified);
-  const step4Product = products.length > 0;
+  const step3Whatsapp = Boolean(store?.whatsappPhone && store?.isWhatsappVerified === true);
+  const step4Product = Boolean(products && products.length > 0);
 
   const completedCount = [
     step1StoreCreated, 
@@ -54,20 +55,39 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
 
   const totalSteps = 4;
   const progressPercent = Math.round((completedCount / totalSteps) * 100);
-  const isComplete = completedCount === totalSteps;
+  const isComplete = isLoaded && completedCount === totalSteps;
 
   // Manejo de animación de celebración cuando se completan los 4 pasos
   React.useEffect(() => {
-    if (isComplete && !isFullyDismissed) {
-      setShowCelebration(true);
-      const timer = setTimeout(() => {
-        setIsFullyDismissed(true);
-      }, 4500); // 4.5 segundos de celebración con fade-out elegante
-      return () => clearTimeout(timer);
-    }
-  }, [isComplete, isFullyDismissed]);
+    if (!store?.id) return;
 
-  if (isFullyDismissed) return null;
+    if (isComplete) {
+      try {
+        const alreadyCelebrated = localStorage.getItem(`apana_onboarding_celebrated_${store.id}`);
+        if (!alreadyCelebrated) {
+          setShowCelebration(true);
+          localStorage.setItem(`apana_onboarding_celebrated_${store.id}`, 'true');
+          const timer = setTimeout(() => {
+            setIsFullyDismissed(true);
+          }, 4500);
+          return () => clearTimeout(timer);
+        } else {
+          setIsFullyDismissed(true);
+        }
+      } catch (_) {
+        setIsFullyDismissed(true);
+      }
+    } else {
+      // Si la tienda aún no completa todos los pasos, asegurar que el checklist sea visible
+      try {
+        localStorage.removeItem(`apana_onboarding_celebrated_${store.id}`);
+      } catch (_) {}
+      setIsFullyDismissed(false);
+      setShowCelebration(false);
+    }
+  }, [isComplete, store?.id]);
+
+  if (!isLoaded || isFullyDismissed) return null;
 
   // Modal / Card de Celebración Festiva
   if (showCelebration) {

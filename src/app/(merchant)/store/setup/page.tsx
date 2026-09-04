@@ -135,15 +135,12 @@ export default function OnboardingWizardPage() {
 
         if (existingStore) {
           sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(existingStore));
-          sessionStorage.setItem('apana_active_store', JSON.stringify(existingStore));
           window.location.href = '/dashboard';
           return;
         }
 
         // Si no hay tienda creada en Firestore ➔ Limpiar cualquier residuo de caché obsoleto
         sessionStorage.removeItem(`apana_cache_store_${user.uid}`);
-        sessionStorage.removeItem('apana_active_store');
-        sessionStorage.removeItem('apana_active_products');
         sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
 
         // Crear perfil en segundo plano sin frenar al usuario

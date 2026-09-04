@@ -70,16 +70,23 @@ export default function EditProductPage({ params }: Props) {
         let targetPlan = 'gratis';
         let targetCategories: string[] = [];
 
-        // 1. Revisar si hay tienda impersonada (SuperAdmin)
+        const userEmail = user?.email?.toLowerCase().trim() || '';
+        const isSuperAdminUser = userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com';
+
+        // 1. Revisar si hay tienda impersonada (SÓLO para SuperAdmin)
         if (typeof window !== 'undefined') {
           try {
             const imp = sessionStorage.getItem('apana_impersonated_store');
             if (imp) {
-              const parsedImp = JSON.parse(imp);
-              currentStoreId = parsedImp.id;
-              targetPlan = parsedImp.plan || 'gratis';
-              targetCategories = parsedImp.categories || [];
-              if (isMounted) setFsStore(parsedImp);
+              if (isSuperAdminUser) {
+                const parsedImp = JSON.parse(imp);
+                currentStoreId = parsedImp.id;
+                targetPlan = parsedImp.plan || 'gratis';
+                targetCategories = parsedImp.categories || [];
+                if (isMounted) setFsStore(parsedImp);
+              } else {
+                sessionStorage.removeItem('apana_impersonated_store');
+              }
             }
           } catch (_) {}
         }
@@ -87,7 +94,7 @@ export default function EditProductPage({ params }: Props) {
         // 2. Revisar caché local del usuario (apana_cache_store_${user.uid})
         if (!currentStoreId && typeof window !== 'undefined') {
           try {
-            const userStoreCache = sessionStorage.getItem(`apana_cache_store_${user.uid}`) || sessionStorage.getItem('apana_active_store');
+            const userStoreCache = sessionStorage.getItem(`apana_cache_store_${user.uid}`);
             if (userStoreCache) {
               const parsed = JSON.parse(userStoreCache);
               if (parsed?.id) {
@@ -127,8 +134,8 @@ export default function EditProductPage({ params }: Props) {
           setStoreCategories(targetCategories);
         }
 
-        // 5. Intentar leer producto de caché local rápido primero (0ms)
-        if (typeof window !== 'undefined') {
+        // 5. Intentar leer producto de caché local rápido primero (0ms) sólo si no estamos impersonando
+        if (!isSuperAdminUser && typeof window !== 'undefined') {
           try {
             const cachedProds = sessionStorage.getItem(`apana_cache_prods_${user.uid}`);
             if (cachedProds) {
@@ -353,7 +360,6 @@ export default function EditProductPage({ params }: Props) {
           category: (storePlan === 'emprendedor' || storePlan === 'negocio') ? productCategory : '',
         });
         sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
-        sessionStorage.removeItem('apana_active_products');
         if (fsStore?.slug) {
           sessionStorage.removeItem(`apana_public_prods_${fsStore.slug}`);
           sessionStorage.removeItem(`apana_public_store_${fsStore.slug}`);
@@ -379,7 +385,6 @@ export default function EditProductPage({ params }: Props) {
           await deleteProductFromFS(effectiveStoreId, productId);
           deleteProduct(productId);
           sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
-          sessionStorage.removeItem('apana_active_products');
           if (fsStore?.slug) {
             sessionStorage.removeItem(`apana_public_prods_${fsStore.slug}`);
             sessionStorage.removeItem(`apana_public_store_${fsStore.slug}`);

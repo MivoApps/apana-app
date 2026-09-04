@@ -61,12 +61,21 @@ export default function ProductGalleryPage() {
         return;
       }
 
-      // 0. Revisar si hay sesión de impersonación activa (SuperAdmin)
+      const userEmail = user?.email?.toLowerCase().trim() || '';
+      const isSuperAdminUser = userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com';
+
+      // 0. Revisar si hay sesión de impersonación activa (SÓLO para SuperAdmin)
       let impersonatedStoreData: Store | null = null;
       if (typeof window !== 'undefined') {
         try {
           const imp = sessionStorage.getItem('apana_impersonated_store');
-          if (imp) impersonatedStoreData = JSON.parse(imp);
+          if (imp) {
+            if (isSuperAdminUser) {
+              impersonatedStoreData = JSON.parse(imp);
+            } else {
+              sessionStorage.removeItem('apana_impersonated_store');
+            }
+          }
         } catch (_) { }
       }
 
@@ -103,8 +112,6 @@ export default function ProductGalleryPage() {
       if (!storeFromFS) {
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem(`apana_cache_store_${user.uid}`);
-          sessionStorage.removeItem('apana_active_store');
-          sessionStorage.removeItem('apana_active_products');
           sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
         }
         router.push('/store/setup');
@@ -196,8 +203,9 @@ export default function ProductGalleryPage() {
           await deleteProductFromFS(effectiveStoreId, productId);
           setFsProducts((prev) => {
             const updated = prev.filter((p) => p.id !== productId);
-            sessionStorage.setItem(`apana_cache_prods_${user.uid}`, JSON.stringify(updated));
-            sessionStorage.setItem('apana_active_products', JSON.stringify(updated));
+            if (!isSuperAdmin) {
+              sessionStorage.setItem(`apana_cache_prods_${user.uid}`, JSON.stringify(updated));
+            }
             if (activeStore?.slug) {
               sessionStorage.removeItem(`apana_public_prods_${activeStore.slug}`);
               sessionStorage.removeItem(`apana_public_store_${activeStore.slug}`);
