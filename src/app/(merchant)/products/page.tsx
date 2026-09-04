@@ -61,6 +61,26 @@ export default function ProductGalleryPage() {
         return;
       }
 
+      // 0. Revisar si hay sesión de impersonación activa (SuperAdmin)
+      let impersonatedStoreData: Store | null = null;
+      if (typeof window !== 'undefined') {
+        try {
+          const imp = sessionStorage.getItem('apana_impersonated_store');
+          if (imp) impersonatedStoreData = JSON.parse(imp);
+        } catch (_) { }
+      }
+
+      if (impersonatedStoreData) {
+        setFsStore(impersonatedStoreData);
+        setIsLoading(false);
+        try {
+          const prods = await getProductsByStoreIdFromFS(impersonatedStoreData.id);
+          const uniqueProds = Array.from(new Map(prods.map((p) => [p.id, p])).values());
+          setFsProducts(uniqueProds);
+        } catch (_) { }
+        return;
+      }
+
       // 1. Intentar cargar inmediatamente del caché rápido de sesión si existe (0 ms)
       const cachedStore = sessionStorage.getItem(`apana_cache_store_${user.uid}`);
       const cachedProducts = sessionStorage.getItem(`apana_cache_prods_${user.uid}`);
