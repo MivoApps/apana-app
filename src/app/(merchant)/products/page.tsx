@@ -203,7 +203,10 @@ export default function ProductGalleryPage() {
 
   const filteredProducts = uniqueProductList
     .filter((p) => {
-      const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!p) return false;
+      const title = (p.title || '').toLowerCase();
+      const query = (searchQuery || '').toLowerCase();
+      const matchesSearch = title.includes(query);
       const matchesStatus =
         selectedStatusFilter === 'todos' ||
         (selectedStatusFilter === 'activos' && p.inStock) ||

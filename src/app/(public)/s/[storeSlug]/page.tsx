@@ -134,7 +134,10 @@ export default function PublicStorePage({ params }: Props) {
   const allowedProducts = storeProducts.slice(0, maxProductsAllowed);
 
   const filteredProducts = allowedProducts.filter((product) => {
-    const matchesSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!product) return false;
+    const title = (product.title || '').toLowerCase();
+    const query = (searchQuery || '').toLowerCase();
+    const matchesSearch = title.includes(query);
     const matchesCategory =
       !isPaidPlan ||
       selectedCategory === 'todos' ||
