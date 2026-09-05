@@ -31,6 +31,8 @@ export default function PublicCartPage({ params }: Props) {
   const [customerAddress, setCustomerAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'yape' | 'transferencia' | 'efectivo' | ''>('yape');
   const [notes, setNotes] = useState('');
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isLoadingStore, setIsLoadingStore] = useState(true);
 
   const resolvedParams = React.use(params);
   const [store, setStore] = useState<Store | null>(null);
@@ -45,11 +47,17 @@ export default function PublicCartPage({ params }: Props) {
     }
 
     const fetchStore = async () => {
-      const { getStoreBySlugFromFS } = await import('@/lib/firebase/firestore');
-      const fsStore = await getStoreBySlugFromFS(resolvedParams.storeSlug);
-      if (fsStore) {
-        setStore(fsStore);
-        sessionStorage.setItem(`apana_public_store_${resolvedParams.storeSlug}`, JSON.stringify(fsStore));
+      try {
+        const { getStoreBySlugFromFS } = await import('@/lib/firebase/firestore');
+        const fsStore = await getStoreBySlugFromFS(resolvedParams.storeSlug);
+        if (fsStore) {
+          setStore(fsStore);
+          sessionStorage.setItem(`apana_public_store_${resolvedParams.storeSlug}`, JSON.stringify(fsStore));
+        }
+      } catch (err) {
+        console.error('Error fetching store in cart:', err);
+      } finally {
+        setIsLoadingStore(false);
       }
     };
     fetchStore();
@@ -65,49 +73,68 @@ export default function PublicCartPage({ params }: Props) {
     return '';
   };
 
-  const handleSendWhatsAppOrder = async () => {
-    if (items.length === 0 || !store) return;
-
-    if (store.plan === 'emprendedor' || store.plan === 'negocio') {
-      try {
-        const { recordAnalyticsEvent } = await import('@/lib/firebase/firestore');
-        await recordAnalyticsEvent(store.id, 'click');
-      } catch (err) { }
-    }
+  const handleSendWhatsAppOrder = () => {
+    if (items.length === 0 || !store || isRedirecting) return;
+    setIsRedirecting(true);
 
     const paymentLabel = getPaymentMethodLabel();
 
-    // Registrar pedido en la base de datos para exportación a Excel en Plan Negocio Pro
-    try {
-      const { recordStoreOrderInFS } = await import('@/lib/firebase/firestore');
-      await recordStoreOrderInFS(store.id, {
-        storeId: store.id,
-        customerName: customerName.trim() || 'Cliente WhatsApp',
-        customerAddress: customerAddress.trim() || '',
-        paymentMethod: paymentLabel || 'WhatsApp',
-        items: items.map(it => ({
-          id: it.product.id,
-          title: it.product.title,
-          price: it.calculatedPrice ?? it.product.price,
-          quantity: it.quantity,
-          selectedOption: it.selectedOptions && it.selectedOptions.length > 0
-            ? it.selectedOptions.map(o => `${o.groupTitle}: ${o.valueName}`).join(', ')
-            : '',
-        })),
-        total: totalPrice,
-        status: 'enviado_whatsapp',
-      });
-    } catch (orderErr) {
-      console.warn('No se pudo registrar orden local:', orderErr);
-    }
-
+    // 1. Generar enlace inmediatamente y de forma síncrona
     const link = generateWhatsAppLink(store, items, {
       customerName: customerName.trim(),
       customerAddress: customerAddress.trim(),
       paymentMethod: paymentLabel,
       notes: notes.trim(),
     });
-    window.open(link, '_blank');
+
+    // 2. Disparar analíticas y registro de orden en segundo plano sin bloquear la apertura de WhatsApp
+    if (store.plan === 'emprendedor' || store.plan === 'negocio') {
+      import('@/lib/firebase/firestore')
+        .then(({ recordAnalyticsEvent }) => {
+          recordAnalyticsEvent(store.id, 'click').catch(() => {});
+        })
+        .catch(() => {});
+    }
+
+    import('@/lib/firebase/firestore')
+      .then(({ recordStoreOrderInFS }) => {
+        recordStoreOrderInFS(store.id, {
+          storeId: store.id,
+          customerName: customerName.trim() || 'Cliente WhatsApp',
+          customerAddress: customerAddress.trim() || '',
+          paymentMethod: paymentLabel || 'WhatsApp',
+          items: items.map((it) => ({
+            id: it.product.id,
+            title: it.product.title,
+            price: it.calculatedPrice ?? it.product.price,
+            quantity: it.quantity,
+            selectedOption:
+              it.selectedOptions && it.selectedOptions.length > 0
+                ? it.selectedOptions.map((o) => `${o.groupTitle}: ${o.valueName}`).join(', ')
+                : '',
+          })),
+          total: totalPrice,
+          status: 'enviado_whatsapp',
+        }).catch((orderErr) => {
+          console.warn('No se pudo registrar orden local:', orderErr);
+        });
+      })
+      .catch(() => {});
+
+    // 3. Abrir WhatsApp de forma garantizada según dispositivo sin activar bloqueador de popups en móvil
+    const isMobile =
+      typeof navigator !== 'undefined' &&
+      /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      window.location.href = link;
+    } else {
+      window.open(link, '_blank', 'noopener,noreferrer');
+    }
+
+    setTimeout(() => {
+      setIsRedirecting(false);
+    }, 3500);
   };
 
   const isElegant = store?.themeStyle === 'elegante';
@@ -388,9 +415,14 @@ export default function PublicCartPage({ params }: Props) {
 
       {/* Fixed Bottom Action Bar (Completar por WhatsApp) */}
       {items.length > 0 && (
-        <div className={`fixed bottom-0 left-0 right-0 max-w-[640px] mx-auto backdrop-blur-md p-4 pb-safe border-t shadow-[0_-4px_16px_rgba(0,0,0,0.05)] z-40 ${isElegant ? 'bg-[#FAF8F5]/95 border-[#E7E2D9]' : 'bg-white/95 border-[#bccac0]/30'
-          }`}>
-          {(!store?.whatsappPhone || !store?.isWhatsappVerified) ? (
+        <div
+          className={`fixed bottom-0 left-0 right-0 max-w-[640px] mx-auto backdrop-blur-md p-4 pb-safe border-t shadow-[0_-4px_16px_rgba(0,0,0,0.05)] z-40 ${
+            isElegant ? 'bg-[#FAF8F5]/95 border-[#E7E2D9]' : 'bg-white/95 border-[#bccac0]/30'
+          }`}
+        >
+          {isLoadingStore && !store ? (
+            <div className="w-full h-12 bg-slate-200 animate-pulse rounded-xl" />
+          ) : (!store?.whatsappPhone || !store?.isWhatsappVerified) ? (
             <div className="flex flex-col gap-2">
               <button
                 type="button"
@@ -407,12 +439,29 @@ export default function PublicCartPage({ params }: Props) {
             <>
               <button
                 onClick={handleSendWhatsAppOrder}
+                disabled={isRedirecting}
                 style={{ backgroundColor: brandColor }}
-                className={`w-full h-12 text-white font-bold text-base shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer ${isElegant ? 'rounded-2xl font-playfair tracking-wide' : isModern ? 'rounded-2xl uppercase font-space-grotesk' : 'rounded-xl font-plus-jakarta'
-                  }`}
+                className={`w-full h-12 text-white font-bold text-base shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  isRedirecting ? 'opacity-85 cursor-wait' : ''
+                } ${
+                  isElegant
+                    ? 'rounded-2xl font-playfair tracking-wide'
+                    : isModern
+                    ? 'rounded-2xl uppercase font-space-grotesk'
+                    : 'rounded-xl font-plus-jakarta'
+                }`}
               >
-                <WhatsAppIcon size={20} />
-                Completar por WhatsApp
+                {isRedirecting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Abriendo WhatsApp...</span>
+                  </>
+                ) : (
+                  <>
+                    <WhatsAppIcon size={20} />
+                    <span>Completar por WhatsApp</span>
+                  </>
+                )}
               </button>
               <p className="text-center text-xs text-[#6d7a72] mt-2">
                 Serás redirigido a WhatsApp de forma segura.
