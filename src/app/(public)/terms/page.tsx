@@ -80,7 +80,7 @@ export default function TermsPage() {
               APANA es un proveedor de tecnología en la nube (Software as a Service - SaaS) que facilita a emprendedores y comercios la creación de tiendas online interactivas y la generación de enlaces de contacto directo hacia la aplicación WhatsApp.
             </p>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              <strong>APANA no es una pasarela de pagos ni un intermediario financiero.</strong> Las transacciones comerciales, cobros de productos, acuerdos de entrega, calidad de los artículos comercializados y obligaciones tributarias son de entera y exclusiva responsabilidad entre el comercio vendedor y su cliente comprador final.
+              <strong>APANA no es una pasarela de pagos ni un intermediario financiero.</strong> Cada tienda pública alojada en APANA es operada de forma independiente por el comercio respectivo. Las transacciones comerciales, acuerdos de entrega, cobros, calidad, garantías de los artículos comercializados y obligaciones tributarias son de entera y exclusiva responsabilidad entre el comercio vendedor y su cliente comprador final bajo un contrato bilateral en el que APANA no es parte contratante.
             </p>
           </section>
 
@@ -164,12 +164,19 @@ export default function TermsPage() {
                 </a>
               </div>
             </div>
-            <div className="pt-2">
+            <div className="pt-2 flex flex-col sm:flex-row sm:items-center gap-3">
+              <Link 
+                href="/privacy" 
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#006c49] hover:underline"
+              >
+                <span>🔒 Política de Privacidad y Tratamiento de Datos ➔</span>
+              </Link>
+              <span className="hidden sm:inline text-slate-300">•</span>
               <Link 
                 href="/libro-de-reclamaciones" 
-                className="inline-flex items-center gap-2 text-xs font-bold text-[#006c49] hover:underline"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#006c49] hover:underline"
               >
-                <span>📖 Acceder al Libro de Reclamaciones Virtual conforme a INDECOPI ➔</span>
+                <span>📖 Libro de Reclamaciones Virtual conforme a INDECOPI ➔</span>
               </Link>
             </div>
           </section>

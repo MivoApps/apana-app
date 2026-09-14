@@ -685,6 +685,28 @@ export default function PublicProductDetailPage({ params }: Props) {
           <div className="w-full h-12 bg-slate-100 text-slate-500 rounded-xl font-bold text-sm flex items-center justify-center border border-slate-200 cursor-not-allowed">
             🚫 Producto Agotado Temporalmente
           </div>
+        ) : activeStore?.status === 'pausada' ? (
+          <div className="flex flex-col gap-2">
+            <div className="w-full h-12 bg-amber-100 text-amber-900 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center border border-amber-200 cursor-not-allowed">
+              ⏸️ Tienda en Pausa Temporal
+            </div>
+            <p className="text-[11px] text-amber-800 text-center leading-tight">
+              Esta tienda no está recibiendo nuevos pedidos en este momento.
+            </p>
+          </div>
+        ) : activeStore?.slug !== 'panaderia-don-jose' && (!activeStore?.whatsappPhone || !activeStore?.isWhatsappVerified) ? (
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              disabled
+              className="w-full h-12 bg-slate-200 text-slate-500 font-bold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 cursor-not-allowed shadow-none select-none"
+            >
+              <span>⏳ Pedidos no disponibles temporalmente</span>
+            </button>
+            <p className="text-[11px] text-amber-950 bg-amber-50 border border-amber-200/80 rounded-xl p-2.5 text-center leading-tight">
+              Esta tienda aún está configurando su línea de WhatsApp. Vuelve pronto para realizar tu compra.
+            </p>
+          </div>
         ) : (
           <>
             <button

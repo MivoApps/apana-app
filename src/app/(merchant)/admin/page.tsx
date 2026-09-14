@@ -27,6 +27,7 @@ import {
   Mail,
   UserCheck,
   Calendar,
+  MapPin,
   AlertTriangle,
   ChevronDown,
   DollarSign,
@@ -55,7 +56,8 @@ import {
   Globe,
   Gauge,
   Info,
-  CheckCheck
+  CheckCheck,
+  Flag
 } from 'lucide-react';
 import { generateQrWithLogo, generateFullStickerImage } from '@/lib/qr-generator';
 import { useAuth } from '@/lib/firebase/auth-context';
@@ -71,12 +73,15 @@ import {
   getAllPaymentRecordsForAdminFromFS,
   adminExtendStoreSubscriptionInFS,
   adminToggleWhatsappVerificationInFS,
+  adminToggleEmailVerificationInFS,
   adminUpdateUserDetailsInFS,
   getAllReclamacionesForAdminFromFS,
   adminUpdateReclamacionStatusInFS,
   adminSaveGlobalAnnouncementInFS,
   getGlobalAnnouncementFromFS,
   cleanupExpiredOtpRequestsInFS,
+  getStoreReportsForAdminFromFS,
+  updateStoreReportStatusInFS,
   AdminStoreItem,
   AdminUserItem,
   PaymentRecord,
@@ -93,12 +98,13 @@ export default function SuperAdminPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
 
-  // Estado Principal (6 Pestañas: Tiendas, Suscripciones, Usuarios, Seguimiento/Leads, Reclamaciones, Infraestructura)
-  const [activeTab, setActiveTab] = useState<'stores' | 'subscriptions' | 'users' | 'leads' | 'reclamaciones' | 'infrastructure'>('stores');
+  // Estado Principal (7 Pestañas: Tiendas, Suscripciones, Usuarios, Seguimiento/Leads, Reclamaciones, Reportes, Infraestructura)
+  const [activeTab, setActiveTab] = useState<'stores' | 'subscriptions' | 'users' | 'leads' | 'reclamaciones' | 'reports' | 'infrastructure'>('stores');
   const [stores, setStores] = useState<AdminStoreItem[]>([]);
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [reclamaciones, setReclamaciones] = useState<ReclamacionItem[]>([]);
+  const [storeReports, setStoreReports] = useState<any[]>([]);
   const [announcement, setAnnouncement] = useState<GlobalAnnouncement>({
     message: '',
     active: false,
@@ -112,6 +118,7 @@ export default function SuperAdminPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [planFilter, setPlanFilter] = useState<'todos' | 'gratis' | 'emprendedor' | 'negocio'>('todos');
   const [statusFilter, setStatusFilter] = useState<'todos' | 'activa' | 'pausada'>('todos');
+  const [reclamacionScopeFilter, setReclamacionScopeFilter] = useState<'todas' | 'apana' | 'tiendas'>('todas');
 
   // Feedback
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
@@ -126,6 +133,7 @@ export default function SuperAdminPage() {
     plan: 'gratis' as 'gratis' | 'emprendedor' | 'negocio',
     status: 'activa' as 'activa' | 'pausada',
     isWhatsappVerified: false,
+    isEmailVerified: false,
   });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
@@ -187,8 +195,11 @@ export default function SuperAdminPage() {
     window.location.href = '/login';
   };
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (silent: boolean = false) => {
+    const isSilent = typeof silent === 'boolean' && silent;
+    if (!isSilent && stores.length === 0) {
+      setIsLoading(true);
+    }
     try {
       // Tareas de mantenimiento en segundo plano (sin bloquear la carga de la vista)
       if (user?.uid) {
@@ -196,21 +207,64 @@ export default function SuperAdminPage() {
       }
       cleanupExpiredOtpRequestsInFS().catch(() => { });
 
-      // Carga en paralelo de datos esenciales
-      const [storesData, usersData, paymentsData, reclamacionesData, globalAnn] = await Promise.all([
-        getAllStoresForAdminFromFS(),
-        getAllUsersForAdminFromFS(),
-        getAllPaymentRecordsForAdminFromFS(),
-        getAllReclamacionesForAdminFromFS(),
-        getGlobalAnnouncementFromFS(),
+      // Fase 1: Cargar tiendas y anuncio global de inmediato (desbloquea la pestaña principal en milisegundos)
+      const [storesData, globalAnn] = await Promise.all([
+        getAllStoresForAdminFromFS().catch((err) => {
+          console.warn('Aviso cargando tiendas:', err);
+          return [] as AdminStoreItem[];
+        }),
+        getGlobalAnnouncementFromFS().catch((err) => {
+          console.warn('Aviso cargando anuncio global:', err);
+          return null;
+        }),
       ]);
+
       setStores(storesData);
-      setUsers(usersData);
-      setPayments(paymentsData);
-      setReclamaciones(reclamacionesData);
       if (globalAnn) {
         setAnnouncement(globalAnn);
         setAnnouncementForm(globalAnn);
+      }
+      // Desbloquear interfaz de inmediato con las tiendas
+      setIsLoading(false);
+
+      // Fase 2: Cargar el resto de pestañas en segundo plano protegidas individualmente contra fallos de permisos
+      const [usersData, paymentsData, reclamacionesData, reportsData] = await Promise.all([
+        getAllUsersForAdminFromFS(storesData).catch((err) => {
+          console.warn('Aviso cargando usuarios:', err);
+          return [] as AdminUserItem[];
+        }),
+        getAllPaymentRecordsForAdminFromFS().catch((err) => {
+          console.warn('Aviso cargando pagos:', err);
+          return [];
+        }),
+        getAllReclamacionesForAdminFromFS().catch((err) => {
+          console.warn('Aviso cargando reclamaciones:', err);
+          return [];
+        }),
+        getStoreReportsForAdminFromFS().catch((err) => {
+          console.warn('Aviso cargando reportes de tienda:', err);
+          return [];
+        }),
+      ]);
+
+      setUsers(usersData);
+      setPayments(paymentsData);
+      setReclamaciones(reclamacionesData);
+      setStoreReports(reportsData || []);
+
+      // Guardar en caché de sesión para accesos instantáneos
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem('apana_admin_cache', JSON.stringify({
+            stores: storesData,
+            users: usersData,
+            payments: paymentsData,
+            reclamaciones: reclamacionesData,
+            storeReports: reportsData || [],
+            announcement: globalAnn,
+            savedAt: Date.now(),
+          }));
+        } catch { }
       }
     } catch (err) {
       console.error('Error al cargar datos de admin:', err);
@@ -222,7 +276,7 @@ export default function SuperAdminPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      router.push('/login');
+      router.replace('/login');
       return;
     }
 
@@ -231,13 +285,39 @@ export default function SuperAdminPage() {
       setIsAuthorized(false);
       setIsLoading(false);
       setTimeout(() => {
-        router.push('/dashboard');
+        router.replace('/dashboard');
       }, 3000);
       return;
     }
 
     setIsAuthorized(true);
-    loadData();
+
+    // Hidratar inmediatamente desde caché de sesión para renderizado instantáneo (<50ms)
+    let hasCache = false;
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedStr = sessionStorage.getItem('apana_admin_cache');
+        if (cachedStr) {
+          const cached = JSON.parse(cachedStr);
+          if (cached?.stores && Array.isArray(cached.stores)) {
+            setStores(cached.stores);
+            if (cached.users) setUsers(cached.users);
+            if (cached.payments) setPayments(cached.payments);
+            if (cached.reclamaciones) setReclamaciones(cached.reclamaciones);
+            if (cached.storeReports) setStoreReports(cached.storeReports);
+            if (cached.announcement) {
+              setAnnouncement(cached.announcement);
+              setAnnouncementForm(cached.announcement);
+            }
+            setIsLoading(false);
+            hasCache = true;
+          }
+        }
+      } catch { }
+    }
+
+    // Sincronizar con Firestore de fondo si había caché, o con carga inicial si no la había
+    loadData(hasCache);
   }, [user, authLoading, router]);
 
   // 1. Impersonación / Magic Login
@@ -383,6 +463,47 @@ export default function SuperAdminPage() {
     }
   };
 
+  // Toggle Rápido de Validación de Correo Electrónico (Desde Tienda)
+  const handleToggleEmailVerified = async (store: AdminStoreItem) => {
+    const nextVal = !store.isEmailVerified;
+    setActionLoadingId(store.id);
+    try {
+      const ownerRef = store.ownerEmail || store.ownerId || (store as any).userId;
+      await adminToggleEmailVerificationInFS(store.id, nextVal, ownerRef);
+      setStores((prev) => prev.map((s) => (s.id === store.id ? { ...s, isEmailVerified: nextVal } : s)));
+      setUsers((prev) => prev.map((u) => (u.uid === store.ownerId || u.email === store.ownerEmail ? { ...u, isEmailVerified: nextVal } : u)));
+      setSuccessMsg(`Correo de "${store.name}" marcado como ${nextVal ? 'VERIFICADO 🟢' : 'NO VERIFICADO ⚪'}.`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (e) {
+      alert('Error al actualizar validación de correo electrónico.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Toggle Rápido de Validación de Correo Electrónico (Desde Usuario)
+  const handleToggleUserEmailVerified = async (userItem: AdminUserItem) => {
+    const nextVal = !userItem.isEmailVerified;
+    const actionKey = userItem.uid || userItem.email;
+    setActionLoadingId(actionKey);
+    try {
+      const targetStore = stores.find((s) => s.ownerId === userItem.uid || s.ownerEmail === userItem.email || s.name === userItem.storeName);
+      if (targetStore) {
+        await adminToggleEmailVerificationInFS(targetStore.id, nextVal, userItem.email || userItem.uid);
+        setStores((prev) => prev.map((s) => (s.id === targetStore.id ? { ...s, isEmailVerified: nextVal } : s)));
+      } else {
+        await adminToggleEmailVerificationInFS(`user_${userItem.uid}`, nextVal, userItem.email || userItem.uid);
+      }
+      setUsers((prev) => prev.map((u) => (u.uid === userItem.uid || u.email === userItem.email ? { ...u, isEmailVerified: nextVal } : u)));
+      setSuccessMsg(`Correo de "${userItem.email}" marcado como ${nextVal ? 'VERIFICADO 🟢' : 'NO VERIFICADO ⚪'}.`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (e) {
+      alert('Error al actualizar validación de correo electrónico del usuario.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   // Extender Suscripción (+30 días)
   const handleExtendSubscription = async (store: AdminStoreItem, days: number = 30) => {
     setActionLoadingId(store.id);
@@ -416,6 +537,7 @@ export default function SuperAdminPage() {
       plan: (store.plan as any) || 'gratis',
       status: (store.status as any) || 'activa',
       isWhatsappVerified: Boolean(store.isWhatsappVerified),
+      isEmailVerified: Boolean(store.isEmailVerified),
     });
   };
 
@@ -437,6 +559,11 @@ export default function SuperAdminPage() {
         await adminToggleWhatsappVerificationInFS(editingStore.id, editForm.isWhatsappVerified);
       }
 
+      if (editForm.isEmailVerified !== editingStore.isEmailVerified) {
+        const ownerRef = editingStore.ownerEmail || editingStore.ownerId || (editingStore as any).userId;
+        await adminToggleEmailVerificationInFS(editingStore.id, editForm.isEmailVerified, ownerRef);
+      }
+
       setStores((prev) =>
         prev.map((s) =>
           s.id === editingStore.id
@@ -448,6 +575,7 @@ export default function SuperAdminPage() {
               plan: editForm.plan,
               status: editForm.status,
               isWhatsappVerified: editForm.isWhatsappVerified,
+              isEmailVerified: editForm.isEmailVerified,
             }
             : s
         )
@@ -718,12 +846,23 @@ export default function SuperAdminPage() {
 
   const filteredReclamaciones = reclamaciones.filter((r) => {
     const term = searchQuery.toLowerCase();
-    return (
+    const matchesSearch =
       r.claimCode.toLowerCase().includes(term) ||
       r.fullName.toLowerCase().includes(term) ||
       r.docNumber.includes(term) ||
-      r.email.toLowerCase().includes(term)
-    );
+      r.email.toLowerCase().includes(term) ||
+      (r.storeName && r.storeName.toLowerCase().includes(term)) ||
+      (r.storeSlug && r.storeSlug.toLowerCase().includes(term));
+
+    if (!matchesSearch) return false;
+
+    if (reclamacionScopeFilter === 'apana') {
+      return !r.storeId; // Reclamos centrales de APANA
+    }
+    if (reclamacionScopeFilter === 'tiendas') {
+      return Boolean(r.storeId); // Reclamos de tiendas de comerciantes
+    }
+    return true;
   });
 
   if (authLoading || isLoading) {
@@ -799,7 +938,7 @@ export default function SuperAdminPage() {
 
             {/* Refrescar Datos */}
             <button
-              onClick={loadData}
+              onClick={() => loadData(false)}
               className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all flex items-center gap-1.5 text-xs font-bold border border-slate-700 cursor-pointer"
               title="Refrescar datos"
             >
@@ -965,6 +1104,22 @@ export default function SuperAdminPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab('reports')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === 'reports'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-xs'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              }`}
+          >
+            <Flag size={16} />
+            <span>Reportes ({storeReports.length})</span>
+            {storeReports.filter((r) => r.status === 'pendiente').length > 0 && (
+              <span className="px-1.5 py-0.2 bg-red-500 text-white font-black text-[10px] rounded-full">
+                {storeReports.filter((r) => r.status === 'pendiente').length}
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab('infrastructure')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === 'infrastructure'
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
@@ -1058,7 +1213,7 @@ export default function SuperAdminPage() {
                   <thead className="bg-[#071220] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-800 text-[10px]">
                     <tr>
                       <th className="py-3 px-4">Tienda / Negocio</th>
-                      <th className="py-3 px-4">WhatsApp & Verificación</th>
+                      <th className="py-3 px-4">Verificaciones (WA & Correo)</th>
                       <th className="py-3 px-4">Plan Asignado</th>
                       <th className="py-3 px-4">Productos</th>
                       <th className="py-3 px-4">Estado</th>
@@ -1086,14 +1241,24 @@ export default function SuperAdminPage() {
                                 <span className="font-bold text-white truncate text-sm">
                                   {store.name}
                                 </span>
-                                <Link
-                                  href={`/s/${store.slug}`}
-                                  target="_blank"
-                                  className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-mono"
-                                >
-                                  /s/{store.slug}
-                                  <ExternalLink size={11} />
-                                </Link>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Link
+                                    href={`/s/${store.slug}`}
+                                    target="_blank"
+                                    className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-mono"
+                                  >
+                                    /s/{store.slug}
+                                    <ExternalLink size={11} />
+                                  </Link>
+                                  {store.country ? (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.2 bg-slate-800/80 text-slate-300 text-[10px] rounded border border-slate-700/80" title={`IP: ${store.ipSignup || 'No registrada'}`}>
+                                      <span>{store.country === 'PE' ? '🇵🇪' : store.country === 'CO' ? '🇨🇴' : store.country === 'CL' ? '🇨🇱' : store.country === 'MX' ? '🇲🇽' : store.country === 'AR' ? '🇦🇷' : '🌐'}</span>
+                                      <span>{store.city || store.country}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] text-slate-500 font-normal">🇵🇪 Perú</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </td>
@@ -1130,16 +1295,40 @@ export default function SuperAdminPage() {
                                   {store.isWhatsappVerified ? (
                                     <>
                                       <CheckCircle2 size={10} className="text-emerald-400" />
-                                      <span>Validado</span>
+                                      <span>WA Validado</span>
                                     </>
                                   ) : (
                                     <>
                                       <ShieldAlert size={10} className="text-slate-400" />
-                                      <span>Sin validar (Clic para validar)</span>
+                                      <span>WA Sin validar</span>
                                     </>
                                   )}
                                 </button>
                               )}
+
+                              {/* Badge y Botón de Verificación de Correo Electrónico */}
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleEmailVerified(store)}
+                                  disabled={isBusy}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold w-fit transition-all cursor-pointer ${store.isEmailVerified
+                                      ? 'bg-blue-950/70 text-blue-400 border border-blue-700/60 hover:bg-blue-900'
+                                      : 'bg-slate-800 text-amber-400 border border-amber-800/60 hover:text-white hover:border-amber-600'
+                                    }`}
+                                  title={store.isEmailVerified ? "Correo verificado oficialmente (Clic para desvalidar)" : "Clic para validar correo del comercio manualmente"}
+                                >
+                                  <Mail size={10} className={store.isEmailVerified ? 'text-blue-400' : 'text-amber-400'} />
+                                  {store.isEmailVerified ? (
+                                    <>
+                                      <CheckCircle2 size={10} className="text-blue-400" />
+                                      <span>Email Validado</span>
+                                    </>
+                                  ) : (
+                                    <span>Validar Email ✉️</span>
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           </td>
 
@@ -1435,6 +1624,7 @@ export default function SuperAdminPage() {
                     <tr>
                       <th className="py-3 px-4">Usuario / Nombre</th>
                       <th className="py-3 px-4">Correo Electrónico</th>
+                      <th className="py-3 px-4">Ubicación</th>
                       <th className="py-3 px-4">Rol en APANA</th>
                       <th className="py-3 px-4">Tienda Asociada</th>
                       <th className="py-3 px-4 text-right">Acciones</th>
@@ -1454,7 +1644,39 @@ export default function SuperAdminPage() {
                             </div>
                           </td>
                           <td className="py-3.5 px-4 font-mono text-slate-300">
-                            {u.email}
+                            <div className="flex flex-col gap-1">
+                              <span>{u.email}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleUserEmailVerified(u)}
+                                disabled={actionLoadingId === (u.uid || u.email)}
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold w-fit transition-all cursor-pointer ${u.isEmailVerified
+                                    ? 'bg-blue-950/70 text-blue-400 border border-blue-700/60 hover:bg-blue-900'
+                                    : 'bg-slate-800 text-amber-400 border border-amber-800/60 hover:text-white hover:border-amber-600'
+                                  }`}
+                                title={u.isEmailVerified ? "Correo verificado (Clic para marcar como no verificado)" : "Clic para validar correo manualmente"}
+                              >
+                                <Mail size={10} className={u.isEmailVerified ? 'text-blue-400' : 'text-amber-400'} />
+                                {u.isEmailVerified ? (
+                                  <>
+                                    <CheckCircle2 size={10} className="text-blue-400" />
+                                    <span>Verificado</span>
+                                  </>
+                                ) : (
+                                  <span>Validar correo ✉️</span>
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            {u.country ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 text-[11px] border border-slate-700/80 font-medium" title={`IP: ${u.ipSignup || 'No registrada'}`}>
+                                <span>{u.country === 'PE' ? '🇵🇪' : u.country === 'CO' ? '🇨🇴' : u.country === 'CL' ? '🇨🇱' : u.country === 'MX' ? '🇲🇽' : u.country === 'AR' ? '🇦🇷' : '🌐'}</span>
+                                <span>{u.city || u.country}</span>
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-slate-500 italic">No registrado</span>
+                            )}
                           </td>
                           <td className="py-3.5 px-4">
                             <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isAdmin
@@ -1567,12 +1789,33 @@ export default function SuperAdminPage() {
                       return (
                         <tr key={lead.user.uid} className="hover:bg-slate-800/30 transition-colors">
                           <td className="py-3.5 px-4 font-medium text-white">
-                            <div className="flex flex-col">
+                            <div className="flex flex-col gap-1">
                               <span className="font-bold">{lead.user.name || 'Sin nombre'}</span>
                               <span className="text-[11px] text-slate-400 font-mono">{lead.user.email}</span>
-                              <span className="text-[10px] text-slate-500 mt-0.5">
-                                Reg: {new Date(lead.user.createdAt).toLocaleDateString('es-PE')}
-                              </span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[10px] text-slate-500">
+                                  Reg: {new Date(lead.user.createdAt).toLocaleDateString('es-PE')}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleUserEmailVerified(lead.user)}
+                                  disabled={actionLoadingId === (lead.user.uid || lead.user.email)}
+                                  className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold transition-all cursor-pointer ${lead.user.isEmailVerified || lead.store?.isEmailVerified
+                                      ? 'bg-blue-950/70 text-blue-400 border border-blue-700/60'
+                                      : 'bg-slate-800 text-amber-400 border border-amber-800/60 hover:text-white'
+                                    }`}
+                                  title="Validar o desvalidar correo del comercio"
+                                >
+                                  {lead.user.isEmailVerified || lead.store?.isEmailVerified ? (
+                                    <>
+                                      <CheckCircle2 size={9} className="text-blue-400" />
+                                      <span>Email OK</span>
+                                    </>
+                                  ) : (
+                                    <span>Validar email</span>
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           </td>
                           <td className="py-3.5 px-4">
@@ -1634,18 +1877,57 @@ export default function SuperAdminPage() {
         {/* 📖 TAB: LIBRO DE RECLAMACIONES INDECOPI */}
         {activeTab === 'reclamaciones' && (
           <section className="bg-[#0e1e33] border border-slate-800 rounded-2xl overflow-hidden shadow-sm flex flex-col">
-            <div className="p-4 px-5 border-b border-slate-800 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <BookOpen size={17} className="text-emerald-400" />
-                Hojas de Reclamación Virtuales Registradas (INDECOPI)
-              </h2>
-              <span className="text-xs text-slate-400">Plazo legal de respuesta: 15 días hábiles</span>
+            <div className="p-4 px-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <BookOpen size={17} className="text-emerald-400" />
+                  Hojas de Reclamación Virtuales Registradas (INDECOPI)
+                </h2>
+                <span className="text-xs text-slate-400">Plazo legal de respuesta: 15 días hábiles improrrogables</span>
+              </div>
+
+              {/* Selector de Ámbito */}
+              <div className="flex items-center gap-1.5 bg-[#071220] p-1 rounded-xl border border-slate-800 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setReclamacionScopeFilter('todas')}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                    reclamacionScopeFilter === 'todas'
+                      ? 'bg-slate-700 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Todas ({reclamaciones.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReclamacionScopeFilter('apana')}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                    reclamacionScopeFilter === 'apana'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  🏢 APANA Central ({reclamaciones.filter((r) => !r.storeId).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReclamacionScopeFilter('tiendas')}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                    reclamacionScopeFilter === 'tiendas'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  🏪 Tiendas ({reclamaciones.filter((r) => Boolean(r.storeId)).length})
+                </button>
+              </div>
             </div>
 
             {filteredReclamaciones.length === 0 ? (
               <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
                 <CheckCircle2 size={32} className="text-emerald-500/50" />
-                <span>No hay reclamaciones ni quejas registradas. Todo en orden.</span>
+                <span>No hay reclamaciones ni quejas en esta vista. Todo en orden.</span>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -1653,6 +1935,7 @@ export default function SuperAdminPage() {
                   <thead className="bg-[#071220] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-800 text-[10px]">
                     <tr>
                       <th className="py-3 px-4">Código / Hoja</th>
+                      <th className="py-3 px-4">Establecimiento</th>
                       <th className="py-3 px-4">Consumidor</th>
                       <th className="py-3 px-4">Tipo</th>
                       <th className="py-3 px-4">Bien Contratado</th>
@@ -1670,6 +1953,18 @@ export default function SuperAdminPage() {
                         <tr key={rec.id} className="hover:bg-[#162a45]/50 transition-colors">
                           <td className="py-3.5 px-4 font-mono font-bold text-emerald-400">
                             {rec.claimCode}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            {rec.storeName ? (
+                              <div className="flex flex-col">
+                                <span className="font-bold text-emerald-300">{rec.storeName}</span>
+                                <span className="text-[10px] text-slate-400">/s/{rec.storeSlug}</span>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] font-bold text-blue-400 bg-blue-950/60 border border-blue-800 px-2 py-0.5 rounded">
+                                APANA Central
+                              </span>
+                            )}
                           </td>
                           <td className="py-3.5 px-4">
                             <div className="flex flex-col">
@@ -1712,6 +2007,152 @@ export default function SuperAdminPage() {
                             >
                               Ver Hoja Completa
                             </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* 🚩 TAB: REPORTES DE TIENDAS Y FRAUDE */}
+        {activeTab === 'reports' && (
+          <section className="bg-[#0e1e33] border border-slate-800 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+            <div className="p-4 px-5 border-b border-slate-800 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <Flag size={17} className="text-amber-400" />
+                Alertas y Reportes Comunitarios de Tiendas
+              </h2>
+              <span className="text-xs text-slate-400">Total recibidos: {storeReports.length}</span>
+            </div>
+
+            {storeReports.length === 0 ? (
+              <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
+                <CheckCircle2 size={32} className="text-emerald-500/50" />
+                <span>No hay reportes de tiendas recibidos. La plataforma opera de forma limpia.</span>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#071220] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-800 text-[10px]">
+                    <tr>
+                      <th className="py-3 px-4">Fecha</th>
+                      <th className="py-3 px-4">Tienda Reportada</th>
+                      <th className="py-3 px-4">Motivo</th>
+                      <th className="py-3 px-4">Detalle / Evidencias</th>
+                      <th className="py-3 px-4">Contacto Reportante</th>
+                      <th className="py-3 px-4">Estado</th>
+                      <th className="py-3 px-4 text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {storeReports.map((rep) => {
+                      const isPending = rep.status === 'pendiente';
+                      const repDate = rep.createdAt ? new Date(rep.createdAt).toLocaleDateString('es-PE', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : 'Reciente';
+
+                      return (
+                        <tr key={rep.id} className="hover:bg-[#162a45]/50 transition-colors">
+                          <td className="py-3.5 px-4 text-slate-400 whitespace-nowrap">
+                            {repDate}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-white">{rep.storeName}</span>
+                              <Link
+                                href={`/s/${rep.storeSlug}`}
+                                target="_blank"
+                                className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-mono"
+                              >
+                                <span>/s/{rep.storeSlug}</span>
+                                <ExternalLink size={10} />
+                              </Link>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[11px] font-semibold">
+                              {rep.reasonLabel || rep.reason}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 max-w-xs">
+                            <p className="text-slate-300 line-clamp-2 text-xs" title={rep.details}>
+                              {rep.details}
+                            </p>
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-400 text-xs">
+                            {rep.reporterContact || 'Anónimo'}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              isPending
+                                ? 'bg-red-500/10 text-red-400 border border-red-500/30'
+                                : rep.status === 'revisado'
+                                ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+                                : 'bg-slate-700/50 text-slate-400'
+                            }`}>
+                              {isPending ? 'Pendiente' : rep.status === 'revisado' ? 'Revisado' : rep.status}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {isPending && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (confirm(`¿Pausar preventivamente la tienda "${rep.storeName}"?`)) {
+                                      try {
+                                        await adminUpdateStoreStatusInFS(rep.storeId, 'pausada');
+                                        await updateStoreReportStatusInFS(rep.id, 'accion_tomada');
+                                        setStoreReports((prev) =>
+                                          prev.map((r) => (r.id === rep.id ? { ...r, status: 'accion_tomada' } : r))
+                                        );
+                                        setStores((prev) =>
+                                          prev.map((s) => (s.id === rep.storeId ? { ...s, status: 'pausada' } : s))
+                                        );
+                                        alert('Tienda pausada preventivamente con éxito.');
+                                      } catch (e) {
+                                        alert('Error al pausar la tienda.');
+                                      }
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
+                                  title="Pausar la tienda reportada de inmediato"
+                                >
+                                  Pausar Tienda
+                                </button>
+                              )}
+
+                              {isPending ? (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    try {
+                                      await updateStoreReportStatusInFS(rep.id, 'revisado');
+                                      setStoreReports((prev) =>
+                                        prev.map((r) => (r.id === rep.id ? { ...r, status: 'revisado' } : r))
+                                      );
+                                    } catch (e) {
+                                      alert('Error al marcar como revisado');
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
+                                >
+                                  Marcar Revisado
+                                </button>
+                              ) : (
+                                <span className={`text-[11px] font-semibold ${rep.status === 'accion_tomada' ? 'text-amber-400' : 'text-slate-400'}`}>
+                                  {rep.status === 'accion_tomada' ? '⚠️ Tienda Pausada' : 'Atendido'}
+                                </span>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -2217,9 +2658,20 @@ export default function SuperAdminPage() {
                 <BookOpen size={20} className="text-emerald-400" />
                 <div>
                   <h3 className="font-bold text-sm text-white">Hoja N° {selectedReclamacion.claimCode}</h3>
-                  <span className="text-[11px] text-slate-400">
-                    Fecha de Registro: {new Date(selectedReclamacion.createdAt).toLocaleString('es-PE')}
-                  </span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[11px] text-slate-400">
+                      {new Date(selectedReclamacion.createdAt).toLocaleString('es-PE')}
+                    </span>
+                    {selectedReclamacion.storeName ? (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                        Tienda: {selectedReclamacion.storeName} ({selectedReclamacion.storeSlug})
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        APANA Central
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button
@@ -2347,7 +2799,7 @@ export default function SuperAdminPage() {
               </div>
 
               {/* Checkbox Validación de WhatsApp */}
-              <div className="flex items-center gap-2 pt-1 pb-1">
+              <div className="flex items-center gap-2 pt-1 pb-0.5">
                 <input
                   type="checkbox"
                   id="editIsWhatsappVerified"
@@ -2357,6 +2809,20 @@ export default function SuperAdminPage() {
                 />
                 <label htmlFor="editIsWhatsappVerified" className="text-xs font-medium text-slate-200 cursor-pointer">
                   WhatsApp Verificado Oficialmente
+                </label>
+              </div>
+
+              {/* Checkbox Validación de Correo Electrónico */}
+              <div className="flex items-center gap-2 pb-1">
+                <input
+                  type="checkbox"
+                  id="editIsEmailVerified"
+                  checked={editForm.isEmailVerified}
+                  onChange={(e) => setEditForm({ ...editForm, isEmailVerified: e.target.checked })}
+                  className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                />
+                <label htmlFor="editIsEmailVerified" className="text-xs font-medium text-slate-200 cursor-pointer">
+                  Correo Electrónico Verificado Oficialmente
                 </label>
               </div>
 

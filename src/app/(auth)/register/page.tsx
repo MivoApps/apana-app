@@ -35,13 +35,13 @@ export default function RegisterPage() {
 
       const userEmail = user.email?.toLowerCase().trim() || '';
       if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
-        window.location.href = '/admin';
+        router.replace('/admin');
         return;
       }
 
       // Timeout de seguridad de 2 segundos para forzar redirección
       const fallbackTimer = setTimeout(() => {
-        if (isMounted) window.location.href = '/dashboard';
+        if (isMounted) router.replace('/dashboard');
       }, 2000);
 
       import('@/lib/firebase/firestore').then(async ({ getStoreByUserIdFromFS }) => {
@@ -50,15 +50,15 @@ export default function RegisterPage() {
           if (isMounted) {
             clearTimeout(fallbackTimer);
             if (store) {
-              window.location.href = '/dashboard';
+              router.replace('/dashboard');
             } else {
-              window.location.href = '/store/setup';
+              router.replace('/store/setup');
             }
           }
         } catch {
           if (isMounted) {
             clearTimeout(fallbackTimer);
-            window.location.href = '/dashboard';
+            router.replace('/dashboard');
           }
         }
       });
@@ -114,6 +114,17 @@ export default function RegisterPage() {
         console.warn('No se pudo enviar correo de verificación inicial:', emailErr);
       }
 
+      // Obtener ubicación geográfica ligera (país, ciudad, IP)
+      let geoData = { country: 'PE', city: 'Lima', ip: '' };
+      try {
+        const geoRes = await fetch('/api/geo');
+        if (geoRes.ok) {
+          geoData = await geoRes.json();
+        }
+      } catch (geoErr) {
+        console.warn('No se pudo obtener geolocalización:', geoErr);
+      }
+
       // Guardar perfil de usuario en la colección 'users' de Firestore
       const { createUserProfileInFS } = await import('@/lib/firebase/firestore');
       await createUserProfileInFS({
@@ -122,6 +133,9 @@ export default function RegisterPage() {
         email: email.trim(),
         role: 'merchant',
         createdAt: Date.now(),
+        country: geoData.country || 'PE',
+        city: geoData.city || 'Lima',
+        ipSignup: geoData.ip || '',
       });
 
       // Limpiar cualquier paso viejo del Wizard en localStorage para usuarios nuevos
@@ -155,12 +169,12 @@ export default function RegisterPage() {
 
       // Si es el SuperAdmin ➔ Ir directamente a la Consola de Administración
       if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
-        window.location.href = '/admin';
+        router.replace('/admin');
         return;
       }
 
       // Redirigir al flujo de onboarding de inmediato
-      window.location.href = '/store/setup';
+      router.replace('/store/setup');
     } catch (err: any) {
       console.error('Error al registrarse/iniciar sesión con Google:', err);
       let errorMsg = 'No se pudo iniciar sesión con Google. Reintenta de nuevo.';

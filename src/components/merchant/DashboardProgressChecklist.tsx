@@ -37,12 +37,11 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
 }) => {
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [showCelebration, setShowCelebration] = React.useState(false);
-  const [isFullyDismissed, setIsFullyDismissed] = React.useState(false);
 
   // 1. Validar que tengamos usuario y tienda antes de renderizar
   const isLoaded = Boolean(user && store);
   const step1StoreCreated = Boolean(store?.name && store?.slug);
-  const step2EmailVerified = Boolean(user?.emailVerified);
+  const step2EmailVerified = Boolean(user?.emailVerified || store?.isEmailVerified);
   const step3Whatsapp = Boolean(store?.whatsappPhone && store?.isWhatsappVerified === true);
   const step4Product = Boolean(products && products.length > 0);
 
@@ -57,39 +56,97 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
   const progressPercent = Math.round((completedCount / totalSteps) * 100);
   const isComplete = isLoaded && completedCount === totalSteps;
 
+  // Estado inicial de descartado: si la tienda ya lo tiene marcado en DB o en localStorage
+  const isCelebratedInDB = Boolean(store?.isOnboardingCelebrated);
+  const isCelebratedInStorage = Boolean(
+    typeof window !== 'undefined' && store?.id && localStorage.getItem(`apana_onboarding_celebrated_${store.id}`) === 'true'
+  );
+
+  const [isFullyDismissed, setIsFullyDismissed] = React.useState<boolean>(() => {
+    return isCelebratedInDB || isCelebratedInStorage;
+  });
+
+  // Si las props de store cambian y ya estaba marcado en DB, mantenerlo descartado inmediatamente
+  React.useEffect(() => {
+    if (store?.isOnboardingCelebrated) {
+      setIsFullyDismissed(true);
+      setShowCelebration(false);
+      try {
+        localStorage.setItem(`apana_onboarding_celebrated_${store.id}`, 'true');
+      } catch (_) {}
+    }
+  }, [store?.id, store?.isOnboardingCelebrated]);
+
   // Manejo de animación de celebración cuando se completan los 4 pasos
   React.useEffect(() => {
-    if (!store?.id) return;
+    if (!store?.id || !isLoaded) return;
 
-    if (isComplete) {
+    // Si la tienda ya tiene registrado en Firestore que celebró, descartar de inmediato sin mostrar nada
+    if (store.isOnboardingCelebrated) {
+      setIsFullyDismissed(true);
+      setShowCelebration(false);
       try {
-        const alreadyCelebrated = localStorage.getItem(`apana_onboarding_celebrated_${store.id}`);
-        if (!alreadyCelebrated) {
+        localStorage.setItem(`apana_onboarding_celebrated_${store.id}`, 'true');
+      } catch (_) {}
+      return;
+    }
+
+    try {
+      const alreadyCelebratedLocal = localStorage.getItem(`apana_onboarding_celebrated_${store.id}`) === 'true';
+
+      if (isComplete) {
+        if (!alreadyCelebratedLocal && !store.isOnboardingCelebrated) {
+          // Primera vez completando los 4 pasos: mostrar felicitaciones y persistir en localStorage y en Firestore
           setShowCelebration(true);
           localStorage.setItem(`apana_onboarding_celebrated_${store.id}`, 'true');
+          
+          // Persistir en Firestore de fondo para que persista aunque borre caché o cambie de dispositivo
+          if (user?.uid) {
+            import('@/lib/firebase/firestore').then(({ createOrUpdateStoreInFS }) => {
+              createOrUpdateStoreInFS(user.uid, {
+                id: store.id,
+                isOnboardingCelebrated: true,
+              }).catch(() => {});
+            });
+          }
+
           const timer = setTimeout(() => {
+            setShowCelebration(false);
             setIsFullyDismissed(true);
           }, 4500);
           return () => clearTimeout(timer);
         } else {
+          // Ya lo vio anteriormente: no volver a mostrar nunca más
+          setShowCelebration(false);
+          setIsFullyDismissed(true);
+          // Asegurar sincronización en Firestore si no estaba marcado
+          if (user?.uid && !store.isOnboardingCelebrated) {
+            import('@/lib/firebase/firestore').then(({ createOrUpdateStoreInFS }) => {
+              createOrUpdateStoreInFS(user.uid, {
+                id: store.id,
+                isOnboardingCelebrated: true,
+              }).catch(() => {});
+            });
+          }
+        }
+      } else {
+        // Aún no está 100% completo, sólo sincronizar si ya estaba descartado por error
+        if (alreadyCelebratedLocal) {
           setIsFullyDismissed(true);
         }
-      } catch (_) {
-        setIsFullyDismissed(true);
       }
-    } else {
-      // Si la tienda aún no completa todos los pasos, asegurar que el checklist sea visible
-      try {
-        localStorage.removeItem(`apana_onboarding_celebrated_${store.id}`);
-      } catch (_) {}
-      setIsFullyDismissed(false);
-      setShowCelebration(false);
+    } catch (_) {
+      if (isComplete) setIsFullyDismissed(true);
     }
-  }, [isComplete, store?.id]);
+  }, [isComplete, isLoaded, store?.id, store?.isOnboardingCelebrated, user?.uid]);
 
-  if (!isLoaded || isFullyDismissed) return null;
+  // Si ya celebró o se descartó (en DB o en state), no renderizar absolutamente nada (evita cualquier parpadeo)
+  if (!isLoaded || isFullyDismissed || isCelebratedInDB || isCelebratedInStorage) return null;
 
-  // Modal / Card de Celebración Festiva (sólo cuando se completa por primera vez)
+  // Si ya está completo pero no en animación de celebración, ocultar inmediatamente
+  if (isComplete && !showCelebration) return null;
+
+  // Modal / Card de Celebración Festiva (sólo cuando se completa por primera y única vez)
   if (showCelebration) {
     return (
       <div className="bg-linear-to-r from-emerald-600 via-[#059669] to-teal-700 rounded-3xl p-6 sm:p-7 text-white shadow-xl relative overflow-hidden animate-in zoom-in-95 duration-500 flex flex-col sm:flex-row items-center justify-between gap-5">

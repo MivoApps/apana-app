@@ -20,6 +20,9 @@ export interface Store {
   bannerUrl?: string | null;
   city?: string;
   department?: string;
+  country?: string; // Código de país ej. "PE", "CO", "CL"
+  countryName?: string; // ej. "Perú"
+  ipSignup?: string; // IP de origen al momento de creación
   socialLinks?: {
     instagram?: string;
     facebook?: string;
@@ -37,11 +40,27 @@ export interface Store {
   lastPaymentAmount?: number;
   lastCulqiChargeId?: string;
   categories?: string[]; // Categorías de productos de la tienda (Plan Emprendedor y Negocio)
+  isEmailVerified?: boolean; // Validación oficial del correo del comercio
+  emailVerifiedAt?: number; // Timestamp de verificación de correo
   isWhatsappVerified?: boolean; // Validación anti-fraude del WhatsApp del comercio
   whatsappVerificationCode?: string; // Código de 6 dígitos enviado
   whatsappVerifiedAt?: number; // Timestamp de verificación
   downgradedAt?: number; // Timestamp cuando pasó a Plan Gratis
   dataRetentionUntil?: number; // Timestamp fin del período de gracia de 6 meses (180 días)
+  
+  // Auditoría y Límite Anti-Fraude de Cambios de Nombre y Teléfono (Máx 2 cada 30 días)
+  nameChangesHistory?: number[]; // Timestamps de cambios de nombre de la tienda
+  phoneChangesHistory?: number[]; // Timestamps de cambios de teléfono de la tienda
+  
+  // Flag de persistencia en base de datos para la celebración de onboarding
+  isOnboardingCelebrated?: boolean;
+
+  // Datos Legales / Fiscales para Libro de Reclamaciones Oficial (Opcional con fallback inteligente)
+  legalBusinessName?: string; // Razón Social o Nombre del Titular
+  legalTaxIdType?: 'RUC' | 'DNI';
+  legalTaxId?: string; // Número de RUC o DNI
+  legalAddress?: string; // Dirección Comercial o Fiscal
+  
   createdAt?: any;
   updatedAt?: any;
 }

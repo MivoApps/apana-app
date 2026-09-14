@@ -21,7 +21,11 @@ import {
   LogOut,
   ShieldCheck,
   AlertCircle,
-  Mail
+  Mail,
+  Scale,
+  Building2,
+  FileText,
+  Info
 } from 'lucide-react';
 import { sendEmailVerification } from 'firebase/auth';
 import { Button } from '@/components/ui/Button';
@@ -85,6 +89,12 @@ export default function SettingsPage() {
   const [instagram, setInstagram] = useState('');
   const [tiktok, setTiktok] = useState('');
 
+  // Datos Fiscales / Legales para Libro de Reclamaciones (Opcional con fallback inteligente)
+  const [legalBusinessName, setLegalBusinessName] = useState('');
+  const [legalTaxIdType, setLegalTaxIdType] = useState<'RUC' | 'DNI'>('RUC');
+  const [legalTaxId, setLegalTaxId] = useState('');
+  const [legalAddress, setLegalAddress] = useState('');
+
   const cleanInitialPhone = (phoneStr: string) => {
     const digitsOnly = phoneStr.replace(/\D/g, '');
     return digitsOnly.length > 9 ? digitsOnly.slice(-9) : digitsOnly;
@@ -106,8 +116,105 @@ export default function SettingsPage() {
   const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
   const [acceptTermsChecked, setAcceptTermsChecked] = useState(false);
   const [phoneChangeError, setPhoneChangeError] = useState('');
+
+  // Estados para Modal Seguro de Cambio de Nombre de Tienda (Anti-Fraude: 2 por 30 días)
+  const [showChangeNameModal, setShowChangeNameModal] = useState(false);
+  const [newNameInput, setNewNameInput] = useState('');
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
+  const [nameChangeError, setNameChangeError] = useState('');
+  const [acceptNameTermsChecked, setAcceptNameTermsChecked] = useState(false);
+
   const [isResendingEmail, setIsResendingEmail] = useState(false);
   const [emailSentToast, setEmailSentToast] = useState(false);
+
+  // Palabras reservadas del sistema que los comercios no pueden usar como nombre
+  const RESERVED_STORE_NAMES = ['apana', 'apana oficial', 'admin', 'administrador', 'soporte', 'soporte oficial', 'verificado', 'oficial'];
+
+  // Función helper para calcular cambios en los últimos 30 días
+  const getRecentChangesCount = (history?: number[]): number => {
+    if (!history || !Array.isArray(history)) return 0;
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return history.filter((ts) => typeof ts === 'number' && ts > thirtyDaysAgo).length;
+  };
+
+  const nameChangesInLast30Days = getRecentChangesCount(fsStore?.nameChangesHistory);
+  const phoneChangesInLast30Days = getRecentChangesCount(fsStore?.phoneChangesHistory);
+  const canChangeName = nameChangesInLast30Days < 2;
+  const canChangePhone = phoneChangesInLast30Days < 2;
+
+  const handleOpenChangeNameModal = () => {
+    setNewNameInput(storeName);
+    setNameChangeError('');
+    setAcceptNameTermsChecked(false);
+    setShowChangeNameModal(true);
+  };
+
+  const handleConfirmChangeName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanName = newNameInput.trim();
+    if (!cleanName || cleanName.length < 3) {
+      setNameChangeError('El nombre debe tener al menos 3 caracteres.');
+      return;
+    }
+    if (cleanName.length > 50) {
+      setNameChangeError('El nombre no puede superar los 50 caracteres.');
+      return;
+    }
+    if (RESERVED_STORE_NAMES.includes(cleanName.toLowerCase())) {
+      setNameChangeError('Este nombre está reservado por el sistema de APANA.');
+      return;
+    }
+    if (!canChangeName) {
+      setNameChangeError('Has alcanzado el límite máximo de 2 cambios de nombre cada 30 días.');
+      return;
+    }
+    if (!acceptNameTermsChecked) {
+      setNameChangeError('Debes confirmar que comprendes el aviso de seguridad.');
+      return;
+    }
+
+    setIsUpdatingName(true);
+    setNameChangeError('');
+
+    try {
+      if (user && fsStore) {
+        const currentHistory = Array.isArray(fsStore.nameChangesHistory) ? fsStore.nameChangesHistory : [];
+        const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+        const filteredHistory = currentHistory.filter((ts) => ts > thirtyDaysAgo);
+        const updatedHistory = [...filteredHistory, Date.now()];
+
+        const updatedStore = await createOrUpdateStoreInFS(user.uid, {
+          name: cleanName,
+          nameChangesHistory: updatedHistory,
+          whatsappPhone: fsStore.whatsappPhone || '',
+          themeStyle: selectedStyle,
+          primaryColor: selectedColorHex,
+          description: storeDescription,
+          categories: categories,
+          logoUrl: logoUrl,
+          city: city,
+          schedule: schedule,
+          shippingType: shippingType,
+          socialLinks: {
+            instagram: instagram,
+            tiktok: tiktok,
+          },
+        });
+
+        setFsStore(updatedStore);
+        setStoreName(cleanName);
+        sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(updatedStore));
+        sessionStorage.removeItem(`apana_public_store_${updatedStore.slug}`);
+      }
+      setShowChangeNameModal(false);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+    } catch (err: any) {
+      setNameChangeError(err?.message || 'Error al actualizar el nombre de la tienda.');
+    } finally {
+      setIsUpdatingName(false);
+    }
+  };
 
   const handleResendEmail = async () => {
     if (!user) return;
@@ -171,15 +278,26 @@ export default function SettingsPage() {
       return;
     }
 
+    if (!canChangePhone) {
+      setPhoneChangeError('Has alcanzado el límite máximo de 2 cambios de número cada 30 días.');
+      return;
+    }
+
     setIsUpdatingPhone(true);
     setPhoneChangeError('');
 
     try {
       const fullPhone = `51${newPhoneInput}`;
-      if (user) {
+      if (user && fsStore) {
+        const currentPhoneHistory = Array.isArray(fsStore.phoneChangesHistory) ? fsStore.phoneChangesHistory : [];
+        const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+        const filteredPhoneHistory = currentPhoneHistory.filter((ts) => ts > thirtyDaysAgo);
+        const updatedPhoneHistory = [...filteredPhoneHistory, Date.now()];
+
         const updatedStore = await createOrUpdateStoreInFS(user.uid, {
           name: storeName,
           whatsappPhone: fullPhone,
+          phoneChangesHistory: updatedPhoneHistory,
           isWhatsappVerified: false,
           themeStyle: selectedStyle,
           primaryColor: selectedColorHex,
@@ -233,6 +351,10 @@ export default function SettingsPage() {
           setShippingType(parsed.shippingType || 'coordinar');
           setInstagram(parsed.socialLinks?.instagram || '');
           setTiktok(parsed.socialLinks?.tiktok || '');
+          setLegalBusinessName(parsed.legalBusinessName || '');
+          setLegalTaxIdType(parsed.legalTaxIdType || 'RUC');
+          setLegalTaxId(parsed.legalTaxId || '');
+          setLegalAddress(parsed.legalAddress || '');
           setWhatsappPhone(cleanInitialPhone(parsed.whatsappPhone || ''));
           setSelectedStyle(parsed.themeStyle || 'minimalista');
           setSelectedColorHex(parsed.primaryColor || '#059669');
@@ -255,6 +377,10 @@ export default function SettingsPage() {
         setShippingType(storeFromFS.shippingType || 'coordinar');
         setInstagram(storeFromFS.socialLinks?.instagram || '');
         setTiktok(storeFromFS.socialLinks?.tiktok || '');
+        setLegalBusinessName(storeFromFS.legalBusinessName || '');
+        setLegalTaxIdType(storeFromFS.legalTaxIdType || 'RUC');
+        setLegalTaxId(storeFromFS.legalTaxId || '');
+        setLegalAddress(storeFromFS.legalAddress || '');
         setWhatsappPhone(cleanInitialPhone(storeFromFS.whatsappPhone || ''));
         setSelectedStyle(storeFromFS.themeStyle || 'minimalista');
         setSelectedColorHex(storeFromFS.primaryColor || '#059669');
@@ -281,6 +407,10 @@ export default function SettingsPage() {
       shippingType !== (currentStore.shippingType || 'coordinar') ||
       instagram !== (currentStore.socialLinks?.instagram || '') ||
       tiktok !== (currentStore.socialLinks?.tiktok || '') ||
+      legalBusinessName !== (currentStore.legalBusinessName || '') ||
+      legalTaxIdType !== (currentStore.legalTaxIdType || 'RUC') ||
+      legalTaxId !== (currentStore.legalTaxId || '') ||
+      legalAddress !== (currentStore.legalAddress || '') ||
       whatsappPhone !== cleanInitialPhone(currentStore.whatsappPhone || '') ||
       selectedStyle !== (currentStore.themeStyle || 'minimalista') ||
       selectedColorHex !== (currentStore.primaryColor || '#059669') ||
@@ -351,6 +481,10 @@ export default function SettingsPage() {
           shippingType: shippingType,
           plan: fsStore?.plan,
           isWhatsappVerified: fsStore?.isWhatsappVerified,
+          legalBusinessName: legalBusinessName.trim(),
+          legalTaxIdType: legalTaxIdType,
+          legalTaxId: legalTaxId.trim(),
+          legalAddress: legalAddress.trim(),
           socialLinks: {
             instagram: instagram,
             tiktok: tiktok,
@@ -509,17 +643,46 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="storeName" className="text-xs font-semibold text-[#0b1c30]">
-                Nombre de la Tienda
-              </label>
-              <input
-                id="storeName"
-                type="text"
-                required
-                value={storeName}
-                onChange={(e) => setStoreName(e.target.value)}
-                className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
-              />
+              <div className="flex items-center justify-between">
+                <label htmlFor="storeName" className="text-xs font-semibold text-[#0b1c30]">
+                  Nombre de la Tienda
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    canChangeName
+                      ? 'bg-emerald-50 text-[#059669] border border-emerald-200'
+                      : 'bg-amber-50 text-amber-800 border border-amber-200'
+                  }`}>
+                    {2 - nameChangesInLast30Days} de 2 cambios disp.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleOpenChangeNameModal}
+                    className="text-[11px] font-bold text-[#059669] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    ✏️ Cambiar Nombre
+                  </button>
+                </div>
+              </div>
+              <div className="relative flex items-center bg-gray-50 border border-[#bccac0]/40 rounded-xl overflow-hidden shadow-xs">
+                <input
+                  id="storeName"
+                  type="text"
+                  readOnly
+                  value={storeName}
+                  className="h-11 w-full bg-transparent px-3.5 text-sm font-semibold text-[#0b1c30] tracking-wide focus:outline-none cursor-default"
+                />
+                <button
+                  type="button"
+                  onClick={handleOpenChangeNameModal}
+                  className="px-3 py-1.5 mr-2 text-xs font-semibold text-[#059669] bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors shrink-0 cursor-pointer"
+                >
+                  Modificar
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-tight">
+                Por seguridad comercial y anti-suplantación, puedes modificar el nombre máximo 2 veces cada 30 días.
+              </p>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -613,7 +776,7 @@ export default function SettingsPage() {
             </div>
 
             {currentStore && (
-              <div className="pt-2">
+              <div className="pt-2 flex items-center gap-2 flex-wrap">
                 <Link
                   href={`/s/${currentStore.slug}`}
                   target="_blank"
@@ -622,6 +785,24 @@ export default function SettingsPage() {
                   <ExternalLink size={14} />
                   Ver mi link público: /s/{currentStore.slug}
                 </Link>
+
+                {/* Tooltip Explicativo */}
+                <div className="relative group inline-flex items-center">
+                  <button
+                    type="button"
+                    aria-label="Información sobre tu enlace público"
+                    className="text-slate-400 hover:text-emerald-700 transition-colors p-0.5 rounded-full"
+                  >
+                    <Info size={14} />
+                  </button>
+
+                  {/* Tooltip Flotante */}
+                  <div className="absolute left-0 bottom-full mb-2 hidden group-hover:flex flex-col w-64 p-2.5 bg-slate-900 text-white text-[11px] rounded-xl shadow-xl z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150 leading-relaxed">
+                    <span className="font-bold text-emerald-300 mb-0.5">🔗 Enlace público permanente</span>
+                    Este enlace permanece fijo aunque cambies el nombre de tu tienda, asegurando que tus códigos QR impresos y links compartidos sigan funcionando siempre.
+                    <div className="absolute left-3 top-full -mt-1 border-4 border-transparent border-t-slate-900" />
+                  </div>
+                </div>
               </div>
             )}
           </section>
@@ -754,6 +935,98 @@ export default function SettingsPage() {
                   placeholder="ej. @mitienda o tiktok.com/@mitienda"
                   value={tiktok}
                   onChange={(e) => setTiktok(e.target.value)}
+                  className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Card: Datos Legales para Libro de Reclamaciones (Opcional con fallback automático) */}
+          <section className="bg-white rounded-2xl p-5 border border-[#bccac0]/40 shadow-xs flex flex-col gap-4">
+            <div className="flex items-center gap-2.5 pb-2 border-b border-gray-100">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <Scale size={18} />
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-base text-[#0b1c30]">Libro de Reclamaciones Oficial</h2>
+                  <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">
+                    Opcional
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#6d7a72]">
+                  Datos fiscales formales para la hoja virtual de tu tienda ante INDECOPI
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100/80 text-[11px] text-indigo-950 leading-relaxed flex items-start gap-2">
+              <Building2 size={16} className="text-indigo-600 shrink-0 mt-0.5" />
+              <span>
+                <strong>Nota:</strong> Tu tienda ya cuenta con Libro de Reclamaciones activo usando tu nombre comercial. Si tienes RUC o Razón Social, agrégalos aquí para que tu tienda figure como <strong>Comercio Formal Verificado</strong>.
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-3.5">
+              {/* Razón Social o Nombre del Titular */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="legalBusinessName" className="text-xs font-semibold text-[#0b1c30]">
+                  Razón Social o Nombre del Titular Legal
+                </label>
+                <input
+                  id="legalBusinessName"
+                  type="text"
+                  placeholder="ej. Inversiones San José S.A.C. o Juan Pérez Gómez"
+                  value={legalBusinessName}
+                  onChange={(e) => setLegalBusinessName(e.target.value)}
+                  className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                />
+              </div>
+
+              {/* Documento Fiscal (RUC o DNI) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="legalTaxIdType" className="text-xs font-semibold text-[#0b1c30]">
+                    Tipo de Doc.
+                  </label>
+                  <select
+                    id="legalTaxIdType"
+                    value={legalTaxIdType}
+                    onChange={(e) => setLegalTaxIdType(e.target.value as 'RUC' | 'DNI')}
+                    className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs cursor-pointer font-medium"
+                  >
+                    <option value="RUC">RUC (11 dígitos)</option>
+                    <option value="DNI">DNI (8 dígitos)</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2 flex flex-col gap-1.5">
+                  <label htmlFor="legalTaxId" className="text-xs font-semibold text-[#0b1c30]">
+                    {legalTaxIdType === 'RUC' ? 'Número de RUC' : 'Número de DNI'}
+                  </label>
+                  <input
+                    id="legalTaxId"
+                    type="text"
+                    maxLength={legalTaxIdType === 'RUC' ? 11 : 8}
+                    placeholder={legalTaxIdType === 'RUC' ? 'ej. 20601234567 o 10458923412' : 'ej. 45892341'}
+                    value={legalTaxId}
+                    onChange={(e) => setLegalTaxId(e.target.value.replace(/\D/g, ''))}
+                    className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Dirección Fiscal / Comercial */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="legalAddress" className="text-xs font-semibold text-[#0b1c30]">
+                  Dirección Comercial o Fiscal
+                </label>
+                <input
+                  id="legalAddress"
+                  type="text"
+                  placeholder="ej. Av. Larco 450, Miraflores, Lima"
+                  value={legalAddress}
+                  onChange={(e) => setLegalAddress(e.target.value)}
                   className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
                 />
               </div>
@@ -975,7 +1248,7 @@ export default function SettingsPage() {
                 <span className="text-sm font-bold text-[#0b1c30] truncate">
                   {user?.email || 'Comerciante'}
                 </span>
-                {user?.emailVerified ? (
+                {user?.emailVerified || fsStore?.isEmailVerified ? (
                   <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0">
                     <ShieldCheck size={11} className="text-emerald-700" />
                     <span>Verificado</span>
@@ -987,7 +1260,7 @@ export default function SettingsPage() {
                   </span>
                 )}
               </div>
-              {!user?.emailVerified && (
+              {!user?.emailVerified && !fsStore?.isEmailVerified && (
                 <button
                   type="button"
                   onClick={handleResendEmail}
@@ -1159,7 +1432,7 @@ export default function SettingsPage() {
                 </p>
               )}
 
-              {/* Botones de Acción */}
+            {/* Botones de Acción */}
               <div className="flex gap-2 pt-1">
                 <button
                   type="button"
@@ -1186,6 +1459,140 @@ export default function SettingsPage() {
                   }`}
                 >
                   {isUpdatingPhone ? 'Actualizando...' : 'Confirmar Cambio'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Cambio Controlado de Nombre de Tienda */}
+      {showChangeNameModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+            
+            {/* Header Modal */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+                  <StoreIcon size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-[#0b1c30]">Cambiar Nombre de Tienda</h3>
+                  <p className="text-xs text-slate-500">Política de seguridad y reputación</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowChangeNameModal(false);
+                  setNameChangeError('');
+                }}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Alerta de Política 30 Días */}
+            <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertCircle size={16} className="text-amber-600 shrink-0" />
+                  <span className="text-xs font-bold text-amber-900">Límite de 2 cambios / 30 días</span>
+                </div>
+                <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                  {2 - nameChangesInLast30Days} disp.
+                </span>
+              </div>
+              <p className="text-[11px] text-amber-800/90 leading-relaxed">
+                Para prevenir suplantaciones y proteger la confianza de tus clientes, el nombre de la tienda solo puede modificarse <strong>2 veces cada 30 días</strong>.
+              </p>
+              <div className="text-[10px] text-amber-700 bg-amber-100/50 p-2 rounded-lg leading-tight">
+                ℹ️ <strong>Tu enlace y código QR no cambiarán:</strong> Tu enlace web oficial seguirá siendo <strong>/s/{fsStore?.slug}</strong> intacto para que no pierdas material impreso ni enlaces ya compartidos.
+              </div>
+            </div>
+
+            {/* Form Modal */}
+            <form onSubmit={handleConfirmChangeName} className="flex flex-col gap-3.5">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-[#0b1c30] ml-1">
+                  Nuevo Nombre de la Tienda
+                </label>
+                <div className="relative flex items-center bg-white border border-[#bccac0] focus-within:border-[#059669] focus-within:ring-2 focus-within:ring-[#059669]/10 rounded-xl overflow-hidden shadow-xs transition-all">
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    maxLength={50}
+                    placeholder="Ej. Mi Dulce Boutique"
+                    value={newNameInput}
+                    onChange={(e) => {
+                      setNewNameInput(e.target.value);
+                      if (nameChangeError) setNameChangeError('');
+                    }}
+                    className="h-11 w-full bg-transparent px-3 text-base sm:text-sm text-[#0b1c30] placeholder:text-gray-400 focus:outline-none font-medium"
+                  />
+                  <span className="text-[11px] text-slate-400 pr-3 font-mono">
+                    {newNameInput.length}/50
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 ml-1">
+                  Entre 3 y 50 caracteres. No usar palabras reservadas ni términos oficiales falsos.
+                </p>
+              </div>
+
+              {/* Checkbox Aceptación */}
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 flex flex-col gap-2">
+                <label className="flex items-start gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={acceptNameTermsChecked}
+                    onChange={(e) => setAcceptNameTermsChecked(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded text-[#059669] focus:ring-[#059669] border-gray-300"
+                  />
+                  <span className="text-[11px] text-[#3d4a42] leading-tight">
+                    Entiendo que el nombre solo puede cambiarse <strong>2 veces cada 30 días</strong> y que represento legítimamente a este negocio.
+                  </span>
+                </label>
+              </div>
+
+              {nameChangeError && (
+                <p className="text-xs text-red-600 font-semibold text-center bg-red-50 p-2.5 rounded-xl border border-red-200">
+                  {nameChangeError}
+                </p>
+              )}
+
+              {/* Botones de Acción */}
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowChangeNameModal(false);
+                    setNameChangeError('');
+                  }}
+                  className="flex-1 h-11 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    newNameInput.trim().length < 3 ||
+                    newNameInput.trim() === storeName.trim() ||
+                    !acceptNameTermsChecked ||
+                    isUpdatingName
+                  }
+                  className={`flex-1 h-11 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs ${
+                    newNameInput.trim().length >= 3 &&
+                    newNameInput.trim() !== storeName.trim() &&
+                    acceptNameTermsChecked &&
+                    !isUpdatingName
+                      ? 'bg-[#059669] hover:bg-[#00855d] text-white'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {isUpdatingName ? 'Actualizando...' : 'Confirmar Cambio'}
                 </button>
               </div>
             </form>

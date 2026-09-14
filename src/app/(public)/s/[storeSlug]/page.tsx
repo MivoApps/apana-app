@@ -19,6 +19,9 @@ import {
   Crown,
   MapPin,
   Clock,
+  Flag,
+  Share2,
+  BookOpen,
 } from 'lucide-react';
 import { InstagramIcon } from '@/components/ui/InstagramIcon';
 import { useAppStore } from '@/lib/app-store';
@@ -38,6 +41,7 @@ import { getStoreBySlugFromFS, getProductsByStoreIdFromFS } from '@/lib/firebase
 import { Store, Product } from '@/types/store';
 
 import { TermsModal } from '@/components/ui/TermsModal';
+import { ReportStoreModal } from '@/components/ui/ReportStoreModal';
 import { ProductOptionsModal } from '@/components/public/ProductOptionsModal';
 import { StoreSkeleton } from '@/components/public/StoreSkeletons';
 import { SelectedOption } from '@/types/store';
@@ -51,7 +55,28 @@ export default function PublicStorePage({ params }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<string>('todos');
   const [mounted, setMounted] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
   const [selectedModalProduct, setSelectedModalProduct] = useState<Product | null>(null);
+
+  const handleShareStore = () => {
+    if (typeof window === 'undefined') return;
+    const shareUrl = window.location.href;
+    const shareTitle = store?.name || 'Tienda Online';
+    const shareText = `¡Hola! Te invito a visitar la tienda online de ${shareTitle}. Explora los productos y haz tus pedidos fácilmente por WhatsApp:`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: shareTitle,
+        text: shareText,
+        url: shareUrl,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2000);
+    }
+  };
 
   // Estado Firestore híbrido
   const [fsStore, setFsStore] = useState<Store | null>(null);
@@ -154,9 +179,22 @@ export default function PublicStorePage({ params }: Props) {
           <h1 className="font-bold text-lg text-[#0b1c30] truncate tracking-tight">
             {store.name}
           </h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleShareStore}
+              className="w-10 h-10 flex items-center justify-center rounded-full text-[#3d4a42] hover:bg-gray-100 transition-colors cursor-pointer"
+              title="Compartir tienda"
+              aria-label="Compartir tienda"
+            >
+              {copiedShare ? (
+                <Check size={19} className="text-[#059669]" />
+              ) : (
+                <Share2 size={19} />
+              )}
+            </button>
             <Link href={`/s/${store.slug}/cart`}>
-              <button aria-label="Ver Carrito" className="w-10 h-10 flex items-center justify-center rounded-full text-[#3d4a42] relative hover:bg-gray-100 transition-colors">
+              <button aria-label="Ver Carrito" className="w-10 h-10 flex items-center justify-center rounded-full text-[#3d4a42] relative hover:bg-gray-100 transition-colors cursor-pointer">
                 <ShoppingBag size={22} />
                 {totalCartCount > 0 && (
                   <span className="absolute top-1 right-1 w-4 h-4 bg-[#059669] text-white text-[10px] rounded-full flex items-center justify-center font-bold">
@@ -325,41 +363,57 @@ export default function PublicStorePage({ params }: Props) {
               )}
             </div>
 
-            {/* Enlaces de Redes Sociales (Instagram / TikTok) */}
-            {(store.socialLinks?.instagram || store.socialLinks?.tiktok) && (
-              <div className="flex items-center gap-2 mt-1">
-                {store.socialLinks?.instagram && (
-                  <a
-                    href={
-                      store.socialLinks.instagram.startsWith('http')
-                        ? store.socialLinks.instagram
-                        : `https://instagram.com/${store.socialLinks.instagram.replace('@', '')}`
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-pink-50 border border-pink-200 text-pink-700 hover:bg-pink-100 transition-colors shadow-2xs"
-                  >
-                    <InstagramIcon size={12} />
-                    <span>Instagram</span>
-                  </a>
+            {/* Enlaces de Redes Sociales (Instagram / TikTok) y Compartir */}
+            <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
+              {store.socialLinks?.instagram && (
+                <a
+                  href={
+                    store.socialLinks.instagram.startsWith('http')
+                      ? store.socialLinks.instagram
+                      : `https://instagram.com/${store.socialLinks.instagram.replace('@', '')}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-pink-50 border border-pink-200 text-pink-700 hover:bg-pink-100 transition-colors shadow-2xs"
+                >
+                  <InstagramIcon size={12} />
+                  <span>Instagram</span>
+                </a>
+              )}
+              {store.socialLinks?.tiktok && (
+                <a
+                  href={
+                    store.socialLinks.tiktok.startsWith('http')
+                      ? store.socialLinks.tiktok
+                      : `https://tiktok.com/@${store.socialLinks.tiktok.replace('@', '')}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200 transition-colors shadow-2xs"
+                >
+                  <span className="text-[10px]">🎵</span>
+                  <span>TikTok</span>
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={handleShareStore}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 border border-emerald-200 text-[#006c49] hover:bg-emerald-100 transition-colors shadow-2xs cursor-pointer"
+                title="Compartir enlace de la tienda"
+              >
+                {copiedShare ? (
+                  <>
+                    <Check size={12} className="text-[#059669]" />
+                    <span>¡Enlace copiado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 size={12} />
+                    <span>Compartir tienda</span>
+                  </>
                 )}
-                {store.socialLinks?.tiktok && (
-                  <a
-                    href={
-                      store.socialLinks.tiktok.startsWith('http')
-                        ? store.socialLinks.tiktok
-                        : `https://tiktok.com/@${store.socialLinks.tiktok.replace('@', '')}`
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200 transition-colors shadow-2xs"
-                  >
-                    <span className="text-[10px]">🎵</span>
-                    <span>TikTok</span>
-                  </a>
-                )}
-              </div>
-            )}
+              </button>
+            </div>
           </div>
 
           {/* Buscador de Productos Stitch */}
@@ -636,21 +690,52 @@ export default function PublicStorePage({ params }: Props) {
           </div>
 
           {/* Footer Tienda Pública Stitch */}
-          <footer className="py-8 px-4 text-center bg-white border-t border-[#bccac0]/20 flex flex-col items-center gap-3">
-            {(!store.plan || store.plan === 'gratis') && (
+          <footer className="py-7 px-4 text-center bg-white border-t border-[#bccac0]/20 flex flex-col items-center gap-2.5">
+            <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-[#6d7a72]">
               <Link
-                href="/"
-                target="_blank"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#059669]/10 text-[#006c49] text-[11px] font-bold rounded-full hover:bg-[#059669]/20 transition-all border border-[#059669]/15 shadow-2xs"
+                href={`/s/${store.slug}/libro-de-reclamaciones`}
+                className="hover:text-[#0b1c30] transition-colors flex items-center gap-1 font-medium"
               >
-                <span>⚡ Creado con APANA</span>
-                <span className="text-[#6d7a72]/50 font-normal">|</span>
-                <span>Obtén tu tienda gratis</span>
+                <BookOpen size={13} className="text-emerald-700" />
+                <span>Libro de Reclamaciones</span>
               </Link>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => setIsTermsOpen(true)}
+                className="hover:text-[#0b1c30] transition-colors cursor-pointer"
+              >
+                Términos del Servicio
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => setIsReportOpen(true)}
+                className="hover:text-amber-700 transition-colors flex items-center gap-1 text-slate-500 hover:underline cursor-pointer"
+              >
+                <Flag size={12} className="text-amber-600/80" />
+                <span>Reportar tienda</span>
+              </button>
+            </div>
+
+            {/* Copyright & Branding Fusionado */}
+            {(!store.plan || store.plan === 'gratis') ? (
+              <p className="text-xs text-[#6d7a72]">
+                © {new Date().getFullYear()} Creado por{' '}
+                <Link
+                  href="/"
+                  target="_blank"
+                  className="font-bold text-[#006c49] hover:text-[#059669] hover:underline transition-colors inline-flex items-center gap-0.5"
+                >
+                  APANA
+                </Link>
+                . Todos los derechos reservados.
+              </p>
+            ) : (
+              <p className="text-xs text-[#6d7a72]">
+                © {new Date().getFullYear()} <strong className="font-semibold text-slate-700">{store.name}</strong>. Todos los derechos reservados.
+              </p>
             )}
-            <p className="text-xs text-[#6d7a72]">
-              © {new Date().getFullYear()} {store.name}. Todos los derechos reservados.
-            </p>
           </footer>
         </div>
       </main>
@@ -728,13 +813,22 @@ export default function PublicStorePage({ params }: Props) {
                 </span>
               )}
             </div>
-            <span className="text-[11px] font-medium">Mis Pedidos</span>
+            <span className="text-[11px] font-medium">Mi Carrito</span>
           </Link>
         </div>
       </nav>
 
       {/* Modal de Términos y Condiciones */}
       <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
+
+      {/* Modal de Reportar Tienda */}
+      <ReportStoreModal
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+        storeId={store.id}
+        storeSlug={store.slug}
+        storeName={store.name}
+      />
 
       {/* Modal / Bottom Sheet de Selección de Variantes */}
       <ProductOptionsModal

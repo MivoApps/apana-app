@@ -83,14 +83,25 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
 
         {/* Footer with Actions */}
         <div className="px-6 py-3.5 bg-slate-50 border-t border-gray-100 flex items-center justify-between gap-3">
-          <Link
-            href="/terms"
-            target="_blank"
-            className="inline-flex items-center gap-1 text-xs font-bold text-[#006c49] hover:underline"
-          >
-            <span>Leer en pantalla completa</span>
-            <ExternalLink size={12} />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/terms"
+              target="_blank"
+              className="inline-flex items-center gap-1 text-xs font-bold text-[#006c49] hover:underline"
+            >
+              <span>Términos</span>
+              <ExternalLink size={11} />
+            </Link>
+            <span className="text-slate-300">•</span>
+            <Link
+              href="/privacy"
+              target="_blank"
+              className="inline-flex items-center gap-1 text-xs font-bold text-[#006c49] hover:underline"
+            >
+              <span>Privacidad</span>
+              <ExternalLink size={11} />
+            </Link>
+          </div>
           <button
             type="button"
             onClick={onClose}

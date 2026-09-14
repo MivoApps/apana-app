@@ -168,7 +168,7 @@ export const LandingFooter: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="hover:text-[#059669] transition-colors">
+                <Link href="/privacy" className="hover:text-[#059669] transition-colors">
                   Política de Privacidad
                 </Link>
               </li>

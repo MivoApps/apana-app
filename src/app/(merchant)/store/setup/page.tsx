@@ -198,6 +198,12 @@ export default function OnboardingWizardPage() {
     let createdFsStore = null;
     if (user) {
       try {
+        let geoData = { country: 'PE', city: 'Lima', ip: '' };
+        try {
+          const geoRes = await fetch('/api/geo');
+          if (geoRes.ok) geoData = await geoRes.json();
+        } catch { }
+
         createdFsStore = await createOrUpdateStoreInFS(user.uid, {
           name: businessName,
           category,
@@ -207,6 +213,9 @@ export default function OnboardingWizardPage() {
           isWhatsappVerified: false,
           ownerEmail: user.email || '',
           ownerName: user.displayName || businessName,
+          country: geoData.country || 'PE',
+          city: geoData.city || 'Lima',
+          ipSignup: geoData.ip || '',
         });
       } catch (err) {
         console.error('Error guardando tienda en Firestore:', err);

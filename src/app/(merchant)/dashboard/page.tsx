@@ -21,7 +21,8 @@ import {
   ShieldCheck,
   ShieldAlert,
   Mail,
-  CheckCircle2
+  CheckCircle2,
+  BookOpen
 } from 'lucide-react';
 import { sendEmailVerification } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -115,13 +116,13 @@ export default function DashboardPage() {
 
       // 1. Si no hay usuario autenticado en Firebase y no está impersonando ➔ Redirigir a Login
       if (!user && !impersonatedStoreData) {
-        window.location.href = '/login';
+        router.replace('/login');
         return;
       }
 
       // Si es el SuperAdmin (Dueño de APANA) y NO está impersonando ➔ Redirigir automáticamente a la consola de administración
       if (!impersonatedStoreData && isSuperAdminUser) {
-        window.location.href = '/admin';
+        router.replace('/admin');
         return;
       }
 
@@ -172,7 +173,7 @@ export default function DashboardPage() {
             sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
           }
           setFsStore(null);
-          window.location.href = '/store/setup';
+          router.replace('/store/setup');
           return;
         }
 
@@ -323,7 +324,7 @@ export default function DashboardPage() {
             type="button"
             onClick={() => {
               sessionStorage.removeItem('apana_impersonated_store');
-              window.location.href = '/admin';
+              router.replace('/admin');
             }}
             className="bg-amber-950 text-amber-100 hover:bg-black px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer"
           >
@@ -692,7 +693,7 @@ export default function DashboardPage() {
         {/* Accesos Rápidos de Gestión */}
         <div className="flex flex-col gap-3">
           <h3 className="font-bold text-base text-[#0b1c30]">Acciones Frecuentes</h3>
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <Link href="/products/new" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-[#059669] transition-all flex flex-col gap-1.5 shadow-2xs group">
               <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#059669] flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Plus size={18} />
@@ -707,6 +708,14 @@ export default function DashboardPage() {
               </div>
               <span className="text-xs font-bold text-[#0b1c30] leading-tight">Personalizar</span>
               <span className="text-[10px] text-[#6d7a72] leading-tight">Estilo y colores</span>
+            </Link>
+
+            <Link href="/claims" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-emerald-500 transition-all flex flex-col gap-1.5 shadow-2xs group">
+              <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <BookOpen size={18} />
+              </div>
+              <span className="text-xs font-bold text-[#0b1c30] leading-tight">Reclamaciones</span>
+              <span className="text-[10px] text-[#6d7a72] leading-tight">Libro oficial INDECOPI</span>
             </Link>
 
             <Link href="/plans" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-amber-500 transition-all flex flex-col gap-1.5 shadow-2xs group">

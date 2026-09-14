@@ -14,7 +14,8 @@ import {
   orderBy,
   limit,
   Timestamp,
-  writeBatch
+  writeBatch,
+  getCountFromServer
 } from 'firebase/firestore';
 import { db } from './config';
 import { Store, Product } from '@/types/store';
@@ -43,6 +44,12 @@ export interface UserProfile {
   email: string;
   role: 'merchant' | 'admin';
   createdAt: number;
+  country?: string;
+  countryName?: string;
+  city?: string;
+  ipSignup?: string;
+  isEmailVerified?: boolean;
+  emailVerifiedAt?: number;
 }
 
 export const createUserProfileInFS = async (userProfile: Omit<UserProfile, 'createdAt'> & { createdAt?: any }): Promise<void> => {
@@ -285,6 +292,13 @@ export const createOrUpdateStoreInFS = async (
     whatsappVerifiedAt: storeData.whatsappVerifiedAt !== undefined ? storeData.whatsappVerifiedAt : (existingData?.whatsappVerifiedAt ?? null),
     downgradedAt: storeData.downgradedAt !== undefined ? storeData.downgradedAt : (existingData?.downgradedAt ?? null),
     dataRetentionUntil: storeData.dataRetentionUntil !== undefined ? storeData.dataRetentionUntil : (existingData?.dataRetentionUntil ?? null),
+    nameChangesHistory: storeData.nameChangesHistory !== undefined ? storeData.nameChangesHistory : (existingData?.nameChangesHistory ?? []),
+    phoneChangesHistory: storeData.phoneChangesHistory !== undefined ? storeData.phoneChangesHistory : (existingData?.phoneChangesHistory ?? []),
+    isOnboardingCelebrated: storeData.isOnboardingCelebrated !== undefined ? storeData.isOnboardingCelebrated : (existingData?.isOnboardingCelebrated ?? false),
+    legalBusinessName: storeData.legalBusinessName !== undefined ? storeData.legalBusinessName : (existingData?.legalBusinessName ?? ''),
+    legalTaxIdType: storeData.legalTaxIdType !== undefined ? storeData.legalTaxIdType : (existingData?.legalTaxIdType ?? 'RUC'),
+    legalTaxId: storeData.legalTaxId !== undefined ? storeData.legalTaxId : (existingData?.legalTaxId ?? ''),
+    legalAddress: storeData.legalAddress !== undefined ? storeData.legalAddress : (existingData?.legalAddress ?? ''),
     createdAt: existingData?.createdAt ?? null,
   };
 
@@ -560,17 +574,23 @@ export const getAllStoresForAdminFromFS = async (): Promise<AdminStoreItem[]> =>
     const stores = await Promise.all(
       querySnapshot.docs.map(async (docSnap) => {
         const data = docSnap.data() as Store;
-        let prodCount = 0;
-        try {
-          const prodsRef = collection(db, 'stores', docSnap.id, 'products');
-          const prodsSnap = await getDocs(prodsRef);
-          prodCount = prodsSnap.size;
-        } catch (e) { }
+        let prodCount = (data as any).productCount;
+
+        // Si la tienda no tiene productCount indexado, usamos getCountFromServer (metadata rápida sin descargar documentos)
+        if (typeof prodCount !== 'number') {
+          try {
+            const prodsRef = collection(db, 'stores', docSnap.id, 'products');
+            const countSnap = await getCountFromServer(prodsRef);
+            prodCount = countSnap.data().count;
+          } catch (e) {
+            prodCount = 0;
+          }
+        }
 
         return {
           ...data,
           id: docSnap.id,
-          productCount: prodCount,
+          productCount: prodCount || 0,
         } as AdminStoreItem;
       })
     );
@@ -662,13 +682,17 @@ export const adminCleanSuperAdminStoresInFS = async (adminUid: string): Promise<
       deleted++;
     }
 
-    // 3. Actualizar rol a 'admin' para los superadmins
+    // 3. Actualizar rol a 'admin' para los superadmins si el usuario actual es uno de ellos
     const adminEmails = ['angelo@mivo.pe', 'angelocastellanos99@gmail.com'];
     for (const email of adminEmails) {
-      const uRef = doc(db, 'users', email);
-      const uSnap = await getDoc(uRef);
-      if (uSnap.exists()) {
-        await updateDoc(uRef, { role: 'admin' });
+      try {
+        const uRef = doc(db, 'users', email);
+        const uSnap = await getDoc(uRef);
+        if (uSnap.exists()) {
+          await updateDoc(uRef, { role: 'admin' });
+        }
+      } catch (err) {
+        // Ignorar de forma segura si la regla de seguridad deniega actualizar otro usuario
       }
     }
 
@@ -704,21 +728,28 @@ export interface AdminUserItem extends UserProfile {
   storePlan?: string;
 }
 
-export const getAllUsersForAdminFromFS = async (): Promise<AdminUserItem[]> => {
+export const getAllUsersForAdminFromFS = async (existingStores?: AdminStoreItem[]): Promise<AdminUserItem[]> => {
   try {
     const usersRef = collection(db, 'users');
     const usersSnap = await getDocs(usersRef);
     const usersList: AdminUserItem[] = [];
 
-    // Traer tiendas para hacer el match
-    const storesRef = collection(db, 'stores');
-    const storesSnap = await getDocs(storesRef);
+    // Reusar tiendas provistas o consultar solo si no fueron pasadas
     const storesMap = new Map<string, Store>();
-    storesSnap.docs.forEach((d) => {
-      const s = d.data() as Store;
-      const uidKey = s.ownerId || (s as any).userId;
-      if (uidKey) storesMap.set(uidKey, { ...s, id: d.id });
-    });
+    if (existingStores && existingStores.length > 0) {
+      existingStores.forEach((s) => {
+        const uidKey = s.ownerId || (s as any).userId;
+        if (uidKey) storesMap.set(uidKey, s);
+      });
+    } else {
+      const storesRef = collection(db, 'stores');
+      const storesSnap = await getDocs(storesRef);
+      storesSnap.docs.forEach((d) => {
+        const s = d.data() as Store;
+        const uidKey = s.ownerId || (s as any).userId;
+        if (uidKey) storesMap.set(uidKey, { ...s, id: d.id });
+      });
+    }
 
     for (const uDoc of usersSnap.docs) {
       const uData = uDoc.data() as UserProfile;
@@ -761,6 +792,39 @@ export const adminToggleWhatsappVerificationInFS = async (storeId: string, isVer
   }
 };
 
+export const adminToggleEmailVerificationInFS = async (storeId: string, isVerified: boolean, ownerIdOrEmail?: string): Promise<void> => {
+  try {
+    const now = Date.now();
+    // 1. Actualizar en el documento de la tienda
+    const storeRef = doc(db, 'stores', storeId);
+    await updateDoc(storeRef, {
+      isEmailVerified: isVerified,
+      emailVerifiedAt: isVerified ? now : null,
+      updatedAt: serverTimestamp(),
+    });
+
+    // 2. Sincronizar en el perfil del usuario (users/{email} o users/{uid}) si se conoce
+    if (ownerIdOrEmail) {
+      try {
+        const userRef = doc(db, 'users', ownerIdOrEmail.toLowerCase().trim());
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          await updateDoc(userRef, {
+            isEmailVerified: isVerified,
+            emailVerifiedAt: isVerified ? now : null,
+            updatedAt: serverTimestamp(),
+          });
+        }
+      } catch (e) {
+        console.warn('No se pudo actualizar emailVerified en users/', e);
+      }
+    }
+  } catch (error) {
+    console.error('Error al cambiar verificación de correo:', error);
+    throw error;
+  }
+};
+
 export const adminUpdateUserDetailsInFS = async (
   emailOrUid: string,
   data: { name?: string; phone?: string; role?: 'merchant' | 'admin' }
@@ -799,7 +863,7 @@ export const getAllPaymentRecordsForAdminFromFS = async (): Promise<PaymentRecor
     });
     return list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   } catch (error) {
-    console.error('Error al obtener registros de pago:', error);
+    console.warn('Aviso al obtener registros de pago:', error);
     return [];
   }
 };
@@ -1010,6 +1074,9 @@ export const getStoreOrdersFromFS = async (storeId: string): Promise<StoreOrder[
 export interface ReclamacionItem {
   id: string;
   claimCode: string;
+  storeId?: string; // Si pertenece a una tienda específica (vacío si es de APANA central)
+  storeSlug?: string;
+  storeName?: string;
   fullName: string;
   docType: string;
   docNumber: string;
@@ -1028,20 +1095,42 @@ export interface ReclamacionItem {
   status: 'pendiente' | 'atendido';
   responseNotes?: string;
   createdAt: number;
+  deadlineAt?: number; // 15 días hábiles después de creación
+  respondedAt?: number;
 }
 
 export const createReclamacionInFS = async (data: Omit<ReclamacionItem, 'id' | 'createdAt' | 'status'>): Promise<string> => {
   try {
     const reclamacionesRef = collection(db, 'reclamaciones');
+    const now = Date.now();
+    // 15 días hábiles aprox 21 días calendario en ms
+    const deadlineMillis = now + (21 * 24 * 60 * 60 * 1000);
     const newDoc = await addDoc(reclamacionesRef, {
       ...data,
       status: 'pendiente',
-      createdAt: Date.now(),
+      createdAt: now,
+      deadlineAt: data.deadlineAt || deadlineMillis,
     });
     return newDoc.id;
   } catch (error) {
     console.error('Error guardando reclamación en Firestore:', error);
     return '';
+  }
+};
+
+export const getStoreReclamacionesFromFS = async (storeId: string): Promise<ReclamacionItem[]> => {
+  try {
+    const reclamacionesRef = collection(db, 'reclamaciones');
+    const q = query(reclamacionesRef, where('storeId', '==', storeId));
+    const snap = await getDocs(q);
+    const list: ReclamacionItem[] = [];
+    snap.docs.forEach((d) => {
+      list.push({ id: d.id, ...d.data() } as ReclamacionItem);
+    });
+    return list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  } catch (error) {
+    console.warn('Aviso obteniendo reclamaciones de la tienda:', error);
+    return [];
   }
 };
 
@@ -1055,12 +1144,12 @@ export const getAllReclamacionesForAdminFromFS = async (): Promise<ReclamacionIt
     });
     return list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   } catch (error) {
-    console.error('Error obteniendo reclamaciones para SuperAdmin:', error);
+    console.warn('Aviso obteniendo reclamaciones para SuperAdmin:', error);
     return [];
   }
 };
 
-export const adminUpdateReclamacionStatusInFS = async (
+export const updateReclamacionStatusInFS = async (
   id: string,
   status: 'pendiente' | 'atendido',
   responseNotes?: string
@@ -1070,6 +1159,7 @@ export const adminUpdateReclamacionStatusInFS = async (
     await updateDoc(docRef, {
       status,
       responseNotes: responseNotes || '',
+      respondedAt: Date.now(),
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
@@ -1077,6 +1167,8 @@ export const adminUpdateReclamacionStatusInFS = async (
     throw error;
   }
 };
+
+export const adminUpdateReclamacionStatusInFS = updateReclamacionStatusInFS;
 
 export interface GlobalAnnouncement {
   message: string;
@@ -1111,5 +1203,58 @@ export const getGlobalAnnouncementFromFS = async (): Promise<GlobalAnnouncement 
     return null;
   }
 };
+
+// --- REPORTES DE TIENDAS (STORE REPORTS) ---
+export const createStoreReportInFS = async (reportData: {
+  storeId: string;
+  storeSlug: string;
+  storeName: string;
+  reason: string;
+  reasonLabel: string;
+  details: string;
+  reporterContact?: string;
+}): Promise<void> => {
+  try {
+    const reportsCol = collection(db, 'store_reports');
+    await addDoc(reportsCol, {
+      ...reportData,
+      status: 'pendiente',
+      createdAt: Date.now(),
+      createdServerTimestamp: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error al registrar reporte de tienda en Firestore:', error);
+    throw error;
+  }
+};
+
+export const getStoreReportsForAdminFromFS = async (): Promise<any[]> => {
+  try {
+    const reportsCol = collection(db, 'store_reports');
+    const q = query(reportsCol, orderBy('createdAt', 'desc'), limit(50));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }));
+  } catch (error) {
+    console.warn('Aviso obteniendo reportes de tienda (permisos o colección aún no desplegada):', error);
+    return [];
+  }
+};
+
+export const updateStoreReportStatusInFS = async (reportId: string, status: 'pendiente' | 'revisado' | 'descartado' | 'accion_tomada'): Promise<void> => {
+  try {
+    const docRef = doc(db, 'store_reports', reportId);
+    await updateDoc(docRef, {
+      status,
+      updatedAt: Date.now(),
+    });
+  } catch (error) {
+    console.error('Error actualizando estado de reporte:', error);
+    throw error;
+  }
+};
+
 
 

@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
 
 // Rutas públicas que no requieren autenticación
-const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/store-not-found', '/terms'];
+const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/store-not-found', '/terms', '/privacy', '/libro-de-reclamaciones'];
 
 export const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();

@@ -33,13 +33,13 @@ export default function LoginPage() {
 
       const userEmail = user.email?.toLowerCase().trim() || '';
       if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
-        window.location.href = '/admin';
+        router.replace('/admin');
         return;
       }
 
       // Timeout de seguridad de 2 segundos para forzar redirección
       const fallbackTimer = setTimeout(() => {
-        if (isMounted) window.location.href = '/dashboard';
+        if (isMounted) router.replace('/dashboard');
       }, 2000);
 
       import('@/lib/firebase/firestore').then(async ({ getStoreByUserIdFromFS }) => {
@@ -48,15 +48,15 @@ export default function LoginPage() {
           if (isMounted) {
             clearTimeout(fallbackTimer);
             if (store) {
-              window.location.href = '/dashboard';
+              router.replace('/dashboard');
             } else {
-              window.location.href = '/store/setup';
+              router.replace('/store/setup');
             }
           }
         } catch {
           if (isMounted) {
             clearTimeout(fallbackTimer);
-            window.location.href = '/dashboard';
+            router.replace('/dashboard');
           }
         }
       });
@@ -96,7 +96,7 @@ export default function LoginPage() {
 
       // Si es el SuperAdmin (Dueño de APANA) ➔ Ir directamente a la Consola de Administración
       if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
-        window.location.href = '/admin';
+        router.replace('/admin');
         return;
       }
 
@@ -104,9 +104,9 @@ export default function LoginPage() {
       const existingStore = await getStoreByUserIdFromFS(userCredential.user.uid);
 
       if (existingStore) {
-        window.location.href = '/dashboard';
+        router.replace('/dashboard');
       } else {
-        window.location.href = '/store/setup';
+        router.replace('/store/setup');
       }
     } catch (err: any) {
       console.error('Error al iniciar sesión:', err);
@@ -135,18 +135,27 @@ export default function LoginPage() {
 
       // Si es el SuperAdmin ➔ Ir directamente a la Consola de Administración
       if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
-        window.location.href = '/admin';
+        router.replace('/admin');
         return;
       }
 
       const { getUserProfileFromFS, createUserProfileInFS, getStoreByUserIdFromFS } = await import('@/lib/firebase/firestore');
       let userProfile = await getUserProfileFromFS(userCredential.user.uid);
       if (!userProfile) {
+        let geoData = { country: 'PE', city: 'Lima', ip: '' };
+        try {
+          const geoRes = await fetch('/api/geo');
+          if (geoRes.ok) geoData = await geoRes.json();
+        } catch { }
+
         const newUserProfile = {
           uid: userCredential.user.uid,
           email: userCredential.user.email || '',
           name: userCredential.user.displayName || 'Comerciante APANA',
           role: 'merchant' as const,
+          country: geoData.country || 'PE',
+          city: geoData.city || 'Lima',
+          ipSignup: geoData.ip || '',
         };
         await createUserProfileInFS(newUserProfile);
         userProfile = newUserProfile as any;
@@ -154,9 +163,9 @@ export default function LoginPage() {
 
       const existingStore = await getStoreByUserIdFromFS(userCredential.user.uid);
       if (existingStore) {
-        window.location.href = '/dashboard';
+        router.replace('/dashboard');
       } else {
-        window.location.href = '/store/setup';
+        router.replace('/store/setup');
       }
     } catch (err: any) {
       console.error('Error al iniciar sesión con Google:', err);

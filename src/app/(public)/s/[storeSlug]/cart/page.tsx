@@ -9,7 +9,8 @@ import {
   Plus,
   Minus,
   Trash2,
-  CheckCircle2
+  CheckCircle2,
+  ShieldCheck
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { useCartStore } from '@/lib/cart-store';
@@ -406,6 +407,30 @@ export default function PublicCartPage({ params }: Props) {
                   >
                     {formatCurrency(totalPrice)}
                   </span>
+                </div>
+              </div>
+
+              {/* Disclaimer de Transparencia y Compra Segura */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex items-start gap-3 text-left">
+                <div className="w-7 h-7 rounded-xl bg-emerald-100 text-[#006c49] flex items-center justify-center shrink-0 mt-0.5">
+                  <ShieldCheck size={16} />
+                </div>
+                <div className="space-y-1 text-[11px] text-slate-600 leading-relaxed">
+                  <p className="font-bold text-[#0b1c30]">
+                    Transparencia y Compra Segura
+                  </p>
+                  <p>
+                    Esta tienda es operada de forma independiente por <strong>{store?.name || 'el comercio'}</strong> con la tecnología de <span className="font-semibold text-[#006c49]">APANA</span>. El pago y la entrega se coordinan directamente entre el vendedor y tú. Verifica los datos de contacto antes de transferir.
+                  </p>
+                  <div className="pt-0.5 flex items-center gap-2 text-[10px] text-slate-500">
+                    <Link href="/terms" target="_blank" className="text-[#006c49] font-semibold hover:underline">
+                      Términos
+                    </Link>
+                    <span>•</span>
+                    <Link href="/privacy" target="_blank" className="text-[#006c49] font-semibold hover:underline">
+                      Privacidad
+                    </Link>
+                  </div>
                 </div>
               </div>
             </>
