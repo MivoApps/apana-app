@@ -170,8 +170,8 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
   return (
     <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col font-sans">
       {/* Header con enlace a la tienda */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#bccac0]/30 py-3.5 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#bccac0]/30 py-3.5 px-4">
+        <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <Link 
             href={`/s/${store.slug}`} 
             className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#059669] hover:text-[#00855d] transition-colors"
@@ -179,42 +179,42 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
             <ArrowLeft size={16} />
             <span>Volver a {store.name}</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-slate-500 hidden sm:inline">Tienda Online Verificada</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-slate-500 hidden sm:inline">Tienda Verificada</span>
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10 w-full">
+      <main className="flex-1 max-w-[640px] mx-auto px-4 py-6 sm:py-8 w-full">
         {submitted ? (
           /* Hoja de Reclamación Generada Exitosamente */
-          <div className="bg-white rounded-3xl p-6 sm:p-10 border-2 border-emerald-500/40 shadow-xl space-y-8 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl p-5 sm:p-7 border border-[#bccac0]/40 shadow-xs space-y-6 animate-in fade-in duration-300">
             {/* Header Constancia */}
-            <div className="border-b border-slate-100 pb-6 text-center space-y-3">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 text-[#059669] flex items-center justify-center mx-auto shadow-inner">
-                <CheckCircle2 size={36} />
+            <div className="border-b border-slate-100 pb-5 text-center space-y-2.5">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 text-[#059669] flex items-center justify-center mx-auto shadow-inner">
+                <CheckCircle2 size={30} />
               </div>
-              <span className="inline-block px-3 py-1 bg-emerald-50 border border-emerald-200 text-[#006c49] text-xs font-extrabold rounded-full uppercase tracking-wider">
+              <span className="inline-block px-3 py-1 bg-emerald-50 border border-emerald-200 text-[#006c49] text-[11px] font-extrabold rounded-full uppercase tracking-wider">
                 Reclamación Registrada Exitosamente
               </span>
-              <h1 className="text-2xl sm:text-3xl font-black text-[#0b1c30]">
+              <h1 className="text-xl sm:text-2xl font-bold text-[#0b1c30]">
                 Hoja de Reclamación Virtual
               </h1>
-              <p className="text-sm font-mono font-bold text-emerald-800 bg-emerald-50 py-1.5 px-4 rounded-xl inline-block border border-emerald-200">
+              <p className="text-xs sm:text-sm font-mono font-bold text-emerald-800 bg-emerald-50 py-1.5 px-3 rounded-xl inline-block border border-emerald-200">
                 N° {claimCode}
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-[11px] text-slate-500">
                 Fecha y hora de registro: <strong>{submissionDate}</strong>
               </p>
             </div>
 
             {/* Provider and Consumer Summary */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
-                <div className="font-bold text-[#0b1c30] flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
-                  <Building2 size={15} className="text-[#059669]" />
+            <div className="flex flex-col gap-3 text-xs">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-1.5">
+                <div className="font-bold text-[#0b1c30] flex items-center gap-1.5 border-b border-slate-200 pb-1.5 text-xs">
+                  <Building2 size={14} className="text-[#059669]" />
                   <span>Datos del Proveedor (Establecimiento Virtual)</span>
                 </div>
                 <p><strong>Establecimiento:</strong> {store.name}</p>
@@ -224,9 +224,9 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                 <p><strong>Contacto Oficial:</strong> {providerPhone}</p>
               </div>
 
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
-                <div className="font-bold text-[#0b1c30] flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
-                  <ShieldCheck size={15} className="text-[#059669]" />
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-1.5">
+                <div className="font-bold text-[#0b1c30] flex items-center gap-1.5 border-b border-slate-200 pb-1.5 text-xs">
+                  <ShieldCheck size={14} className="text-[#059669]" />
                   <span>Datos del Consumidor Reclamante</span>
                 </div>
                 <p><strong>Nombre:</strong> {formData.fullName}</p>
@@ -239,10 +239,10 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
             </div>
 
             {/* Claim Content Summary */}
-            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/80 space-y-4 text-xs sm:text-sm">
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-3 text-xs">
               <div>
-                <span className="text-slate-500 font-medium block text-xs">Tipo de Reclamación:</span>
-                <span className="font-bold text-emerald-800 uppercase text-sm">
+                <span className="text-slate-500 font-medium block text-[11px]">Tipo de Reclamación:</span>
+                <span className="font-bold text-emerald-800 uppercase text-xs">
                   {formData.claimType === 'reclamo' 
                     ? 'RECLAMO (Disconformidad con los productos adquiridos)' 
                     : 'QUEJA (Malestar o descontento con la atención brindada)'}
@@ -250,20 +250,20 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
               </div>
 
               <div>
-                <span className="text-slate-500 font-medium block text-xs">Bien o Servicio Contratado:</span>
+                <span className="text-slate-500 font-medium block text-[11px]">Bien o Servicio Contratado:</span>
                 <p className="font-semibold text-slate-800">{formData.goodDescription}</p>
-                {formData.amount && <p className="text-xs text-slate-600 mt-0.5">Monto reclamado: S/ {formData.amount}</p>}
+                {formData.amount && <p className="text-[11px] text-slate-600 mt-0.5">Monto reclamado: S/ {formData.amount}</p>}
               </div>
 
               <div>
-                <span className="text-slate-500 font-medium block text-xs">Detalle de los hechos:</span>
+                <span className="text-slate-500 font-medium block text-[11px]">Detalle de los hechos:</span>
                 <p className="text-slate-700 bg-white p-3 rounded-xl border border-slate-200 mt-1 whitespace-pre-wrap leading-relaxed">
                   {formData.detail}
                 </p>
               </div>
 
               <div>
-                <span className="text-slate-500 font-medium block text-xs">Pedido concreto del consumidor:</span>
+                <span className="text-slate-500 font-medium block text-[11px]">Pedido concreto del consumidor:</span>
                 <p className="text-slate-700 bg-white p-3 rounded-xl border border-slate-200 mt-1 whitespace-pre-wrap leading-relaxed">
                   {formData.consumerRequest}
                 </p>
@@ -271,29 +271,29 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
             </div>
 
             {/* Legal Notice */}
-            <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 text-xs text-amber-900 leading-relaxed">
-              <Clock size={20} className="text-amber-700 shrink-0 mt-0.5" />
+            <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3.5 flex items-start gap-2.5 text-xs text-amber-900 leading-relaxed">
+              <Clock size={18} className="text-amber-700 shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold">Plazo de atención legal conforme a Ley N° 29571 (INDECOPI):</p>
-                <p className="mt-0.5">
+                <p className="font-bold text-xs">Plazo de atención legal conforme a Ley N° 29571 (INDECOPI):</p>
+                <p className="mt-0.5 text-[11px] text-amber-800">
                   El establecimiento <strong>{store.name}</strong> deberá dar respuesta formal a la presente reclamación en un plazo máximo de <strong>quince (15) días hábiles improrrogables</strong> mediante comunicación dirigida a su correo electrónico <strong>{formData.email}</strong> o a través de su número de contacto.
                 </p>
               </div>
             </div>
 
             {/* Cláusula de Deslinde Tecnológico de APANA */}
-            <div className="p-3 bg-slate-100/70 border border-slate-200 rounded-xl text-[11px] text-slate-500 text-center leading-relaxed">
+            <div className="p-2.5 bg-slate-100/70 border border-slate-200 rounded-xl text-[10px] text-slate-500 text-center leading-relaxed">
               Plataforma tecnológica provista por <strong>APANA (beapana.com)</strong>. La atención, resolución y responsabilidad legal sobre los productos o servicios ofrecidos corresponde con exclusividad al establecimiento <strong>{store.name}</strong>.
             </div>
 
             {/* Print & Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="flex-1 h-12 bg-white hover:bg-slate-50 border border-slate-300 text-[#0b1c30] font-bold text-sm rounded-2xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="flex-1 h-11 bg-white hover:bg-slate-50 border border-slate-300 text-[#0b1c30] font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Printer size={16} />
+                <Printer size={15} />
                 <span>Imprimir / Guardar en PDF</span>
               </button>
 
@@ -301,7 +301,7 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                 <Button
                   variant="primary"
                   fullWidth
-                  className="h-12 text-sm font-bold bg-[#059669] hover:bg-[#00855d] text-white rounded-2xl shadow-md"
+                  className="h-11 text-xs font-bold bg-[#059669] hover:bg-[#00855d] text-white rounded-xl shadow-xs"
                 >
                   Volver a la Tienda
                 </Button>
@@ -310,15 +310,15 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
           </div>
         ) : (
           /* Formulario Oficial de Reclamación */
-          <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#bccac0]/30 shadow-xs space-y-8">
+          <div className="bg-white rounded-2xl p-5 sm:p-7 border border-[#bccac0]/40 shadow-xs space-y-6">
             {/* Header del Establecimiento */}
-            <div className="border-b border-gray-100 pb-6 space-y-3">
+            <div className="border-b border-gray-100 pb-5 space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-[#006c49] text-xs font-bold rounded-full border border-emerald-200/60">
-                  <BookOpen size={14} />
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-[#006c49] text-[11px] font-bold rounded-full border border-emerald-200/60">
+                  <BookOpen size={13} />
                   <span>Conforme a la Ley N° 29571 • INDECOPI</span>
                 </div>
-                <span className="text-xs text-slate-400">Hoja de Reclamación Virtual</span>
+                <span className="text-[11px] text-slate-400 font-medium">Hoja de Reclamación Virtual</span>
               </div>
 
               <div className="flex items-center gap-3 pt-1">
@@ -334,28 +334,28 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                   </div>
                 )}
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-black text-[#0b1c30]">
+                  <h1 className="text-lg sm:text-xl font-bold text-[#0b1c30]">
                     Libro de Reclamaciones
                   </h1>
-                  <p className="text-xs sm:text-sm text-slate-600">
+                  <p className="text-xs text-slate-600">
                     Establecimiento: <strong>{store.name}</strong> • {providerTaxDoc}
                   </p>
                 </div>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <form onSubmit={handleSubmit} className="space-y-6">
               
               {/* Sección 1: Identificación del Consumidor */}
-              <section className="space-y-4">
-                <h2 className="text-base sm:text-lg font-bold text-[#0b1c30] flex items-center gap-2 border-b border-slate-100 pb-2">
-                  <span className="w-6 h-6 rounded-full bg-[#059669] text-white text-xs flex items-center justify-center font-black">1</span>
+              <section className="space-y-3.5">
+                <h2 className="text-sm font-bold text-[#0b1c30] flex items-center gap-2 border-b border-slate-100 pb-2">
+                  <span className="w-5 h-5 rounded-full bg-[#059669] text-white text-[11px] flex items-center justify-center font-bold">1</span>
                   <span>Identificación del Consumidor Reclamante</span>
                 </h2>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
                       Nombres y Apellidos completos *
                     </label>
                     <input
@@ -365,19 +365,19 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                       value={formData.fullName}
                       onChange={handleChange}
                       placeholder="ej. María Carmen López Silva"
-                      className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669]"
+                      className="w-full h-11 px-3.5 rounded-xl border border-[#bccac0] text-sm text-[#0b1c30] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
                       Tipo de Documento *
                     </label>
                     <select
                       name="docType"
                       value={formData.docType}
                       onChange={handleChange}
-                      className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669]"
+                      className="w-full h-11 px-3.5 rounded-xl border border-[#bccac0] text-sm text-[#0b1c30] bg-white focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] transition-all"
                     >
                       <option value="DNI">DNI (Documento Nacional de Identidad)</option>
                       <option value="CE">Carné de Extranjería</option>
@@ -387,7 +387,7 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
                       Número de Documento *
                     </label>
                     <input
@@ -397,12 +397,12 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                       value={formData.docNumber}
                       onChange={handleChange}
                       placeholder="ej. 72345678"
-                      className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669]"
+                      className="w-full h-11 px-3.5 rounded-xl border border-[#bccac0] text-sm text-[#0b1c30] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
                       Teléfono / WhatsApp de Contacto *
                     </label>
                     <input
@@ -412,12 +412,12 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="ej. 987654321"
-                      className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669]"
+                      className="w-full h-11 px-3.5 rounded-xl border border-[#bccac0] text-sm text-[#0b1c30] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
                       Correo Electrónico (para notificación de respuesta) *
                     </label>
                     <input
@@ -427,12 +427,12 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="ej. m.lopez@gmail.com"
-                      className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669]"
+                      className="w-full h-11 px-3.5 rounded-xl border border-[#bccac0] text-sm text-[#0b1c30] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
                       Dirección (Calle / Urbanización)
                     </label>
                     <input
@@ -441,12 +441,12 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                       value={formData.address}
                       onChange={handleChange}
                       placeholder="ej. Av. Pardo 540, Dpto 302"
-                      className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669]"
+                      className="w-full h-11 px-3.5 rounded-xl border border-[#bccac0] text-sm text-[#0b1c30] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
                       Ciudad / Distrito
                     </label>
                     <input
@@ -455,26 +455,26 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                       value={formData.city}
                       onChange={handleChange}
                       placeholder="ej. Miraflores, Lima"
-                      className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669]"
+                      className="w-full h-11 px-3.5 rounded-xl border border-[#bccac0] text-sm text-[#0b1c30] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] transition-all"
                     />
                   </div>
 
-                  <div className="sm:col-span-2 pt-1">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700">
+                  <div className="sm:col-span-2 pt-0.5">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700 select-none">
                       <input
                         type="checkbox"
                         name="isMinor"
                         checked={formData.isMinor}
                         onChange={handleChange}
-                        className="w-4 h-4 rounded text-[#059669] focus:ring-[#059669] border-slate-300"
+                        className="w-4 h-4 rounded text-[#059669] focus:ring-[#059669] border-[#bccac0]"
                       />
                       <span>El reclamante es menor de edad (requiere datos del padre o apoderado)</span>
                     </label>
                   </div>
 
                   {formData.isMinor && (
-                    <div className="sm:col-span-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <div className="sm:col-span-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
                         Nombre completo del Padre, Madre o Apoderado *
                       </label>
                       <input
@@ -484,7 +484,7 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                         value={formData.parentName}
                         onChange={handleChange}
                         placeholder="ej. Roberto López Mendoza"
-                        className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669]"
+                        className="w-full h-11 px-3.5 rounded-xl border border-[#bccac0] text-sm bg-white text-[#0b1c30] focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669]"
                       />
                     </div>
                   )}
@@ -492,19 +492,19 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
               </section>
 
               {/* Sección 2: Identificación del Bien Contratado */}
-              <section className="space-y-4">
-                <h2 className="text-base sm:text-lg font-bold text-[#0b1c30] flex items-center gap-2 border-b border-slate-100 pb-2">
-                  <span className="w-6 h-6 rounded-full bg-[#059669] text-white text-xs flex items-center justify-center font-black">2</span>
+              <section className="space-y-3.5">
+                <h2 className="text-sm font-bold text-[#0b1c30] flex items-center gap-2 border-b border-slate-100 pb-2">
+                  <span className="w-5 h-5 rounded-full bg-[#059669] text-white text-[11px] flex items-center justify-center font-bold">2</span>
                   <span>Identificación del Bien Contratado</span>
                 </h2>
 
-                <div className="space-y-4">
+                <div className="space-y-3.5">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2">
+                    <label className="block text-xs font-semibold text-[#0b1c30] mb-1.5">
                       Tipo de Bien *
                     </label>
                     <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer text-xs sm:text-sm font-semibold text-slate-800">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[#0b1c30] select-none">
                         <input
                           type="radio"
                           name="contractType"
@@ -513,9 +513,9 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                           onChange={handleChange}
                           className="w-4 h-4 text-[#059669] focus:ring-[#059669]"
                         />
-                        <span>Producto (Bienes, ropa, comida, artículos)</span>
+                        <span>Producto (Bienes, ropa, comida, etc.)</span>
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer text-xs sm:text-sm font-semibold text-slate-800">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[#0b1c30] select-none">
                         <input
                           type="radio"
                           name="contractType"
@@ -529,9 +529,9 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                      <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
                         Descripción del Producto o Servicio *
                       </label>
                       <input
@@ -540,13 +540,13 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                         required
                         value={formData.goodDescription}
                         onChange={handleChange}
-                        placeholder="ej. Torta de chocolate 1kg con envío a domicilio"
-                        className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669]"
+                        placeholder="ej. Torta de chocolate 1kg con envío"
+                        className="w-full h-11 px-3.5 rounded-xl border border-[#bccac0] text-sm text-[#0b1c30] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] transition-all"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                      <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
                         Monto Reclamado (S/)
                       </label>
                       <input
@@ -556,7 +556,7 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                         value={formData.amount}
                         onChange={handleChange}
                         placeholder="ej. 45.00"
-                        className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669]"
+                        className="w-full h-11 px-3.5 rounded-xl border border-[#bccac0] text-sm text-[#0b1c30] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] transition-all"
                       />
                     </div>
                   </div>
@@ -564,22 +564,22 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
               </section>
 
               {/* Sección 3: Detalle de la Reclamación */}
-              <section className="space-y-4">
-                <h2 className="text-base sm:text-lg font-bold text-[#0b1c30] flex items-center gap-2 border-b border-slate-100 pb-2">
-                  <span className="w-6 h-6 rounded-full bg-[#059669] text-white text-xs flex items-center justify-center font-black">3</span>
+              <section className="space-y-3.5">
+                <h2 className="text-sm font-bold text-[#0b1c30] flex items-center gap-2 border-b border-slate-100 pb-2">
+                  <span className="w-5 h-5 rounded-full bg-[#059669] text-white text-[11px] flex items-center justify-center font-bold">3</span>
                   <span>Detalle de la Reclamación</span>
                 </h2>
 
-                <div className="space-y-4">
+                <div className="space-y-3.5">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2">
+                    <label className="block text-xs font-semibold text-[#0b1c30] mb-1.5">
                       Tipo de Discrepancia *
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <label className={`p-3.5 rounded-xl border cursor-pointer flex flex-col gap-1 transition-all ${
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <label className={`p-3 rounded-xl border cursor-pointer flex flex-col gap-1 transition-all select-none ${
                         formData.claimType === 'reclamo' 
                           ? 'border-[#059669] bg-emerald-50/50 ring-1 ring-[#059669]' 
-                          : 'border-slate-200 hover:border-slate-300'
+                          : 'border-[#bccac0]/50 hover:border-slate-300'
                       }`}>
                         <div className="flex items-center gap-2">
                           <input
@@ -590,17 +590,17 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                             onChange={handleChange}
                             className="w-4 h-4 text-[#059669] focus:ring-[#059669]"
                           />
-                          <span className="font-bold text-xs sm:text-sm text-[#0b1c30]">RECLAMO</span>
+                          <span className="font-bold text-xs text-[#0b1c30]">RECLAMO</span>
                         </div>
                         <span className="text-[11px] text-slate-500 leading-snug pl-6">
-                          Disconformidad relacionada directamente a los productos o servicios adquiridos.
+                          Disconformidad relacionada directamente a los productos adquiridos.
                         </span>
                       </label>
 
-                      <label className={`p-3.5 rounded-xl border cursor-pointer flex flex-col gap-1 transition-all ${
+                      <label className={`p-3 rounded-xl border cursor-pointer flex flex-col gap-1 transition-all select-none ${
                         formData.claimType === 'queja' 
                           ? 'border-[#059669] bg-emerald-50/50 ring-1 ring-[#059669]' 
-                          : 'border-slate-200 hover:border-slate-300'
+                          : 'border-[#bccac0]/50 hover:border-slate-300'
                       }`}>
                         <div className="flex items-center gap-2">
                           <input
@@ -611,76 +611,76 @@ export default function StoreLibroReclamacionesPage({ params }: Props) {
                             onChange={handleChange}
                             className="w-4 h-4 text-[#059669] focus:ring-[#059669]"
                           />
-                          <span className="font-bold text-xs sm:text-sm text-[#0b1c30]">QUEJA</span>
+                          <span className="font-bold text-xs text-[#0b1c30]">QUEJA</span>
                         </div>
                         <span className="text-[11px] text-slate-500 leading-snug pl-6">
-                          Malestar o descontento respecto a la atención al público (sin relación directa al producto).
+                          Malestar o descontento respecto a la atención brindada.
                         </span>
                       </label>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
                       Detalle de los hechos *
                     </label>
                     <textarea
                       name="detail"
                       required
-                      rows={4}
+                      rows={3}
                       value={formData.detail}
                       onChange={handleChange}
-                      placeholder="Describa claramente lo sucedido, fechas, pedidos o inconvenientes ocurridos..."
-                      className="w-full p-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] resize-y leading-relaxed"
+                      placeholder="Describa claramente lo sucedido, fechas o inconvenientes ocurridos..."
+                      className="w-full p-3 rounded-xl border border-[#bccac0] text-sm text-[#0b1c30] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] resize-y leading-relaxed transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
                       Pedido concreto del consumidor *
                     </label>
                     <textarea
                       name="consumerRequest"
                       required
-                      rows={3}
+                      rows={2}
                       value={formData.consumerRequest}
                       onChange={handleChange}
-                      placeholder="Indique qué solicita para resolver su reclamación (ej. cambio del producto, reembolso del dinero, etc.)..."
-                      className="w-full p-3.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] resize-y leading-relaxed"
+                      placeholder="Indique qué solicita para resolver su caso (ej. cambio de producto, reembolso, etc.)..."
+                      className="w-full p-3 rounded-xl border border-[#bccac0] text-sm text-[#0b1c30] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] resize-y leading-relaxed transition-all"
                     />
                   </div>
                 </div>
               </section>
 
               {/* Declaración Jurada y Aceptación */}
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                <label className="flex items-start gap-2.5 cursor-pointer text-xs text-slate-700 leading-relaxed">
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <label className="flex items-start gap-2.5 cursor-pointer text-[11px] text-slate-700 leading-relaxed select-none">
                   <input
                     type="checkbox"
                     name="acceptedTerms"
                     required
                     checked={formData.acceptedTerms}
                     onChange={handleChange}
-                    className="w-4 h-4 rounded text-[#059669] focus:ring-[#059669] border-slate-300 mt-0.5 shrink-0"
+                    className="w-4 h-4 rounded text-[#059669] focus:ring-[#059669] border-[#bccac0] mt-0.5 shrink-0"
                   />
                   <span>
-                    Declaro bajo juramento que los datos ingresados en la presente Hoja de Reclamación Virtual son veraces y corresponden a mi persona. Autorizo al establecimiento <strong>{store.name}</strong> a remitir la respuesta formal a mi correo electrónico conforme a la Ley N° 29571.
+                    Declaro bajo juramento que los datos ingresados son veraces y corresponden a mi persona. Autorizo al establecimiento <strong>{store.name}</strong> a remitir la respuesta formal a mi correo conforme a la Ley N° 29571.
                   </span>
                 </label>
               </div>
 
               {/* Botón de Envío */}
-              <div className="pt-2">
+              <div className="pt-1">
                 <Button
                   type="submit"
                   variant="primary"
                   fullWidth
                   disabled={loading}
-                  className="h-12 bg-[#059669] hover:bg-[#00855d] text-white font-bold text-sm rounded-xl shadow-md transition-transform active:scale-[0.99]"
+                  className="h-11 bg-[#059669] hover:bg-[#00855d] text-white font-bold text-xs rounded-xl shadow-xs transition-transform active:scale-[0.99]"
                 >
                   {loading ? 'Registrando Reclamación...' : 'Enviar Hoja de Reclamación'}
                 </Button>
-                <p className="text-[11px] text-center text-slate-400 mt-2.5">
+                <p className="text-[10px] text-center text-slate-400 mt-2">
                   Se generará una Hoja de Reclamación numerada descargable e imprimible de forma inmediata.
                 </p>
               </div>
