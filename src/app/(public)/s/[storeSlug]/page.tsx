@@ -107,30 +107,37 @@ export default function PublicStorePage({ params }: Props) {
 
     // 2. Revalidar de Firestore silenciosamente en segundo plano
     const fetchFromFirestore = async () => {
-      const fetchedStore = await getStoreBySlugFromFS(targetSlug);
-      if (fetchedStore) {
-        setFsStore(fetchedStore);
-        sessionStorage.setItem(`apana_public_store_${targetSlug}`, JSON.stringify(fetchedStore));
+      try {
+        const fetchedStore = await getStoreBySlugFromFS(targetSlug);
+        if (fetchedStore) {
+          setFsStore(fetchedStore);
+          sessionStorage.setItem(`apana_public_store_${targetSlug}`, JSON.stringify(fetchedStore));
 
-        // Registrar visita única por sesión
-        const sessionVisitKey = `apana_session_visited_${fetchedStore.id}`;
-        if (typeof window !== 'undefined' && !sessionStorage.getItem(sessionVisitKey)) {
-          sessionStorage.setItem(sessionVisitKey, 'true');
-          const { recordAnalyticsEvent } = await import('@/lib/firebase/firestore');
-          recordAnalyticsEvent(fetchedStore.id, 'visit').catch(() => { });
+          // Registrar visita única de forma desacoplada y no bloqueante
+          const sessionVisitKey = `apana_session_visited_${fetchedStore.id}`;
+          if (typeof window !== 'undefined' && !sessionStorage.getItem(sessionVisitKey)) {
+            sessionStorage.setItem(sessionVisitKey, 'true');
+            import('@/lib/firebase/firestore').then(({ recordAnalyticsEvent }) => {
+              recordAnalyticsEvent(fetchedStore.id, 'visit').catch(() => { });
+            }).catch(() => { });
+          }
+
+          // Cargar productos de inmediato
+          const prods = await getProductsByStoreIdFromFS(fetchedStore.id);
+          setFsProducts(prods);
+          sessionStorage.setItem(`apana_public_prods_${targetSlug}`, JSON.stringify(prods));
+        } else {
+          // Si la tienda fue borrada en Firestore, limpiar caché y forzar vista no encontrada
+          setFsStore(null);
+          setFsProducts([]);
+          sessionStorage.removeItem(`apana_public_store_${targetSlug}`);
+          sessionStorage.removeItem(`apana_public_prods_${targetSlug}`);
         }
-
-        const prods = await getProductsByStoreIdFromFS(fetchedStore.id);
-        setFsProducts(prods);
-        sessionStorage.setItem(`apana_public_prods_${targetSlug}`, JSON.stringify(prods));
-      } else {
-        // Si la tienda fue borrada en Firestore, limpiar caché y forzar vista no encontrada
-        setFsStore(null);
-        setFsProducts([]);
-        sessionStorage.removeItem(`apana_public_store_${targetSlug}`);
-        sessionStorage.removeItem(`apana_public_prods_${targetSlug}`);
+      } catch (err) {
+        console.error('Error fetching public store data:', err);
+      } finally {
+        setIsFetchingFS(false);
       }
-      setIsFetchingFS(false);
     };
 
     fetchFromFirestore();
