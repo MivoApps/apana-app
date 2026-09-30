@@ -158,8 +158,13 @@ export default function DashboardPage() {
           }
         }
 
-        // Consultar tienda y productos en Firestore
-        const storeFromFS = await getStoreByUserIdFromFS(user.uid);
+        // Consultar tienda en Firestore con límite de tiempo (1.8s) para no congelar la pantalla
+        const fetchStoreWithTimeout = Promise.race([
+          getStoreByUserIdFromFS(user.uid),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1800))
+        ]);
+
+        const storeFromFS = await fetchStoreWithTimeout;
 
         if (!storeFromFS) {
           if (typeof window !== 'undefined') {

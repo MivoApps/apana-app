@@ -37,10 +37,10 @@ export default function LoginPage() {
         return;
       }
 
-      // Timeout de seguridad de 2 segundos para forzar redirección
+      // Timeout de seguridad de 1.2s para forzar redirección si la red tarda
       const fallbackTimer = setTimeout(() => {
-        if (isMounted) router.replace('/dashboard');
-      }, 2000);
+        if (isMounted) router.replace('/store/setup');
+      }, 1200);
 
       import('@/lib/firebase/firestore').then(async ({ getStoreByUserIdFromFS }) => {
         try {
@@ -56,7 +56,7 @@ export default function LoginPage() {
         } catch {
           if (isMounted) {
             clearTimeout(fallbackTimer);
-            router.replace('/dashboard');
+            router.replace('/store/setup');
           }
         }
       });
