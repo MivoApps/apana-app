@@ -137,11 +137,6 @@ export default function DashboardPage() {
         return;
       }
 
-      // Temporizador de seguridad de 1.5s para no congelar la pantalla en conexiones lentas
-      const safetyTimer = setTimeout(() => {
-        if (isMounted) setIsLoading(false);
-      }, 1500);
-
       if (!user) return;
 
       try {
@@ -167,7 +162,6 @@ export default function DashboardPage() {
         const storeFromFS = await getStoreByUserIdFromFS(user.uid);
 
         if (!storeFromFS) {
-          clearTimeout(safetyTimer);
           if (typeof window !== 'undefined') {
             sessionStorage.removeItem(`apana_cache_store_${user.uid}`);
             sessionStorage.removeItem(`apana_cache_prods_${user.uid}`);
@@ -204,7 +198,6 @@ export default function DashboardPage() {
         console.warn('Aviso sincronizando dashboard:', err);
       } finally {
         if (isMounted) {
-          clearTimeout(safetyTimer);
           setIsLoading(false);
         }
       }
@@ -217,7 +210,8 @@ export default function DashboardPage() {
     };
   }, [user, authLoading]);
 
-  if (authLoading || (isLoading && !fsStore)) {
+  // Si está cargando auth, cargando tienda, o aún no tenemos la tienda cargada, NO renderizar dashboard
+  if (authLoading || isLoading || !fsStore) {
     return (
       <div className="min-h-screen bg-[#f8f9ff] flex flex-col items-center justify-center text-[#0b1c30] gap-3">
         <div className="w-10 h-10 border-4 border-[#059669] border-t-transparent rounded-full animate-spin" />

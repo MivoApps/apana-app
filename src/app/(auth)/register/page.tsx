@@ -39,9 +39,9 @@ export default function RegisterPage() {
         return;
       }
 
-      // Timeout de seguridad de 2 segundos para forzar redirección
+      // Timeout de seguridad de 2 segundos: en registro, por defecto un usuario nuevo va a /store/setup
       const fallbackTimer = setTimeout(() => {
-        if (isMounted) router.replace('/dashboard');
+        if (isMounted) router.replace('/store/setup');
       }, 2000);
 
       import('@/lib/firebase/firestore').then(async ({ getStoreByUserIdFromFS }) => {
@@ -58,7 +58,7 @@ export default function RegisterPage() {
         } catch {
           if (isMounted) {
             clearTimeout(fallbackTimer);
-            router.replace('/dashboard');
+            router.replace('/store/setup');
           }
         }
       });
