@@ -749,7 +749,12 @@ export interface AdminUserItem extends UserProfile {
 export const getAllUsersForAdminFromFS = async (existingStores?: AdminStoreItem[]): Promise<AdminUserItem[]> => {
   try {
     const usersRef = collection(db, 'users');
-    const usersSnap = await getDocs(usersRef);
+    let usersSnap;
+    try {
+      usersSnap = await getDocsFromServer(usersRef);
+    } catch {
+      usersSnap = await getDocs(usersRef);
+    }
     const usersList: AdminUserItem[] = [];
 
     // Reusar tiendas provistas o consultar solo si no fueron pasadas
@@ -761,7 +766,12 @@ export const getAllUsersForAdminFromFS = async (existingStores?: AdminStoreItem[
       });
     } else {
       const storesRef = collection(db, 'stores');
-      const storesSnap = await getDocs(storesRef);
+      let storesSnap;
+      try {
+        storesSnap = await getDocsFromServer(storesRef);
+      } catch {
+        storesSnap = await getDocs(storesRef);
+      }
       storesSnap.docs.forEach((d) => {
         const s = d.data() as Store;
         const uidKey = s.ownerId || (s as any).userId;
@@ -771,9 +781,13 @@ export const getAllUsersForAdminFromFS = async (existingStores?: AdminStoreItem[
 
     for (const uDoc of usersSnap.docs) {
       const uData = uDoc.data() as UserProfile;
-      const associatedStore = storesMap.get(uData.uid);
+      const uidVal = uData.uid || uDoc.id;
+      const emailVal = uData.email || (uDoc.id.includes('@') ? uDoc.id : '');
+      const associatedStore = storesMap.get(uidVal) || (emailVal ? storesMap.get(emailVal) : undefined);
       usersList.push({
         ...uData,
+        uid: uidVal,
+        email: emailVal,
         storeName: associatedStore?.name,
         storeSlug: associatedStore?.slug,
         storePlan: associatedStore?.plan,
@@ -787,10 +801,55 @@ export const getAllUsersForAdminFromFS = async (existingStores?: AdminStoreItem[
   }
 };
 
-export const adminDeleteUserFromFS = async (emailOrUid: string): Promise<void> => {
+export const adminDeleteUserFromFS = async (emailOrUid: string, fallbackUid?: string): Promise<void> => {
   try {
-    const userRef = doc(db, 'users', emailOrUid.toLowerCase().trim());
-    await deleteDoc(userRef);
+    const keysToDelete = new Set<string>();
+    if (emailOrUid) {
+      keysToDelete.add(emailOrUid.trim());
+      keysToDelete.add(emailOrUid.toLowerCase().trim());
+    }
+    if (fallbackUid) {
+      keysToDelete.add(fallbackUid.trim());
+    }
+
+    // 1. Eliminar documentos directos en la colección 'users'
+    for (const key of keysToDelete) {
+      if (!key) continue;
+      try {
+        const userRef = doc(db, 'users', key);
+        await deleteDoc(userRef);
+      } catch (e) {
+        console.warn(`Aviso eliminando doc users/${key}:`, e);
+      }
+    }
+
+    // 2. Eliminar documentos donde el campo 'uid' coincida
+    const usersRef = collection(db, 'users');
+    const targetUid = fallbackUid || (!emailOrUid.includes('@') ? emailOrUid : '');
+    if (targetUid) {
+      try {
+        const qUid = query(usersRef, where('uid', '==', targetUid));
+        const snapUid = await getDocs(qUid);
+        for (const d of snapUid.docs) {
+          await deleteDoc(d.ref);
+        }
+      } catch (e) {
+        console.warn('Aviso eliminando users por uid:', e);
+      }
+    }
+
+    // 3. Eliminar documentos donde el campo 'email' coincida
+    if (emailOrUid && emailOrUid.includes('@')) {
+      try {
+        const qEmail = query(usersRef, where('email', '==', emailOrUid.trim()));
+        const snapEmail = await getDocs(qEmail);
+        for (const d of snapEmail.docs) {
+          await deleteDoc(d.ref);
+        }
+      } catch (e) {
+        console.warn('Aviso eliminando users por email:', e);
+      }
+    }
   } catch (error) {
     console.error('Error al eliminar usuario en Firestore:', error);
     throw error;

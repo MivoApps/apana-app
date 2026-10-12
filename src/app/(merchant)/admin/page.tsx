@@ -656,10 +656,13 @@ export default function SuperAdminPage() {
     if (!deletingUser) return;
     setIsDeletingUser(true);
     try {
-      await adminDeleteUserFromFS(deletingUser.email || deletingUser.uid);
-      setUsers((prev) => prev.filter((u) => u.uid !== deletingUser.uid));
+      await adminDeleteUserFromFS(deletingUser.email || deletingUser.uid, deletingUser.uid);
+      setUsers((prev) => prev.filter((u) => u.uid !== deletingUser.uid && (!deletingUser.email || u.email !== deletingUser.email)));
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('apana_admin_cache');
+      }
       setDeletingUser(null);
-      setSuccessMsg(`Usuario eliminado de Firestore.`);
+      setSuccessMsg(`Usuario y perfil eliminados de Firestore.`);
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (e) {
       alert('Error eliminando usuario.');
@@ -680,8 +683,12 @@ export default function SuperAdminPage() {
       setStores((prev) => prev.filter((s) => s.id !== deletingUserAssociatedStore.id));
 
       // 2. Eliminar usuario
-      await adminDeleteUserFromFS(deletingUser.email || deletingUser.uid);
-      setUsers((prev) => prev.filter((u) => u.uid !== deletingUser.uid));
+      await adminDeleteUserFromFS(deletingUser.email || deletingUser.uid, deletingUser.uid);
+      setUsers((prev) => prev.filter((u) => u.uid !== deletingUser.uid && (!deletingUser.email || u.email !== deletingUser.email)));
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('apana_admin_cache');
+      }
 
       setDeletingUser(null);
       setSuccessMsg(`Tienda "${deletingUserAssociatedStore.name}" y usuario eliminados permanentemente.`);
@@ -754,32 +761,35 @@ export default function SuperAdminPage() {
     }
   };
 
-  // Filtrados
+  // Filtrados seguros (Anti-Crash contra campos nulos o indefinidos)
+  const term = (searchQuery || '').trim().toLowerCase();
+
   const filteredStores = stores.filter((s) => {
     const matchesSearch =
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (s.whatsappPhone && s.whatsappPhone.includes(searchQuery));
+      !term ||
+      Boolean(s?.name && s.name.toLowerCase().includes(term)) ||
+      Boolean(s?.slug && s.slug.toLowerCase().includes(term)) ||
+      Boolean(s?.whatsappPhone && s.whatsappPhone.includes(term));
     const matchesPlan =
       planFilter === 'todos' ||
-      (planFilter === 'emprendedor' && s.plan === 'emprendedor') ||
-      (planFilter === 'negocio' && s.plan === 'negocio') ||
-      (planFilter === 'gratis' && (!s.plan || s.plan === 'gratis'));
+      (planFilter === 'emprendedor' && s?.plan === 'emprendedor') ||
+      (planFilter === 'negocio' && s?.plan === 'negocio') ||
+      (planFilter === 'gratis' && (!s?.plan || s.plan === 'gratis'));
     const matchesStatus =
       statusFilter === 'todos' ||
-      (statusFilter === 'activa' && s.status !== 'pausada') ||
-      (statusFilter === 'pausada' && s.status === 'pausada');
+      (statusFilter === 'activa' && s?.status !== 'pausada') ||
+      (statusFilter === 'pausada' && s?.status === 'pausada');
 
     return matchesSearch && matchesPlan && matchesStatus;
   });
 
   // 🎯 Detección Inteligente de Leads y Onboarding Incompleto
   const incompleteLeads = users.map((u) => {
-    const userStore = stores.find((s) => s.ownerId === u.uid || s.ownerId === u.email || s.name === u.storeName || s.slug === u.storeSlug);
+    const userStore = stores.find((s) => (s?.ownerId && u?.uid && s.ownerId === u.uid) || (s?.ownerId && u?.email && s.ownerId === u.email) || (s?.name && u?.storeName && s.name === u.storeName) || (s?.slug && u?.storeSlug && s.slug === u.storeSlug));
     const hasStore = Boolean(userStore);
     const hasWhatsapp = Boolean(userStore?.whatsappPhone && userStore?.isWhatsappVerified);
     const productCount = userStore?.productCount || 0;
-    const phoneToContact = userStore?.whatsappPhone || (u as any).phone || '';
+    const phoneToContact = userStore?.whatsappPhone || (u as any)?.phone || '';
 
     // Estado del embudo (funnel)
     let funnelStatus: 'sin_tienda' | 'sin_whatsapp' | 'sin_productos' | 'completo' = 'completo';
@@ -822,45 +832,61 @@ export default function SuperAdminPage() {
   const totalIncompleteLeads = incompleteLeads.filter((l) => l.isIncomplete).length;
 
   const filteredLeads = incompleteLeads.filter((l) => {
-    const term = searchQuery.toLowerCase();
+    if (!term) return true;
     const matchesSearch =
-      l.user.email.toLowerCase().includes(term) ||
-      l.user.name.toLowerCase().includes(term) ||
-      (l.store?.name && l.store.name.toLowerCase().includes(term)) ||
-      (l.phoneToContact && l.phoneToContact.includes(term));
+      Boolean(l.user?.email && l.user.email.toLowerCase().includes(term)) ||
+      Boolean(l.user?.name && l.user.name.toLowerCase().includes(term)) ||
+      Boolean(l.store?.name && l.store.name.toLowerCase().includes(term)) ||
+      Boolean(l.store?.slug && l.store.slug.toLowerCase().includes(term)) ||
+      Boolean(l.phoneToContact && l.phoneToContact.includes(term));
 
     return matchesSearch;
   });
 
   const filteredUsers = users.filter((u) => {
-    const term = searchQuery.toLowerCase();
+    if (!term) return true;
     return (
-      (u.email && u.email.toLowerCase().includes(term)) ||
-      (u.name && u.name.toLowerCase().includes(term)) ||
-      (u.storeName && u.storeName.toLowerCase().includes(term)) ||
-      (u.storeSlug && u.storeSlug.toLowerCase().includes(term))
+      Boolean(u?.email && u.email.toLowerCase().includes(term)) ||
+      Boolean(u?.name && u.name.toLowerCase().includes(term)) ||
+      Boolean(u?.storeName && u.storeName.toLowerCase().includes(term)) ||
+      Boolean(u?.storeSlug && u.storeSlug.toLowerCase().includes(term)) ||
+      Boolean((u as any)?.phone && String((u as any).phone).includes(term)) ||
+      Boolean(u?.uid && u.uid.toLowerCase().includes(term))
     );
   });
 
   const filteredReclamaciones = reclamaciones.filter((r) => {
-    const term = searchQuery.toLowerCase();
     const matchesSearch =
-      r.claimCode.toLowerCase().includes(term) ||
-      r.fullName.toLowerCase().includes(term) ||
-      r.docNumber.includes(term) ||
-      r.email.toLowerCase().includes(term) ||
-      (r.storeName && r.storeName.toLowerCase().includes(term)) ||
-      (r.storeSlug && r.storeSlug.toLowerCase().includes(term));
+      !term ||
+      Boolean(r?.claimCode && r.claimCode.toLowerCase().includes(term)) ||
+      Boolean(r?.fullName && r.fullName.toLowerCase().includes(term)) ||
+      Boolean(r?.docNumber && r.docNumber.includes(term)) ||
+      Boolean(r?.email && r.email.toLowerCase().includes(term)) ||
+      Boolean(r?.storeName && r.storeName.toLowerCase().includes(term)) ||
+      Boolean(r?.storeSlug && r.storeSlug.toLowerCase().includes(term));
 
     if (!matchesSearch) return false;
 
     if (reclamacionScopeFilter === 'apana') {
-      return !r.storeId; // Reclamos centrales de APANA
+      return !r?.storeId; // Reclamos centrales de APANA
     }
     if (reclamacionScopeFilter === 'tiendas') {
-      return Boolean(r.storeId); // Reclamos de tiendas de comerciantes
+      return Boolean(r?.storeId); // Reclamos de tiendas de comerciantes
     }
     return true;
+  });
+
+  const filteredPayments = payments.filter((p) => {
+    if (!term) return true;
+    const targetStore = stores.find((s) => s.id === p.storeId);
+    return (
+      Boolean(p.culqiChargeId && p.culqiChargeId.toLowerCase().includes(term)) ||
+      Boolean(p.id && p.id.toLowerCase().includes(term)) ||
+      Boolean(p.storeId && p.storeId.toLowerCase().includes(term)) ||
+      Boolean(targetStore?.name && targetStore.name.toLowerCase().includes(term)) ||
+      Boolean(targetStore?.slug && targetStore.slug.toLowerCase().includes(term)) ||
+      Boolean(p.email && p.email.toLowerCase().includes(term))
+    );
   });
 
   if (authLoading || isLoading) {
@@ -936,9 +962,14 @@ export default function SuperAdminPage() {
 
             {/* Refrescar Datos */}
             <button
-              onClick={() => loadData(false)}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  sessionStorage.removeItem('apana_admin_cache');
+                }
+                loadData(false);
+              }}
               className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all flex items-center gap-1.5 text-xs font-bold border border-slate-700 cursor-pointer"
-              title="Refrescar datos"
+              title="Refrescar datos y vaciar caché"
             >
               <RefreshCw size={14} />
               <span className="hidden sm:inline">Refrescar</span>
@@ -1545,13 +1576,13 @@ export default function SuperAdminPage() {
               <div className="p-4 px-5 border-b border-slate-800 flex items-center justify-between">
                 <h2 className="text-sm font-bold text-white flex items-center gap-2">
                   <TrendingUp size={17} className="text-purple-400" />
-                  Historial de Transacciones Culqi ({payments.length})
+                  Historial de Transacciones Culqi ({filteredPayments.length})
                 </h2>
               </div>
 
-              {payments.length === 0 ? (
+              {filteredPayments.length === 0 ? (
                 <div className="p-8 text-center text-slate-400 text-xs">
-                  No hay registros de transacciones procesadas por Culqi aún.
+                  {searchQuery ? 'No se encontraron transacciones que coincidan con la búsqueda.' : 'No hay registros de transacciones procesadas por Culqi aún.'}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -1567,7 +1598,7 @@ export default function SuperAdminPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60">
-                      {payments.map((p) => {
+                      {filteredPayments.map((p) => {
                         const targetStore = stores.find((s) => s.id === p.storeId);
                         const isApproved = p.status === 'approved';
 
@@ -3053,6 +3084,16 @@ export default function SuperAdminPage() {
                 <p className="text-xs text-slate-300">
                   ¿Estás seguro de eliminar este usuario? No tiene tiendas asociadas.
                 </p>
+
+                <div className="p-3 bg-slate-900/80 border border-slate-700/80 rounded-xl text-left text-[11px] text-slate-300 flex flex-col gap-1">
+                  <span className="font-bold text-amber-400 flex items-center gap-1">
+                    <Info size={13} />
+                    Nota sobre re-registro de cuenta:
+                  </span>
+                  <span className="text-slate-400 text-[10.5px] leading-relaxed">
+                    Esta acción elimina el perfil y tiendas de la base de datos de Firestore. Para que el usuario pueda registrarse nuevamente desde cero con este mismo correo, recuerda también borrarlo en <a href="https://console.firebase.google.com/project/apana-app-edf1a/authentication/users" target="_blank" rel="noreferrer" className="text-emerald-400 underline font-semibold hover:text-emerald-300">Firebase Console → Authentication</a>.
+                  </span>
+                </div>
 
                 <div className="flex gap-2 pt-2">
                   <button
