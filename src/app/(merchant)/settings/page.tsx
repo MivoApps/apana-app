@@ -220,7 +220,19 @@ export default function SettingsPage() {
     if (!user) return;
     setIsResendingEmail(true);
     try {
-      await sendEmailVerification(user);
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://beapana.com';
+      try {
+        await sendEmailVerification(user, {
+          url: `${origin}/dashboard?emailVerified=true`,
+          handleCodeInApp: false,
+        });
+      } catch (e: any) {
+        if (e?.code === 'auth/unauthorized-continue-uri') {
+          await sendEmailVerification(user);
+        } else {
+          throw e;
+        }
+      }
       setEmailSentToast(true);
       setTimeout(() => setEmailSentToast(false), 5000);
     } catch (err: any) {
@@ -368,6 +380,15 @@ export default function SettingsPage() {
       // 2. Traer la verdad actualizada desde Firestore en segundo plano
       const storeFromFS = await getStoreByUserIdFromFS(user.uid);
       if (storeFromFS) {
+        // Sincronizar verificación de correo de Firebase Auth a Firestore si está verificado
+        if (user.emailVerified && (!storeFromFS.isEmailVerified || storeFromFS.emailVerifiedMethod !== 'auth')) {
+          storeFromFS.isEmailVerified = true;
+          storeFromFS.emailVerifiedMethod = 'auth';
+          import('@/lib/firebase/firestore').then(({ syncUserEmailVerificationToFS }) => {
+            syncUserEmailVerificationToFS(user.uid, storeFromFS.id, user.email || undefined);
+          });
+        }
+
         setFsStore(storeFromFS);
         setStoreName(storeFromFS.name || '');
         setStoreDescription(storeFromFS.description || '');
@@ -1251,7 +1272,7 @@ export default function SettingsPage() {
                 {user?.emailVerified || fsStore?.isEmailVerified ? (
                   <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0">
                     <ShieldCheck size={11} className="text-emerald-700" />
-                    <span>Verificado</span>
+                    <span>{fsStore?.emailVerifiedMethod === 'admin' ? 'Aprobado (Admin)' : 'Verificado'}</span>
                   </span>
                 ) : (
                   <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0">

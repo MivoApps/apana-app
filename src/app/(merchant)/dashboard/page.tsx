@@ -61,7 +61,19 @@ export default function DashboardPage() {
     if (!user) return;
     setIsResendingEmail(true);
     try {
-      await sendEmailVerification(user);
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://beapana.com';
+      try {
+        await sendEmailVerification(user, {
+          url: `${origin}/dashboard?emailVerified=true`,
+          handleCodeInApp: false,
+        });
+      } catch (e: any) {
+        if (e?.code === 'auth/unauthorized-continue-uri') {
+          await sendEmailVerification(user);
+        } else {
+          throw e;
+        }
+      }
       setEmailSentToast(true);
       setTimeout(() => setEmailSentToast(false), 5000);
     } catch (err: any) {
@@ -182,6 +194,15 @@ export default function DashboardPage() {
           setFsStore(null);
           router.replace('/store/setup');
           return;
+        }
+
+        // Sincronizar verificación oficial de correo de Firebase Auth hacia Firestore
+        if (user.emailVerified && (!storeFromFS.isEmailVerified || storeFromFS.emailVerifiedMethod !== 'auth')) {
+          storeFromFS.isEmailVerified = true;
+          storeFromFS.emailVerifiedMethod = 'auth';
+          import('@/lib/firebase/firestore').then(({ syncUserEmailVerificationToFS }) => {
+            syncUserEmailVerificationToFS(user.uid, storeFromFS.id, user.email || undefined);
+          });
         }
 
         setFsStore(storeFromFS);

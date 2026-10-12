@@ -148,9 +148,16 @@ export default function PublicProductDetailPage({ params }: Props) {
   const isProStore = activeStore?.plan === 'negocio';
   const maxImagesAllowed = isProStore ? 8 : isPaidStore ? 4 : 1;
 
-  const rawImages: string[] = targetProduct?.imageUrls && targetProduct.imageUrls.filter(Boolean).length > 0
-    ? targetProduct.imageUrls.filter(Boolean) as string[]
-    : [targetProduct?.imageUrl || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80'];
+  const DEFAULT_PRODUCT_IMG = 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80';
+
+  const validImgs = (targetProduct?.imageUrls || []).filter((u): u is string => Boolean(u && !u.startsWith('blob:')));
+  const rawImages: string[] = validImgs.length > 0
+    ? validImgs
+    : [
+        (targetProduct?.imageUrl && !targetProduct.imageUrl.startsWith('blob:'))
+          ? targetProduct.imageUrl
+          : DEFAULT_PRODUCT_IMG
+      ];
 
   const productImages: string[] = rawImages.slice(0, maxImagesAllowed);
 
@@ -379,6 +386,9 @@ export default function PublicProductDetailPage({ params }: Props) {
                 src={productImages[activeImageIndex] || productImages[0]}
                 alt={targetProduct.title}
                 className="w-full h-full object-cover transition-all duration-300 pointer-events-none"
+                onError={(e) => {
+                  e.currentTarget.src = DEFAULT_PRODUCT_IMG;
+                }}
               />
 
               {/* Botones Laterales para pasar de foto */}
@@ -423,7 +433,14 @@ export default function PublicProductDetailPage({ params }: Props) {
                         : 'border-transparent opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <img src={imgUrl} alt={`Miniatura ${idx + 1}`} className="w-full h-full object-cover" />
+                    <img
+                      src={imgUrl}
+                      alt={`Miniatura ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = DEFAULT_PRODUCT_IMG;
+                      }}
+                    />
                   </button>
                 ))}
               </div>

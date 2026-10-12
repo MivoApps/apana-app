@@ -53,6 +53,7 @@ export interface UserProfile {
   ipSignup?: string;
   isEmailVerified?: boolean;
   emailVerifiedAt?: number;
+  emailVerifiedMethod?: 'auth' | 'admin';
 }
 
 export const createUserProfileInFS = async (userProfile: Omit<UserProfile, 'createdAt'> & { createdAt?: any }): Promise<void> => {
@@ -584,6 +585,277 @@ export interface AdminStoreItem extends Store {
   ownerEmail?: string;
 }
 
+export interface StoreAnalyticsSummary {
+  storeId: string;
+  storeName: string;
+  storeSlug: string;
+  ownerName?: string;
+  ownerEmail?: string;
+  whatsappPhone?: string;
+  plan?: string;
+  status?: string;
+  productCount?: number;
+  createdAt?: any;
+  totalVisits: number;
+  totalClicks: number;
+  todayVisits: number;
+  todayClicks: number;
+  last7DaysVisits: number;
+  last7DaysClicks: number;
+  last30DaysVisits: number;
+  last30DaysClicks: number;
+  conversionRate: number;
+  historyByDate: Record<string, { visits: number; clicks: number; productViews: number; cartAdds: number }>;
+}
+
+export interface GlobalDailyAnalytics {
+  date: string;
+  label: string;
+  visits: number;
+  clicks: number;
+  productViews: number;
+  cartAdds: number;
+  activeStoresCount: number;
+}
+
+export interface AdminGlobalAnalytics {
+  todayVisits: number;
+  todayClicks: number;
+  yesterdayVisits: number;
+  yesterdayClicks: number;
+  totalVisits: number;
+  totalClicks: number;
+  overallConversionRate: number;
+  activeStoresWithTrafficCount: number;
+  dormantStoresCount: number;
+  lowTrafficStoresCount: number;
+  dailyHistory: GlobalDailyAnalytics[];
+  storesAnalytics: StoreAnalyticsSummary[];
+}
+
+export const getAdminGlobalAnalyticsFromFS = async (
+  inputStores?: AdminStoreItem[]
+): Promise<AdminGlobalAnalytics> => {
+  try {
+    const stores = inputStores && inputStores.length > 0
+      ? inputStores
+      : await getAllStoresForAdminFromFS();
+
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+    const date7DaysAgo = new Date();
+    date7DaysAgo.setDate(date7DaysAgo.getDate() - 7);
+    const date7DaysAgoStr = `${date7DaysAgo.getFullYear()}-${String(date7DaysAgo.getMonth() + 1).padStart(2, '0')}-${String(date7DaysAgo.getDate()).padStart(2, '0')}`;
+
+    const dates30: { dateStr: string; label: string }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      const weekday = d.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '');
+      const dayNum = d.getDate();
+      const cleanLabel = `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} ${dayNum}`;
+      dates30.push({ dateStr, label: cleanLabel });
+    }
+
+    const min30DateStr = dates30[0].dateStr;
+
+    // Procesar tiendas en lotes de 15 para evitar sobrecarga de red
+    const chunkSize = 15;
+    const storeSummaries: StoreAnalyticsSummary[] = [];
+
+    for (let i = 0; i < stores.length; i += chunkSize) {
+      const chunk = stores.slice(i, i + chunkSize);
+      const chunkResults = await Promise.all(
+        chunk.map(async (store) => {
+          let totalVisits = 0;
+          let totalClicks = 0;
+          let todayVisits = 0;
+          let todayClicks = 0;
+          let yesterdayVisits = 0;
+          let yesterdayClicks = 0;
+          let last7DaysVisits = 0;
+          let last7DaysClicks = 0;
+          let last30DaysVisits = 0;
+          let last30DaysClicks = 0;
+          const historyByDate: Record<string, { visits: number; clicks: number; productViews: number; cartAdds: number }> = {};
+
+          try {
+            const analyticsColl = collection(db, 'stores', store.id, 'analytics');
+            const snap = await getDocs(analyticsColl);
+
+            snap.docs.forEach((d) => {
+              const dateKey = d.id;
+              const data = d.data();
+              const v = Number(data.visits) || 0;
+              const c = Number(data.clicks) || 0;
+              const pv = Number(data.productViews) || 0;
+              const ca = Number(data.cartAdds) || 0;
+
+              historyByDate[dateKey] = { visits: v, clicks: c, productViews: pv, cartAdds: ca };
+              totalVisits += v;
+              totalClicks += c;
+
+              if (dateKey === todayStr) {
+                todayVisits += v;
+                todayClicks += c;
+              }
+              if (dateKey === yesterdayStr) {
+                yesterdayVisits += v;
+                yesterdayClicks += c;
+              }
+              if (dateKey >= date7DaysAgoStr) {
+                last7DaysVisits += v;
+                last7DaysClicks += c;
+              }
+              if (dateKey >= min30DateStr) {
+                last30DaysVisits += v;
+                last30DaysClicks += c;
+              }
+            });
+          } catch (e) {
+            console.warn(`Aviso leyendo analíticas de tienda ${store.id}:`, e);
+          }
+
+          const conversionRate = totalVisits > 0
+            ? Number(((totalClicks / totalVisits) * 100).toFixed(1))
+            : 0;
+
+          return {
+            storeId: store.id,
+            storeName: store.name || 'Sin nombre',
+            storeSlug: store.slug || '',
+            ownerName: store.ownerName || '',
+            ownerEmail: store.ownerEmail || '',
+            whatsappPhone: store.whatsappPhone || '',
+            plan: store.plan || 'gratis',
+            status: store.status || 'activa',
+            productCount: store.productCount || 0,
+            createdAt: store.createdAt || null,
+            totalVisits,
+            totalClicks,
+            todayVisits,
+            todayClicks,
+            last7DaysVisits,
+            last7DaysClicks,
+            last30DaysVisits,
+            last30DaysClicks,
+            conversionRate,
+            historyByDate,
+          } as StoreAnalyticsSummary;
+        })
+      );
+      storeSummaries.push(...chunkResults);
+    }
+
+    // Calcular historial diario global
+    const dailyHistory: GlobalDailyAnalytics[] = dates30.map(({ dateStr, label }) => {
+      let dayVisits = 0;
+      let dayClicks = 0;
+      let dayProductViews = 0;
+      let dayCartAdds = 0;
+      let activeStoresCount = 0;
+
+      storeSummaries.forEach((st) => {
+        const d = st.historyByDate[dateStr];
+        if (d) {
+          dayVisits += d.visits;
+          dayClicks += d.clicks;
+          dayProductViews += d.productViews;
+          dayCartAdds += d.cartAdds;
+          if (d.visits > 0) {
+            activeStoresCount++;
+          }
+        }
+      });
+
+      return {
+        date: dateStr,
+        label,
+        visits: dayVisits,
+        clicks: dayClicks,
+        productViews: dayProductViews,
+        cartAdds: dayCartAdds,
+        activeStoresCount,
+      };
+    });
+
+    let globalTotalVisits = 0;
+    let globalTotalClicks = 0;
+    let globalTodayVisits = 0;
+    let globalTodayClicks = 0;
+    let globalYesterdayVisits = 0;
+    let globalYesterdayClicks = 0;
+    let activeStoresWithTrafficCount = 0;
+    let dormantStoresCount = 0;
+    let lowTrafficStoresCount = 0;
+
+    storeSummaries.forEach((st) => {
+      globalTotalVisits += st.totalVisits;
+      globalTotalClicks += st.totalClicks;
+      globalTodayVisits += st.todayVisits;
+      globalTodayClicks += st.todayClicks;
+      globalYesterdayVisits += (st.historyByDate[yesterdayStr]?.visits || 0);
+      globalYesterdayClicks += (st.historyByDate[yesterdayStr]?.clicks || 0);
+
+      if (st.totalVisits === 0) {
+        dormantStoresCount++;
+      } else if (st.totalVisits <= 5) {
+        lowTrafficStoresCount++;
+        activeStoresWithTrafficCount++;
+      } else {
+        activeStoresWithTrafficCount++;
+      }
+    });
+
+    const overallConversionRate = globalTotalVisits > 0
+      ? Number(((globalTotalClicks / globalTotalVisits) * 100).toFixed(1))
+      : 0;
+
+    // Ordenar storeSummaries por mayor visitas totales por defecto
+    storeSummaries.sort((a, b) => b.totalVisits - a.totalVisits);
+
+    return {
+      todayVisits: globalTodayVisits,
+      todayClicks: globalTodayClicks,
+      yesterdayVisits: globalYesterdayVisits,
+      yesterdayClicks: globalYesterdayClicks,
+      totalVisits: globalTotalVisits,
+      totalClicks: globalTotalClicks,
+      overallConversionRate,
+      activeStoresWithTrafficCount,
+      dormantStoresCount,
+      lowTrafficStoresCount,
+      dailyHistory,
+      storesAnalytics: storeSummaries,
+    };
+  } catch (error) {
+    console.error('Error al obtener analíticas globales para Admin:', error);
+    return {
+      todayVisits: 0,
+      todayClicks: 0,
+      yesterdayVisits: 0,
+      yesterdayClicks: 0,
+      totalVisits: 0,
+      totalClicks: 0,
+      overallConversionRate: 0,
+      activeStoresWithTrafficCount: 0,
+      dormantStoresCount: 0,
+      lowTrafficStoresCount: 0,
+      dailyHistory: [],
+      storesAnalytics: [],
+    };
+  }
+};
+
 export const getAllStoresForAdminFromFS = async (): Promise<AdminStoreItem[]> => {
   try {
     const storesRef = collection(db, 'stores');
@@ -788,6 +1060,8 @@ export const getAllUsersForAdminFromFS = async (existingStores?: AdminStoreItem[
         ...uData,
         uid: uidVal,
         email: emailVal,
+        isEmailVerified: uData.isEmailVerified || associatedStore?.isEmailVerified || false,
+        emailVerifiedMethod: uData.emailVerifiedMethod || associatedStore?.emailVerifiedMethod,
         storeName: associatedStore?.name,
         storeSlug: associatedStore?.slug,
         storePlan: associatedStore?.plan,
@@ -869,7 +1143,12 @@ export const adminToggleWhatsappVerificationInFS = async (storeId: string, isVer
   }
 };
 
-export const adminToggleEmailVerificationInFS = async (storeId: string, isVerified: boolean, ownerIdOrEmail?: string): Promise<void> => {
+export const adminToggleEmailVerificationInFS = async (
+  storeId: string,
+  isVerified: boolean,
+  ownerIdOrEmail?: string,
+  method: 'auth' | 'admin' = 'admin'
+): Promise<void> => {
   try {
     const now = Date.now();
     // 1. Actualizar en el documento de la tienda
@@ -877,6 +1156,7 @@ export const adminToggleEmailVerificationInFS = async (storeId: string, isVerifi
     await updateDoc(storeRef, {
       isEmailVerified: isVerified,
       emailVerifiedAt: isVerified ? now : null,
+      emailVerifiedMethod: isVerified ? method : null,
       updatedAt: serverTimestamp(),
     });
 
@@ -889,6 +1169,7 @@ export const adminToggleEmailVerificationInFS = async (storeId: string, isVerifi
           await updateDoc(userRef, {
             isEmailVerified: isVerified,
             emailVerifiedAt: isVerified ? now : null,
+            emailVerifiedMethod: isVerified ? method : null,
             updatedAt: serverTimestamp(),
           });
         }
@@ -899,6 +1180,34 @@ export const adminToggleEmailVerificationInFS = async (storeId: string, isVerifi
   } catch (error) {
     console.error('Error al cambiar verificación de correo:', error);
     throw error;
+  }
+};
+
+export const syncUserEmailVerificationToFS = async (
+  uid: string,
+  storeId?: string,
+  email?: string
+): Promise<void> => {
+  try {
+    const now = Date.now();
+    const updateData: any = {
+      isEmailVerified: true,
+      emailVerifiedAt: now,
+      emailVerifiedMethod: 'auth',
+      updatedAt: serverTimestamp(),
+    };
+
+    if (storeId) {
+      await updateDoc(doc(db, 'stores', storeId), updateData).catch(() => {});
+    }
+    if (uid) {
+      await updateDoc(doc(db, 'users', uid), updateData).catch(() => {});
+    }
+    if (email && email.toLowerCase() !== uid.toLowerCase()) {
+      await updateDoc(doc(db, 'users', email.toLowerCase().trim()), updateData).catch(() => {});
+    }
+  } catch (e) {
+    console.warn('Aviso sincronizando verificación de correo a Firestore:', e);
   }
 };
 

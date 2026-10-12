@@ -57,7 +57,13 @@ import {
   Gauge,
   Info,
   CheckCheck,
-  Flag
+  Flag,
+  BarChart3,
+  Eye,
+  MousePointerClick,
+  ArrowUpRight,
+  HelpCircle,
+  TrendingDown
 } from 'lucide-react';
 import { generateQrWithLogo, generateFullStickerImage } from '@/lib/qr-generator';
 import { useAuth } from '@/lib/firebase/auth-context';
@@ -86,7 +92,11 @@ import {
   AdminUserItem,
   PaymentRecord,
   ReclamacionItem,
-  GlobalAnnouncement
+  GlobalAnnouncement,
+  getAdminGlobalAnalyticsFromFS,
+  AdminGlobalAnalytics,
+  StoreAnalyticsSummary,
+  GlobalDailyAnalytics
 } from '@/lib/firebase/firestore';
 import { isSuperAdminEmail, getSuperAdminEmails } from '@/lib/auth-helpers';
 
@@ -96,13 +106,26 @@ export default function SuperAdminPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
 
-  // Estado Principal (7 Pestañas: Tiendas, Suscripciones, Usuarios, Seguimiento/Leads, Reclamaciones, Reportes, Infraestructura)
-  const [activeTab, setActiveTab] = useState<'stores' | 'subscriptions' | 'users' | 'leads' | 'reclamaciones' | 'reports' | 'infrastructure'>('stores');
+  // Estado Principal (8 Pestañas: Tiendas, Suscripciones, Analytics, Usuarios, Seguimiento/Leads, Reclamaciones, Reportes, Infraestructura)
+  const [activeTab, setActiveTab] = useState<'stores' | 'subscriptions' | 'users' | 'leads' | 'analytics' | 'reclamaciones' | 'reports' | 'infrastructure'>('stores');
   const [stores, setStores] = useState<AdminStoreItem[]>([]);
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [reclamaciones, setReclamaciones] = useState<ReclamacionItem[]>([]);
   const [storeReports, setStoreReports] = useState<any[]>([]);
+  const [analyticsData, setAnalyticsData] = useState<AdminGlobalAnalytics | null>(null);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
+
+  // Estados de control para la pestaña de Analytics
+  const [analyticsRange, setAnalyticsRange] = useState<'7d' | '14d' | '30d'>('7d');
+  const [analyticsFilterType, setAnalyticsFilterType] = useState<'all' | 'top' | 'zero' | 'low'>('all');
+  const [analyticsTimeframe, setAnalyticsTimeframe] = useState<'all' | '30d' | '7d' | 'today'>('all');
+  const [analyticsSearch, setAnalyticsSearch] = useState('');
+  const [analyticsPlanFilter, setAnalyticsPlanFilter] = useState<'todos' | 'gratis' | 'emprendedor' | 'negocio'>('todos');
+  const [analyticsSortBy, setAnalyticsSortBy] = useState<'visits' | 'clicks' | 'conversion' | 'least_visits'>('visits');
+  const [showDailyTable, setShowDailyTable] = useState(false);
+  const [selectedHoverDate, setSelectedHoverDate] = useState<string | null>(null);
+
   const [announcement, setAnnouncement] = useState<GlobalAnnouncement>({
     message: '',
     active: false,
@@ -226,7 +249,7 @@ export default function SuperAdminPage() {
       setIsLoading(false);
 
       // Fase 2: Cargar el resto de pestañas en segundo plano protegidas individualmente contra fallos de permisos
-      const [usersData, paymentsData, reclamacionesData, reportsData] = await Promise.all([
+      const [usersData, paymentsData, reclamacionesData, reportsData, analyticsRes] = await Promise.all([
         getAllUsersForAdminFromFS(storesData).catch((err) => {
           console.warn('Aviso cargando usuarios:', err);
           return [] as AdminUserItem[];
@@ -243,12 +266,19 @@ export default function SuperAdminPage() {
           console.warn('Aviso cargando reportes de tienda:', err);
           return [];
         }),
+        getAdminGlobalAnalyticsFromFS(storesData).catch((err) => {
+          console.warn('Aviso cargando analíticas globales:', err);
+          return null;
+        }),
       ]);
 
       setUsers(usersData);
       setPayments(paymentsData);
       setReclamaciones(reclamacionesData);
       setStoreReports(reportsData || []);
+      if (analyticsRes) {
+        setAnalyticsData(analyticsRes);
+      }
 
       // Guardar en caché de sesión para accesos instantáneos
       if (typeof window !== 'undefined') {
@@ -259,6 +289,7 @@ export default function SuperAdminPage() {
             payments: paymentsData,
             reclamaciones: reclamacionesData,
             storeReports: reportsData || [],
+            analyticsData: analyticsRes,
             announcement: globalAnn,
             savedAt: Date.now(),
           }));
@@ -268,6 +299,20 @@ export default function SuperAdminPage() {
       console.error('Error al cargar datos de admin:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRefreshAnalytics = async () => {
+    setIsLoadingAnalytics(true);
+    try {
+      const data = await getAdminGlobalAnalyticsFromFS(stores);
+      setAnalyticsData(data);
+      setSuccessMsg('Métricas de analíticas actualizadas en tiempo real.');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      console.error('Error refrescando analíticas:', err);
+    } finally {
+      setIsLoadingAnalytics(false);
     }
   };
 
@@ -303,6 +348,7 @@ export default function SuperAdminPage() {
             if (cached.payments) setPayments(cached.payments);
             if (cached.reclamaciones) setReclamaciones(cached.reclamaciones);
             if (cached.storeReports) setStoreReports(cached.storeReports);
+            if (cached.analyticsData) setAnalyticsData(cached.analyticsData);
             if (cached.announcement) {
               setAnnouncement(cached.announcement);
               setAnnouncementForm(cached.announcement);
@@ -463,14 +509,21 @@ export default function SuperAdminPage() {
 
   // Toggle Rápido de Validación de Correo Electrónico (Desde Tienda)
   const handleToggleEmailVerified = async (store: AdminStoreItem) => {
+    // Si ya fue verificado por el propio usuario mediante Auth, avisar que es una verificación real del usuario
+    if (store.isEmailVerified && store.emailVerifiedMethod === 'auth') {
+      alert(`El correo de "${store.name}" fue verificado oficialmente por el propio usuario mediante enlace de correo (Google Auth).\nEsta verificación es de su cuenta y no requiere aprobación manual.`);
+      return;
+    }
+
     const nextVal = !store.isEmailVerified;
+    const method = nextVal ? 'admin' : undefined;
     setActionLoadingId(store.id);
     try {
       const ownerRef = store.ownerEmail || store.ownerId || (store as any).userId;
-      await adminToggleEmailVerificationInFS(store.id, nextVal, ownerRef);
-      setStores((prev) => prev.map((s) => (s.id === store.id ? { ...s, isEmailVerified: nextVal } : s)));
-      setUsers((prev) => prev.map((u) => (u.uid === store.ownerId || u.email === store.ownerEmail ? { ...u, isEmailVerified: nextVal } : u)));
-      setSuccessMsg(`Correo de "${store.name}" marcado como ${nextVal ? 'VERIFICADO 🟢' : 'NO VERIFICADO ⚪'}.`);
+      await adminToggleEmailVerificationInFS(store.id, nextVal, ownerRef, method as any);
+      setStores((prev) => prev.map((s) => (s.id === store.id ? { ...s, isEmailVerified: nextVal, emailVerifiedMethod: method } : s)));
+      setUsers((prev) => prev.map((u) => (u.uid === store.ownerId || u.email === store.ownerEmail ? { ...u, isEmailVerified: nextVal, emailVerifiedMethod: method } : u)));
+      setSuccessMsg(nextVal ? `Correo de "${store.name}" aprobado manualmente por SuperAdmin 🛡️` : `Aprobación manual de correo para "${store.name}" revocada ⚪`);
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (e) {
       alert('Error al actualizar validación de correo electrónico.');
@@ -481,19 +534,25 @@ export default function SuperAdminPage() {
 
   // Toggle Rápido de Validación de Correo Electrónico (Desde Usuario)
   const handleToggleUserEmailVerified = async (userItem: AdminUserItem) => {
+    if (userItem.isEmailVerified && userItem.emailVerifiedMethod === 'auth') {
+      alert(`El usuario "${userItem.email}" ya verificó su correo oficialmente mediante Google Auth.\nNo requiere aprobación manual.`);
+      return;
+    }
+
     const nextVal = !userItem.isEmailVerified;
+    const method = nextVal ? 'admin' : undefined;
     const actionKey = userItem.uid || userItem.email;
     setActionLoadingId(actionKey);
     try {
       const targetStore = stores.find((s) => s.ownerId === userItem.uid || s.ownerEmail === userItem.email || s.name === userItem.storeName);
       if (targetStore) {
-        await adminToggleEmailVerificationInFS(targetStore.id, nextVal, userItem.email || userItem.uid);
-        setStores((prev) => prev.map((s) => (s.id === targetStore.id ? { ...s, isEmailVerified: nextVal } : s)));
+        await adminToggleEmailVerificationInFS(targetStore.id, nextVal, userItem.email || userItem.uid, method as any);
+        setStores((prev) => prev.map((s) => (s.id === targetStore.id ? { ...s, isEmailVerified: nextVal, emailVerifiedMethod: method } : s)));
       } else {
-        await adminToggleEmailVerificationInFS(`user_${userItem.uid}`, nextVal, userItem.email || userItem.uid);
+        await adminToggleEmailVerificationInFS(`user_${userItem.uid}`, nextVal, userItem.email || userItem.uid, method as any);
       }
-      setUsers((prev) => prev.map((u) => (u.uid === userItem.uid || u.email === userItem.email ? { ...u, isEmailVerified: nextVal } : u)));
-      setSuccessMsg(`Correo de "${userItem.email}" marcado como ${nextVal ? 'VERIFICADO 🟢' : 'NO VERIFICADO ⚪'}.`);
+      setUsers((prev) => prev.map((u) => (u.uid === userItem.uid || u.email === userItem.email ? { ...u, isEmailVerified: nextVal, emailVerifiedMethod: method } : u)));
+      setSuccessMsg(nextVal ? `Usuario "${userItem.email}" aprobado manualmente por SuperAdmin 🛡️` : `Aprobación manual de "${userItem.email}" revocada ⚪`);
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (e) {
       alert('Error al actualizar validación de correo electrónico del usuario.');
@@ -559,7 +618,8 @@ export default function SuperAdminPage() {
 
       if (editForm.isEmailVerified !== editingStore.isEmailVerified) {
         const ownerRef = editingStore.ownerEmail || editingStore.ownerId || (editingStore as any).userId;
-        await adminToggleEmailVerificationInFS(editingStore.id, editForm.isEmailVerified, ownerRef);
+        const method = editForm.isEmailVerified ? (editingStore.emailVerifiedMethod || 'admin') : undefined;
+        await adminToggleEmailVerificationInFS(editingStore.id, editForm.isEmailVerified, ownerRef, method as any);
       }
 
       setStores((prev) =>
@@ -574,6 +634,7 @@ export default function SuperAdminPage() {
               status: editForm.status,
               isWhatsappVerified: editForm.isWhatsappVerified,
               isEmailVerified: editForm.isEmailVerified,
+              emailVerifiedMethod: editForm.isEmailVerified ? (editingStore.emailVerifiedMethod || 'admin') : undefined,
             }
             : s
         )
@@ -889,6 +950,131 @@ export default function SuperAdminPage() {
     );
   });
 
+  // Cálculos reactivos para la pestaña de Analytics (deben ejecutarse incondicionalmente antes de cualquier return)
+  const rangeHistory = React.useMemo(() => {
+    if (!analyticsData?.dailyHistory) return [];
+    const count = analyticsRange === '7d' ? 7 : analyticsRange === '14d' ? 14 : 30;
+    return analyticsData.dailyHistory.slice(-count);
+  }, [analyticsData, analyticsRange]);
+
+  const maxVisitsInRange = React.useMemo(() => {
+    if (rangeHistory.length === 0) return 10;
+    const max = Math.max(...rangeHistory.map((d) => d.visits), 5);
+    return max;
+  }, [rangeHistory]);
+
+  const rangeTotals = React.useMemo(() => {
+    const totalVisits = rangeHistory.reduce((sum, d) => sum + d.visits, 0);
+    const totalClicks = rangeHistory.reduce((sum, d) => sum + d.clicks, 0);
+    const avgVisits = rangeHistory.length > 0 ? Math.round(totalVisits / rangeHistory.length) : 0;
+    const avgClicks = rangeHistory.length > 0 ? Math.round(totalClicks / rangeHistory.length) : 0;
+    const convRate = totalVisits > 0 ? ((totalClicks / totalVisits) * 100).toFixed(1) : '0.0';
+    return { totalVisits, totalClicks, avgVisits, avgClicks, convRate };
+  }, [rangeHistory]);
+
+  const analyticsStores = React.useMemo(() => {
+    if (!analyticsData?.storesAnalytics) return [];
+    let list = [...analyticsData.storesAnalytics];
+
+    // 1. Filtro por tipo de tráfico
+    if (analyticsFilterType === 'top') {
+      list = list.filter((s) => s.totalVisits > 0);
+    } else if (analyticsFilterType === 'zero') {
+      list = list.filter((s) => s.totalVisits === 0);
+    } else if (analyticsFilterType === 'low') {
+      list = list.filter((s) => s.totalVisits > 0 && s.totalVisits <= 5);
+    }
+
+    // 2. Filtro por Plan
+    if (analyticsPlanFilter !== 'todos') {
+      list = list.filter((s) => (s.plan || 'gratis') === analyticsPlanFilter);
+    }
+
+    // 3. Búsqueda por texto (nombre, slug, dueño, email, teléfono)
+    if (analyticsSearch.trim()) {
+      const q = analyticsSearch.toLowerCase().trim();
+      list = list.filter(
+        (s) =>
+          (s.storeName && s.storeName.toLowerCase().includes(q)) ||
+          (s.storeSlug && s.storeSlug.toLowerCase().includes(q)) ||
+          (s.ownerName && s.ownerName.toLowerCase().includes(q)) ||
+          (s.ownerEmail && s.ownerEmail.toLowerCase().includes(q)) ||
+          (s.whatsappPhone && s.whatsappPhone.includes(q))
+      );
+    }
+
+    // 4. Ordenamiento según métrica del período seleccionado
+    list.sort((a, b) => {
+      let aVisits = a.totalVisits;
+      let bVisits = b.totalVisits;
+      let aClicks = a.totalClicks;
+      let bClicks = b.totalClicks;
+
+      if (analyticsTimeframe === 'today') {
+        aVisits = a.todayVisits;
+        bVisits = b.todayVisits;
+        aClicks = a.todayClicks;
+        bClicks = b.todayClicks;
+      } else if (analyticsTimeframe === '7d') {
+        aVisits = a.last7DaysVisits;
+        bVisits = b.last7DaysVisits;
+        aClicks = a.last7DaysClicks;
+        bClicks = b.last7DaysClicks;
+      } else if (analyticsTimeframe === '30d') {
+        aVisits = a.last30DaysVisits;
+        bVisits = b.last30DaysVisits;
+        aClicks = a.last30DaysClicks;
+        bClicks = b.last30DaysClicks;
+      }
+
+      if (analyticsSortBy === 'visits') {
+        return bVisits - aVisits;
+      } else if (analyticsSortBy === 'clicks') {
+        return bClicks - aClicks;
+      } else if (analyticsSortBy === 'conversion') {
+        const aConv = aVisits > 0 ? (aClicks / aVisits) * 100 : 0;
+        const bConv = bVisits > 0 ? (bClicks / bVisits) * 100 : 0;
+        return bConv - aConv;
+      } else if (analyticsSortBy === 'least_visits') {
+        return aVisits - bVisits;
+      }
+      return bVisits - aVisits;
+    });
+
+    return list;
+  }, [
+    analyticsData,
+    analyticsFilterType,
+    analyticsPlanFilter,
+    analyticsSearch,
+    analyticsTimeframe,
+    analyticsSortBy,
+  ]);
+
+  const getWhatsAppContactUrl = (store: StoreAnalyticsSummary) => {
+    let phone = (store.whatsappPhone || '').replace(/\D/g, '');
+    if (!phone) return null;
+    if (!phone.startsWith('51') && phone.length === 9) {
+      phone = `51${phone}`;
+    }
+
+    const storeName = store.storeName || 'tu tienda';
+    const ownerName = store.ownerName ? store.ownerName.split(' ')[0] : 'comerciante';
+
+    let text = '';
+    if (store.totalVisits === 0 && (store.productCount || 0) === 0) {
+      text = `¡Hola ${ownerName}! Te saluda el equipo de APANA. Notamos que creaste tu tienda "${storeName}" pero aún no has subido productos. ¿Te gustaría que te ayudemos a configurar tu catálogo para que empieces a vender por WhatsApp?`;
+    } else if (store.totalVisits === 0) {
+      text = `¡Hola ${ownerName}! Te saluda el equipo de APANA. Vemos que tu tienda "${storeName}" ya tiene productos listos pero aún no ha recibido visitas. ¿Te gustaría que te compartamos algunos tips sencillos para difundir tu enlace en tus redes y estados de WhatsApp?`;
+    } else if (store.totalVisits <= 5) {
+      text = `¡Hola ${ownerName}! Te saluda el equipo de APANA. Notamos que tu tienda "${storeName}" ha tenido sus primeras visitas. ¿Te gustaría que te demos unas recomendaciones para aumentar tus consultas y ventas por WhatsApp?`;
+    } else {
+      text = `¡Hola ${ownerName}! Te felicitamos desde el equipo de APANA. Tu tienda "${storeName}" está destacando con ${store.totalVisits} visitas y ${store.totalClicks} consultas por WhatsApp. ¿Cómo van los pedidos? Estamos aquí para apoyarte.`;
+    }
+
+    return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+  };
+
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-[#071220] flex flex-col items-center justify-center text-white gap-3 font-sans">
@@ -1090,6 +1276,22 @@ export default function SuperAdminPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab('analytics')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === 'analytics'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              }`}
+          >
+            <BarChart3 size={16} className="text-emerald-400" />
+            <span>Analytics & Tráfico</span>
+            {analyticsData && analyticsData.todayVisits > 0 && (
+              <span className="px-1.5 py-0.2 bg-emerald-500 text-emerald-950 font-black text-[10px] rounded-full">
+                {analyticsData.todayVisits} hoy
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab('users')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === 'users'
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
@@ -1162,7 +1364,7 @@ export default function SuperAdminPage() {
         </div>
 
         {/* 🔍 Barra de Búsqueda, Dropdowns y Botón Exportar CSV */}
-        {activeTab !== 'infrastructure' && (
+        {activeTab !== 'infrastructure' && activeTab !== 'analytics' && (
           <section className="bg-[#0e1e33] border border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row gap-3 items-center justify-between">
             <div className="relative w-full md:flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
@@ -1337,26 +1539,38 @@ export default function SuperAdminPage() {
 
                               {/* Badge y Botón de Verificación de Correo Electrónico */}
                               <div className="flex items-center gap-1.5 mt-0.5">
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleEmailVerified(store)}
-                                  disabled={isBusy}
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold w-fit transition-all cursor-pointer ${store.isEmailVerified
-                                      ? 'bg-blue-950/70 text-blue-400 border border-blue-700/60 hover:bg-blue-900'
-                                      : 'bg-slate-800 text-amber-400 border border-amber-800/60 hover:text-white hover:border-amber-600'
-                                    }`}
-                                  title={store.isEmailVerified ? "Correo verificado oficialmente (Clic para desvalidar)" : "Clic para validar correo del comercio manualmente"}
-                                >
-                                  <Mail size={10} className={store.isEmailVerified ? 'text-blue-400' : 'text-amber-400'} />
-                                  {store.isEmailVerified ? (
-                                    <>
-                                      <CheckCircle2 size={10} className="text-blue-400" />
-                                      <span>Email Validado</span>
-                                    </>
-                                  ) : (
-                                    <span>Validar Email ✉️</span>
-                                  )}
-                                </button>
+                                {store.isEmailVerified && store.emailVerifiedMethod === 'auth' ? (
+                                  <div
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold w-fit bg-emerald-950/70 text-emerald-400 border border-emerald-700/60 shadow-2xs select-none"
+                                    title="Verificado por el usuario mediante enlace oficial de correo (Google Auth)"
+                                  >
+                                    <CheckCircle2 size={10} className="text-emerald-400" />
+                                    <span>Email Verificado ✉️</span>
+                                  </div>
+                                ) : store.isEmailVerified && store.emailVerifiedMethod === 'admin' ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleEmailVerified(store)}
+                                    disabled={isBusy}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold w-fit bg-blue-950/70 text-blue-400 border border-blue-700/60 hover:bg-rose-950/80 hover:text-rose-300 hover:border-rose-700/60 transition-all cursor-pointer group shadow-2xs"
+                                    title="Aprobado manualmente por SuperAdmin. Haz clic para revocar la aprobación."
+                                  >
+                                    <ShieldCheck size={10} className="text-blue-400 group-hover:text-rose-300" />
+                                    <span className="group-hover:hidden">Aprobado (Admin) 🛡️</span>
+                                    <span className="hidden group-hover:inline">Revocar Aprobación ✖</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleEmailVerified(store)}
+                                    disabled={isBusy}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold w-fit bg-slate-800 text-amber-400 border border-amber-800/60 hover:text-white hover:bg-amber-900/60 hover:border-amber-600 transition-all cursor-pointer shadow-2xs"
+                                    title="Correo no verificado. Haz clic para aprobar manualmente como SuperAdmin."
+                                  >
+                                    <Mail size={10} className="text-amber-400" />
+                                    <span>Validar Manual 🛡️</span>
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </td>
@@ -1675,26 +1889,38 @@ export default function SuperAdminPage() {
                           <td className="py-3.5 px-4 font-mono text-slate-300">
                             <div className="flex flex-col gap-1">
                               <span>{u.email}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleToggleUserEmailVerified(u)}
-                                disabled={actionLoadingId === (u.uid || u.email)}
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold w-fit transition-all cursor-pointer ${u.isEmailVerified
-                                    ? 'bg-blue-950/70 text-blue-400 border border-blue-700/60 hover:bg-blue-900'
-                                    : 'bg-slate-800 text-amber-400 border border-amber-800/60 hover:text-white hover:border-amber-600'
-                                  }`}
-                                title={u.isEmailVerified ? "Correo verificado (Clic para marcar como no verificado)" : "Clic para validar correo manualmente"}
-                              >
-                                <Mail size={10} className={u.isEmailVerified ? 'text-blue-400' : 'text-amber-400'} />
-                                {u.isEmailVerified ? (
-                                  <>
-                                    <CheckCircle2 size={10} className="text-blue-400" />
-                                    <span>Verificado</span>
-                                  </>
-                                ) : (
+                              {u.isEmailVerified && u.emailVerifiedMethod === 'auth' ? (
+                                <div
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold w-fit bg-emerald-950/70 text-emerald-400 border border-emerald-700/60 shadow-2xs select-none"
+                                  title="Verificado por el usuario mediante enlace oficial de correo (Google Auth)"
+                                >
+                                  <CheckCircle2 size={10} className="text-emerald-400" />
+                                  <span>Email Verificado ✉️</span>
+                                </div>
+                              ) : u.isEmailVerified && u.emailVerifiedMethod === 'admin' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleUserEmailVerified(u)}
+                                  disabled={actionLoadingId === (u.uid || u.email)}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold w-fit bg-blue-950/70 text-blue-400 border border-blue-700/60 hover:bg-rose-950/80 hover:text-rose-300 hover:border-rose-700/60 transition-all cursor-pointer group shadow-2xs"
+                                  title="Aprobado manualmente por SuperAdmin. Haz clic para revocar la aprobación."
+                                >
+                                  <ShieldCheck size={10} className="text-blue-400 group-hover:text-rose-300" />
+                                  <span className="group-hover:hidden">Aprobado (Admin) 🛡️</span>
+                                  <span className="hidden group-hover:inline">Revocar Aprobación ✖</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleUserEmailVerified(u)}
+                                  disabled={actionLoadingId === (u.uid || u.email)}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold w-fit bg-slate-800 text-amber-400 border border-amber-800/60 hover:text-white hover:bg-amber-900/60 hover:border-amber-600 transition-all cursor-pointer shadow-2xs"
+                                  title="Correo no verificado. Haz clic para validar manualmente como SuperAdmin."
+                                >
+                                  <Mail size={10} className="text-amber-400" />
                                   <span>Validar correo ✉️</span>
-                                )}
-                              </button>
+                                </button>
+                              )}
                             </div>
                           </td>
                           <td className="py-3.5 px-4">
@@ -1825,25 +2051,26 @@ export default function SuperAdminPage() {
                                 <span className="text-[10px] text-slate-500">
                                   Reg: {new Date(lead.user.createdAt).toLocaleDateString('es-PE')}
                                 </span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleUserEmailVerified(lead.user)}
-                                  disabled={actionLoadingId === (lead.user.uid || lead.user.email)}
-                                  className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold transition-all cursor-pointer ${lead.user.isEmailVerified || lead.store?.isEmailVerified
-                                      ? 'bg-blue-950/70 text-blue-400 border border-blue-700/60'
-                                      : 'bg-slate-800 text-amber-400 border border-amber-800/60 hover:text-white'
-                                    }`}
-                                  title="Validar o desvalidar correo del comercio"
-                                >
-                                  {lead.user.isEmailVerified || lead.store?.isEmailVerified ? (
-                                    <>
-                                      <CheckCircle2 size={9} className="text-blue-400" />
-                                      <span>Email OK</span>
-                                    </>
-                                  ) : (
-                                    <span>Validar email</span>
-                                  )}
-                                </button>
+                                {lead.user.isEmailVerified || lead.store?.isEmailVerified ? (
+                                  <div
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-950/70 text-emerald-400 border border-emerald-700/60 select-none"
+                                    title={lead.user.emailVerifiedMethod === 'auth' || lead.store?.emailVerifiedMethod === 'auth' ? 'Verificado vía Email (Auth)' : 'Aprobado por Admin'}
+                                  >
+                                    <CheckCircle2 size={9} className="text-emerald-400" />
+                                    <span>{lead.user.emailVerifiedMethod === 'admin' || lead.store?.emailVerifiedMethod === 'admin' ? 'Admin OK' : 'Email OK'}</span>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleUserEmailVerified(lead.user)}
+                                    disabled={actionLoadingId === (lead.user.uid || lead.user.email)}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold transition-all cursor-pointer bg-slate-800 text-amber-400 border border-amber-800/60 hover:text-white hover:border-amber-600"
+                                    title="Validar manualmente correo del comercio"
+                                  >
+                                    <Mail size={9} className="text-amber-400" />
+                                    <span>Validar manual</span>
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </td>
@@ -2190,6 +2417,615 @@ export default function SuperAdminPage() {
                 </table>
               </div>
             )}
+          </section>
+        )}
+
+        {/* 📊 TAB: ANALYTICS & TRÁFICO GLOBAL DE TIENDAS */}
+        {activeTab === 'analytics' && (
+          <section className="flex flex-col gap-6">
+            {/* Header / Hero Banner */}
+            <div className="bg-linear-to-r from-emerald-950/80 via-[#0e1e33] to-[#071220] border border-emerald-500/30 rounded-3xl p-6 sm:p-7 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="flex items-start sm:items-center gap-4 relative z-10">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0 shadow-lg text-2xl">
+                  <BarChart3 size={28} />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
+                      Analytics & Tráfico Global de Tiendas
+                    </h2>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/40 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      Métricas en Tiempo Real
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                    Audita cuántas personas entran al día a las tiendas, las veces que se presiona el botón de continuar compra por WhatsApp, descubre las tiendas con más visibilidad y detecta comercios con 0 visitas para brindarles apoyo comercial proactivo.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 relative z-10">
+                <button
+                  onClick={() => handleRefreshAnalytics()}
+                  disabled={isLoadingAnalytics}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all border border-slate-700 flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-sm"
+                >
+                  <RefreshCw size={14} className={isLoadingAnalytics ? 'animate-spin' : ''} />
+                  <span>{isLoadingAnalytics ? 'Actualizando...' : 'Actualizar Analíticas'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 4 Cards de Métricas Clave */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              {/* Card 1: Personas que entran hoy (Visitas) */}
+              <div className="bg-[#0e1e33] border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-sm relative overflow-hidden group hover:border-emerald-500/40 transition-all">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-xs font-bold text-slate-300">Personas que entran hoy</span>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <Eye size={16} />
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-3xl font-black text-white">
+                    {analyticsData?.todayVisits ?? 0}
+                  </span>
+                  <span className="text-xs font-medium text-slate-400">visitas</span>
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">Ayer: <strong className="text-slate-200">{analyticsData?.yesterdayVisits ?? 0}</strong></span>
+                  {analyticsData && (
+                    <span className={`font-bold flex items-center gap-0.5 ${(analyticsData.todayVisits >= analyticsData.yesterdayVisits) ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {analyticsData.todayVisits >= analyticsData.yesterdayVisits ? '▲' : '▼'} {Math.abs(analyticsData.todayVisits - analyticsData.yesterdayVisits)} vs ayer
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Card 2: Clics en WhatsApp Hoy (Compras Iniciadas) */}
+              <div className="bg-[#0e1e33] border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-sm relative overflow-hidden group hover:border-[#25D366]/40 transition-all">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-xs font-bold text-slate-300">Botón WhatsApp Hoy</span>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-[#25D366] flex items-center justify-center">
+                    <MessageCircle size={16} />
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-3xl font-black text-[#25D366]">
+                    {analyticsData?.todayClicks ?? 0}
+                  </span>
+                  <span className="text-xs font-medium text-slate-400">clics</span>
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">Ayer: <strong className="text-slate-200">{analyticsData?.yesterdayClicks ?? 0}</strong></span>
+                  <span className="text-emerald-400 font-bold">
+                    {analyticsData && analyticsData.todayVisits > 0
+                      ? `${((analyticsData.todayClicks / analyticsData.todayVisits) * 100).toFixed(1)}% conversión`
+                      : '0.0% conversión'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 3: Visitas y Clics Acumulados */}
+              <div className="bg-[#0e1e33] border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-sm relative overflow-hidden group hover:border-purple-500/40 transition-all">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-xs font-bold text-slate-300">Total Histórico Global</span>
+                  <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
+                    <TrendingUp size={16} />
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-3xl font-black text-white">
+                    {(analyticsData?.totalVisits ?? 0).toLocaleString()}
+                  </span>
+                  <span className="text-xs font-medium text-slate-400">visitas</span>
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">WhatsApp: <strong className="text-purple-300">{(analyticsData?.totalClicks ?? 0).toLocaleString()}</strong></span>
+                  <span className="text-purple-400 font-bold">
+                    {analyticsData?.overallConversionRate ?? 0}% conv. global
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 4: Salud de Tiendas (Con Tráfico vs Inactivas) */}
+              <div className="bg-[#0e1e33] border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-sm relative overflow-hidden group hover:border-blue-500/40 transition-all">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-xs font-bold text-slate-300">Actividad de Tiendas</span>
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                    <StoreIcon size={16} />
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-3xl font-black text-emerald-400">
+                    {analyticsData?.activeStoresWithTrafficCount ?? 0}
+                  </span>
+                  <span className="text-xs font-medium text-slate-400">con tráfico</span>
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
+                  <span className="text-red-400 font-bold">
+                    ⚠️ {analyticsData?.dormantStoresCount ?? 0} con 0 visitas
+                  </span>
+                  <span className="text-amber-400 font-bold">
+                    📉 {analyticsData?.lowTrafficStoresCount ?? 0} bajo tráfico
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 📈 Sección: Gráfico de Evolución Diaria */}
+            <div className="bg-[#0e1e33] border border-slate-800 rounded-3xl p-6 flex flex-col gap-5 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <TrendingUp size={16} className="text-emerald-400" />
+                    <span>Evolución Diaria: Personas que Entran vs Clics en WhatsApp</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Compara el volumen diario de compradores que exploran catálogos vs los que inician la compra por WhatsApp.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-[#071220] p-1 rounded-xl border border-slate-800 text-xs font-bold">
+                    <button
+                      onClick={() => setAnalyticsRange('7d')}
+                      className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${analyticsRange === '7d' ? 'bg-emerald-500 text-slate-950 font-black shadow-xs' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      7 Días
+                    </button>
+                    <button
+                      onClick={() => setAnalyticsRange('14d')}
+                      className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${analyticsRange === '14d' ? 'bg-emerald-500 text-slate-950 font-black shadow-xs' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      14 Días
+                    </button>
+                    <button
+                      onClick={() => setAnalyticsRange('30d')}
+                      className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${analyticsRange === '30d' ? 'bg-emerald-500 text-slate-950 font-black shadow-xs' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      30 Días
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => setShowDailyTable(!showDailyTable)}
+                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all border border-slate-700 cursor-pointer whitespace-nowrap"
+                  >
+                    {showDailyTable ? 'Ocultar Tabla' : 'Ver Tabla'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Leyenda y Promedios Rápidos */}
+              <div className="flex flex-wrap items-center justify-between gap-4 text-xs">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block" />
+                    <span className="text-slate-300 font-semibold">Visitas a Tiendas (Personas/día)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-sm bg-[#25D366] inline-block" />
+                    <span className="text-slate-300 font-semibold">Clics Botón WhatsApp (Compras iniciadas)</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 text-slate-400">
+                  <span>Promedio: <strong className="text-emerald-400">{rangeTotals.avgVisits} visitas/día</strong></span>
+                  <span>•</span>
+                  <span><strong className="text-[#25D366]">{rangeTotals.avgClicks} compras WhatsApp/día</strong></span>
+                  <span>•</span>
+                  <span>Conv: <strong className="text-purple-400">{rangeTotals.convRate}%</strong></span>
+                </div>
+              </div>
+
+              {/* Contenedor del Gráfico de Barras */}
+              <div className="pt-4 pb-2">
+                {rangeHistory.length === 0 ? (
+                  <div className="py-12 text-center text-slate-500 text-xs font-medium">
+                    No hay suficientes datos de analíticas registradas para este período.
+                  </div>
+                ) : (
+                  <div className="flex items-end gap-2 sm:gap-3 h-48 overflow-x-auto pb-4 pt-6 px-1">
+                    {rangeHistory.map((day) => {
+                      const visitsHeight = Math.max(4, Math.round((day.visits / maxVisitsInRange) * 140));
+                      const clicksHeight = Math.max(4, Math.round((day.clicks / maxVisitsInRange) * 140));
+                      const isHovered = selectedHoverDate === day.date;
+                      const dayConv = day.visits > 0 ? ((day.clicks / day.visits) * 100).toFixed(1) : '0';
+
+                      return (
+                        <div
+                          key={day.date}
+                          onMouseEnter={() => setSelectedHoverDate(day.date)}
+                          onMouseLeave={() => setSelectedHoverDate(null)}
+                          className="flex-1 min-w-[34px] sm:min-w-[42px] flex flex-col items-center gap-1.5 group cursor-pointer relative"
+                        >
+                          {/* Tooltip flotante al pasar el mouse */}
+                          {isHovered && (
+                            <div className="absolute -top-16 z-30 bg-[#071220] border border-slate-700 p-2 rounded-xl shadow-2xl text-[11px] whitespace-nowrap text-white pointer-events-none animate-in fade-in zoom-in-95 duration-150">
+                              <div className="font-bold text-slate-200 border-b border-slate-800 pb-1 mb-1">
+                                {day.label} ({day.date})
+                              </div>
+                              <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+                                <span>👀 Visitas:</span>
+                                <span className="font-black text-white">{day.visits}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-[#25D366] font-semibold">
+                                <span>💬 WhatsApp:</span>
+                                <span className="font-black text-white">{day.clicks}</span>
+                              </div>
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                Conv: {dayConv}% • {day.activeStoresCount} tiendas activas
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Barras Superpuestas / Lado a Lado */}
+                          <div className="w-full h-36 flex items-end justify-center gap-1">
+                            {/* Barra Visitas */}
+                            <div
+                              style={{ height: `${visitsHeight}px` }}
+                              className={`w-3.5 sm:w-4.5 rounded-t-md transition-all ${isHovered ? 'bg-emerald-400' : 'bg-emerald-500/80 group-hover:bg-emerald-400'}`}
+                            />
+                            {/* Barra Clics WhatsApp */}
+                            <div
+                              style={{ height: `${clicksHeight}px` }}
+                              className={`w-3.5 sm:w-4.5 rounded-t-md transition-all ${isHovered ? 'bg-[#25D366]' : 'bg-[#25D366]/80 group-hover:bg-[#25D366]'}`}
+                            />
+                          </div>
+
+                          {/* Etiqueta del Día */}
+                          <span className={`text-[10px] whitespace-nowrap text-center font-medium ${isHovered ? 'text-white font-bold' : 'text-slate-400'}`}>
+                            {day.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Tabla Detallada Día a Día (Colapsable) */}
+              {showDailyTable && (
+                <div className="mt-2 border-t border-slate-800 pt-4 overflow-x-auto animate-in fade-in duration-200">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-[#071220] text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                      <tr>
+                        <th className="px-4 py-3 rounded-l-xl">Fecha</th>
+                        <th className="px-4 py-3">Personas que entraron (Visitas)</th>
+                        <th className="px-4 py-3">Clics Botón WhatsApp</th>
+                        <th className="px-4 py-3">Tasa Conversión</th>
+                        <th className="px-4 py-3 rounded-r-xl">Tiendas con Tráfico</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {[...rangeHistory].reverse().map((day) => {
+                        const conv = day.visits > 0 ? ((day.clicks / day.visits) * 100).toFixed(1) : '0.0';
+                        return (
+                          <tr key={day.date} className="hover:bg-slate-800/30 transition-colors">
+                            <td className="px-4 py-2.5 font-bold text-white flex items-center gap-2">
+                              <span>📅</span>
+                              <span>{day.label}</span>
+                              <span className="text-[10px] text-slate-500 font-normal">({day.date})</span>
+                            </td>
+                            <td className="px-4 py-2.5 font-semibold text-emerald-400">
+                              {day.visits} visitas
+                            </td>
+                            <td className="px-4 py-2.5 font-semibold text-[#25D366]">
+                              {day.clicks} clics
+                            </td>
+                            <td className="px-4 py-2.5 font-bold text-purple-400">
+                              {conv}%
+                            </td>
+                            <td className="px-4 py-2.5 text-slate-400">
+                              {day.activeStoresCount} tiendas
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* 🏬 Sección: Directorio de Tiendas (Ranking de Mayor Visibilidad vs Cero Visitas) */}
+            <div className="bg-[#0e1e33] border border-slate-800 rounded-3xl p-6 flex flex-col gap-5 shadow-sm">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <StoreIcon size={16} className="text-blue-400" />
+                    <span>Auditoría de Tiendas: Ranking de Tráfico & Soporte Proactivo</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Filtra entre comercios líderes con más visitas o detecta tiendas con 0 visualizaciones para brindarles ayuda inmediata por WhatsApp.
+                  </p>
+                </div>
+
+                {/* Selector de Período para el Ranking */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 font-semibold whitespace-nowrap">Período:</span>
+                  <div className="flex items-center bg-[#071220] p-1 rounded-xl border border-slate-800 text-xs font-bold">
+                    <button
+                      onClick={() => setAnalyticsTimeframe('all')}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${analyticsTimeframe === 'all' ? 'bg-emerald-500 text-slate-950 font-black shadow-xs' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      Histórico
+                    </button>
+                    <button
+                      onClick={() => setAnalyticsTimeframe('30d')}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${analyticsTimeframe === '30d' ? 'bg-emerald-500 text-slate-950 font-black shadow-xs' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      30 Días
+                    </button>
+                    <button
+                      onClick={() => setAnalyticsTimeframe('7d')}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${analyticsTimeframe === '7d' ? 'bg-emerald-500 text-slate-950 font-black shadow-xs' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      7 Días
+                    </button>
+                    <button
+                      onClick={() => setAnalyticsTimeframe('today')}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${analyticsTimeframe === 'today' ? 'bg-emerald-500 text-slate-950 font-black shadow-xs' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      Hoy
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filtros Rápidos (Pills) + Buscador + Ordenamiento */}
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                {/* Pills de Filtrado Rápido */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  <button
+                    onClick={() => setAnalyticsFilterType('all')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${analyticsFilterType === 'all' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' : 'bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  >
+                    🌐 Todas ({analyticsData?.storesAnalytics?.length ?? 0})
+                  </button>
+                  <button
+                    onClick={() => setAnalyticsFilterType('top')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${analyticsFilterType === 'top' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  >
+                    🚀 Top Tráfico ({analyticsData?.activeStoresWithTrafficCount ?? 0})
+                  </button>
+                  <button
+                    onClick={() => setAnalyticsFilterType('zero')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${analyticsFilterType === 'zero' ? 'bg-red-500/20 text-red-300 border border-red-500/40' : 'bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  >
+                    ⚠️ Cero Visitas ({analyticsData?.dormantStoresCount ?? 0})
+                  </button>
+                  <button
+                    onClick={() => setAnalyticsFilterType('low')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${analyticsFilterType === 'low' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  >
+                    📉 Bajo Tráfico 1-5 ({analyticsData?.lowTrafficStoresCount ?? 0})
+                  </button>
+                </div>
+
+                {/* Buscador y Controles de Orden */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative flex-1 sm:w-60">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                    <input
+                      type="text"
+                      placeholder="Buscar por tienda, dueño, slug..."
+                      value={analyticsSearch}
+                      onChange={(e) => setAnalyticsSearch(e.target.value)}
+                      className="w-full bg-[#071220] border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-emerald-500 transition-all"
+                    />
+                    {analyticsSearch && (
+                      <button
+                        onClick={() => setAnalyticsSearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filtro por Plan */}
+                  <select
+                    value={analyticsPlanFilter}
+                    onChange={(e) => setAnalyticsPlanFilter(e.target.value as any)}
+                    className="bg-[#071220] border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-300 focus:outline-hidden focus:border-emerald-500 font-semibold cursor-pointer"
+                  >
+                    <option value="todos">Todos los Planes</option>
+                    <option value="gratis">Gratis</option>
+                    <option value="emprendedor">Emprendedor</option>
+                    <option value="negocio">Negocio Pro</option>
+                  </select>
+
+                  {/* Ordenar por */}
+                  <select
+                    value={analyticsSortBy}
+                    onChange={(e) => setAnalyticsSortBy(e.target.value as any)}
+                    className="bg-[#071220] border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-300 focus:outline-hidden focus:border-emerald-500 font-semibold cursor-pointer"
+                  >
+                    <option value="visits">Mayor Visitas</option>
+                    <option value="clicks">Mayor WhatsApp</option>
+                    <option value="conversion">Mayor Conversión %</option>
+                    <option value="least_visits">Menor Visitas</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Lista / Ranking de Tiendas */}
+              <div className="flex flex-col gap-3 mt-1">
+                {analyticsStores.length === 0 ? (
+                  <div className="py-12 text-center text-slate-500 text-xs font-medium bg-[#071220] rounded-2xl border border-slate-800/80">
+                    No se encontraron tiendas con los filtros seleccionados.
+                  </div>
+                ) : (
+                  analyticsStores.map((st, index) => {
+                    let visits = st.totalVisits;
+                    let clicks = st.totalClicks;
+                    if (analyticsTimeframe === 'today') {
+                      visits = st.todayVisits;
+                      clicks = st.todayClicks;
+                    } else if (analyticsTimeframe === '7d') {
+                      visits = st.last7DaysVisits;
+                      clicks = st.last7DaysClicks;
+                    } else if (analyticsTimeframe === '30d') {
+                      visits = st.last30DaysVisits;
+                      clicks = st.last30DaysClicks;
+                    }
+
+                    const convRate = visits > 0 ? ((clicks / visits) * 100).toFixed(1) : '0.0';
+                    const maxTopVisits = analyticsStores[0] ? (
+                      analyticsTimeframe === 'today' ? analyticsStores[0].todayVisits :
+                      analyticsTimeframe === '7d' ? analyticsStores[0].last7DaysVisits :
+                      analyticsTimeframe === '30d' ? analyticsStores[0].last30DaysVisits :
+                      analyticsStores[0].totalVisits
+                    ) : 1;
+                    const progressPct = maxTopVisits > 0 ? Math.min(100, Math.round((visits / maxTopVisits) * 100)) : 0;
+                    const contactUrl = getWhatsAppContactUrl(st);
+
+                    return (
+                      <div
+                        key={st.storeId}
+                        className={`bg-[#071220] border rounded-2xl p-4 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${visits === 0 ? 'border-red-950/60 hover:border-red-800/80 bg-red-950/10' : 'border-slate-800 hover:border-slate-700'}`}
+                      >
+                        {/* Info Principal */}
+                        <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                          {/* Badge de Posición / Alerta */}
+                          <div className="shrink-0 pt-0.5">
+                            {visits > 0 ? (
+                              <div className={`w-8 h-8 rounded-xl font-black text-xs flex items-center justify-center shadow-xs ${
+                                index === 0 ? 'bg-amber-400 text-amber-950 border border-amber-300' :
+                                index === 1 ? 'bg-slate-300 text-slate-900 border border-slate-200' :
+                                index === 2 ? 'bg-amber-700 text-amber-100 border border-amber-600' :
+                                'bg-slate-800 text-slate-300 border border-slate-700'
+                              }`}>
+                                #{index + 1}
+                              </div>
+                            ) : (
+                              <div className="w-8 h-8 rounded-xl font-black text-xs flex items-center justify-center bg-red-950/80 text-red-300 border border-red-800">
+                                0
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-bold text-white text-sm truncate">
+                                {st.storeName}
+                              </span>
+
+                              {/* Badge de Plan */}
+                              <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+                                st.plan === 'negocio' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' :
+                                st.plan === 'emprendedor' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+                                'bg-slate-800 text-slate-400 border-slate-700'
+                              }`}>
+                                {st.plan === 'negocio' ? 'Negocio Pro' : st.plan === 'emprendedor' ? 'Emprendedor' : 'Gratis'}
+                              </span>
+
+                              {/* Badge de Cero Visitas */}
+                              {visits === 0 && (
+                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-red-500/20 text-red-300 border border-red-500/40">
+                                  Sin Visitas
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 mt-1">
+                              <span className="text-slate-500 font-mono text-[11px]">/s/{st.storeSlug}</span>
+                              <span>•</span>
+                              <span>{st.productCount} productos</span>
+                              {st.ownerName && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-slate-300 font-medium">Dueño: {st.ownerName}</span>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Barra de progreso de tráfico relativo */}
+                            {visits > 0 && (
+                              <div className="w-full max-w-xs bg-slate-800/80 h-1.5 rounded-full mt-2.5 overflow-hidden">
+                                <div
+                                  style={{ width: `${progressPct}%` }}
+                                  className="h-full bg-linear-to-r from-emerald-500 to-[#25D366] rounded-full"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Bloque de Métricas Numéricas */}
+                        <div className="flex items-center gap-4 sm:gap-6 shrink-0 border-y md:border-y-0 md:border-l border-slate-800/80 py-2 md:py-0 md:pl-5">
+                          {/* Visitas */}
+                          <div className="flex flex-col items-start sm:items-center">
+                            <span className="text-[10px] uppercase font-bold text-slate-500">Visitas</span>
+                            <span className={`text-base font-black ${visits > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
+                              {visits.toLocaleString()}
+                            </span>
+                          </div>
+
+                          {/* Clics a WhatsApp */}
+                          <div className="flex flex-col items-start sm:items-center">
+                            <span className="text-[10px] uppercase font-bold text-slate-500">WhatsApp</span>
+                            <span className={`text-base font-black ${clicks > 0 ? 'text-[#25D366]' : 'text-slate-500'}`}>
+                              {clicks.toLocaleString()}
+                            </span>
+                          </div>
+
+                          {/* Conversión */}
+                          <div className="flex flex-col items-start sm:items-center">
+                            <span className="text-[10px] uppercase font-bold text-slate-500">Conversión</span>
+                            <span className="text-base font-black text-purple-400">
+                              {convRate}%
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Acciones Rápidas */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* Link Tienda */}
+                          <a
+                            href={`/s/${st.storeSlug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                            title="Ver tienda en vivo"
+                          >
+                            <ExternalLink size={13} />
+                            <span className="hidden sm:inline">Ver Tienda</span>
+                          </a>
+
+                          {/* Botón de Contacto por WhatsApp con Mensaje Inteligente */}
+                          {contactUrl ? (
+                            <a
+                              href={contactUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                                visits === 0
+                                  ? 'bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-500/40'
+                                  : 'bg-[#25D366]/20 hover:bg-[#25D366]/30 text-[#25D366] border border-[#25D366]/40'
+                              }`}
+                              title={visits === 0 ? 'Contactar para ofrecer soporte de activación' : 'Contactar por WhatsApp'}
+                            >
+                              <MessageCircle size={14} />
+                              <span>{visits === 0 ? 'Ayudar por WhatsApp' : 'WhatsApp'}</span>
+                            </a>
+                          ) : (
+                            <span className="px-3 py-2 text-xs text-slate-600 font-semibold italic">
+                              Sin WhatsApp
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </section>
         )}
 
@@ -2841,19 +3677,29 @@ export default function SuperAdminPage() {
                 </label>
               </div>
 
-              {/* Checkbox Validación de Correo Electrónico */}
-              <div className="flex items-center gap-2 pb-1">
-                <input
-                  type="checkbox"
-                  id="editIsEmailVerified"
-                  checked={editForm.isEmailVerified}
-                  onChange={(e) => setEditForm({ ...editForm, isEmailVerified: e.target.checked })}
-                  className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
-                />
-                <label htmlFor="editIsEmailVerified" className="text-xs font-medium text-slate-200 cursor-pointer">
-                  Correo Electrónico Verificado Oficialmente
-                </label>
-              </div>
+              {/* Estado y Validación de Correo Electrónico */}
+              {editingStore.isEmailVerified && editingStore.emailVerifiedMethod === 'auth' ? (
+                <div className="flex items-center gap-2.5 pb-1 bg-emerald-950/40 border border-emerald-800/50 rounded-xl px-3 py-2 text-xs">
+                  <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-emerald-300">Correo Verificado Oficialmente (Google Auth)</span>
+                    <span className="text-[10px] text-slate-400">El usuario validó su correo mediante enlace directo. No requiere aprobación manual.</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 pb-1">
+                  <input
+                    type="checkbox"
+                    id="editIsEmailVerified"
+                    checked={editForm.isEmailVerified}
+                    onChange={(e) => setEditForm({ ...editForm, isEmailVerified: e.target.checked })}
+                    className="w-4 h-4 accent-blue-500 rounded cursor-pointer"
+                  />
+                  <label htmlFor="editIsEmailVerified" className="text-xs font-medium text-slate-200 cursor-pointer">
+                    Aprobar Correo Manualmente (SuperAdmin)
+                  </label>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div className="flex flex-col gap-1">

@@ -31,6 +31,9 @@ interface PublicStoreClientViewProps {
   storeSlug: string;
 }
 
+const DEFAULT_PRODUCT_IMAGE = 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80';
+const getSafeProductImage = (url?: string) => (!url || url.startsWith('blob:') ? DEFAULT_PRODUCT_IMAGE : url);
+
 export default function PublicStoreClientView({
   initialStore,
   initialProducts,
@@ -459,11 +462,14 @@ export default function PublicStoreClientView({
                       <Link href={`/s/${store.slug}/p/${product.id}`} className="flex w-full flex-row items-center gap-3.5">
                         <div className="w-24 h-24 rounded-2xl shrink-0 overflow-hidden bg-slate-100 relative">
                           <img
-                            src={product.imageUrl || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80'}
+                            src={getSafeProductImage(product.imageUrl)}
                             alt={product.title}
                             className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
                               isOutOfStock ? 'grayscale contrast-75' : ''
                             }`}
+                            onError={(e) => {
+                              e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
+                            }}
                           />
                           {badgeText && !isOutOfStock && (
                             <span className="absolute top-1.5 left-1.5 bg-[#059669] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">
@@ -536,11 +542,14 @@ export default function PublicStoreClientView({
                       <Link href={`/s/${store.slug}/p/${product.id}`} className="flex w-full flex-col">
                         <div className="aspect-square relative overflow-hidden bg-[#FAF9F6]">
                           <img
-                            src={product.imageUrl || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80'}
+                            src={getSafeProductImage(product.imageUrl)}
                             alt={product.title}
                             className={`w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 ${
                               isOutOfStock ? 'grayscale contrast-75' : ''
                             }`}
+                            onError={(e) => {
+                              e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
+                            }}
                           />
                           {badgeText && !isOutOfStock && (
                             <span className="absolute top-2 left-2 bg-[#059669] text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-xs z-10">
@@ -595,11 +604,14 @@ export default function PublicStoreClientView({
                     <Link href={`/s/${store.slug}/p/${product.id}`} className="flex w-full flex-col gap-2">
                       <div className="aspect-square relative overflow-hidden rounded-2xl bg-neutral-100/90">
                         <img
-                          src={product.imageUrl || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80'}
+                          src={getSafeProductImage(product.imageUrl)}
                           alt={product.title}
                           className={`w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 ${
                             isOutOfStock ? 'grayscale contrast-75' : ''
                           }`}
+                          onError={(e) => {
+                            e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
+                          }}
                         />
                         {badgeText && !isOutOfStock && (
                           <span className="absolute top-2 left-2 bg-neutral-900/80 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-md shadow-2xs z-10">

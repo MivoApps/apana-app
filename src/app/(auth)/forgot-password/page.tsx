@@ -59,7 +59,19 @@ export default function ForgotPasswordPage() {
     setErrorMsg('');
 
     try {
-      await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://beapana.com';
+      try {
+        await sendPasswordResetEmail(auth, email.trim().toLowerCase(), {
+          url: `${origin}/login`,
+          handleCodeInApp: false,
+        });
+      } catch (e: any) {
+        if (e?.code === 'auth/unauthorized-continue-uri') {
+          await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+        } else {
+          throw e;
+        }
+      }
       setSent(true);
       setCooldown(60); // 60 segundos de espera para reintentar
     } catch (err: any) {
@@ -84,7 +96,19 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setErrorMsg('');
     try {
-      await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://beapana.com';
+      try {
+        await sendPasswordResetEmail(auth, email.trim().toLowerCase(), {
+          url: `${origin}/login`,
+          handleCodeInApp: false,
+        });
+      } catch (e: any) {
+        if (e?.code === 'auth/unauthorized-continue-uri') {
+          await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+        } else {
+          throw e;
+        }
+      }
       setCooldown(60);
     } catch (err: any) {
       console.error('Error al reenviar:', err);

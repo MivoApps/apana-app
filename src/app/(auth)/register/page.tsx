@@ -118,9 +118,17 @@ export default function RegisterPage() {
 
       // Enviar correo de verificación automático al usuario
       try {
-        await sendEmailVerification(userCredential.user);
-      } catch (emailErr) {
-        console.warn('No se pudo enviar correo de verificación inicial:', emailErr);
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://beapana.com';
+        await sendEmailVerification(userCredential.user, {
+          url: `${origin}/dashboard?emailVerified=true`,
+          handleCodeInApp: false,
+        });
+      } catch (emailErr: any) {
+        if (emailErr?.code === 'auth/unauthorized-continue-uri') {
+          await sendEmailVerification(userCredential.user).catch(() => {});
+        } else {
+          console.warn('No se pudo enviar correo de verificación inicial:', emailErr);
+        }
       }
 
       // Obtener ubicación geográfica ligera (país, ciudad, IP)

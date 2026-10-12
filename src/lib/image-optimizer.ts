@@ -1,100 +1,195 @@
 /**
  * Helper de optimización de imágenes en el cliente (Browser HTML5 Canvas)
- * 1. Redimensiona automáticamente la imagen subida a una resolución cuadrada recomendada (ej. 800x800 px).
- * 2. Aplica recorte al centro (center-crop / object-fit cover) si la imagen original no es cuadrada.
- * 3. Comprime el resultado a formato WebP/JPEG con calidad ajustada.
- * 4. Reduce drásticamente el peso del archivo (ej. de 8MB o 15MB de foto de cámara a ~80KB-150KB) sin perder calidad visible.
+ * 1. Soporta imágenes HEIC/HEIF de celulares Android/iPhone convirtiéndolas automáticamente.
+ * 2. Utiliza createImageBitmap / ObjectURL en vez de FileReader base64 gigante para no agotar la RAM en móviles.
+ * 3. Redimensiona automáticamente a resolución cuadrada centrada (center-crop / cover).
+ * 4. Comprime a WebP con fallback automático a JPEG si el navegador no soporta codificación WebP.
+ * 5. Reduce fotos de cámara pesadas (15MB - 30MB) a ~70KB-120KB ultraligeras.
  */
 
 export interface OptimizeImageOptions {
   maxWidth?: number;
   maxHeight?: number;
-  quality?: number; // 0.1 a 1.0 (0.85 es óptimo para WebP/JPEG)
+  quality?: number; // 0.1 a 1.0 (0.75 es óptimo para WebP/JPEG)
   outputFormat?: 'image/webp' | 'image/jpeg';
 }
 
-export function compressAndCropImage(
-  file: File,
+export async function compressAndCropImage(
+  file: File | Blob,
   options: OptimizeImageOptions = {}
 ): Promise<{ dataUrl: string; blob: Blob; originalSize: number; optimizedSize: number }> {
   const {
     maxWidth = 800,
     maxHeight = 800,
-    quality = 0.85,
+    quality = 0.75,
     outputFormat = 'image/webp',
   } = options;
 
-  return new Promise((resolve, reject) => {
-    const originalSize = file.size;
-    const reader = new FileReader();
+  const originalSize = file.size;
+  let processFile: Blob = file;
 
-    reader.onerror = (err) => reject(err);
-    reader.onload = (event) => {
-      const img = new Image();
+  // 1. Detectar y convertir formato HEIC/HEIF (muy común en cámaras de celulares Samsung, Xiaomi, iPhone)
+  const isHeic =
+    file.type === 'image/heic' ||
+    file.type === 'image/heif' ||
+    (file instanceof File && (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')));
 
-      img.onerror = (err) => reject(err);
-      img.onload = () => {
-        // Crear elemento Canvas HTML5 en memoria
-        const canvas = document.createElement('canvas');
-        canvas.width = maxWidth;
-        canvas.height = maxHeight;
+  if (isHeic) {
+    try {
+      const heic2any = (await import('heic2any')).default;
+      const converted = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.85,
+      });
+      processFile = Array.isArray(converted) ? converted[0] : converted;
+    } catch (heicErr) {
+      console.warn('Aviso al convertir archivo HEIC con heic2any:', heicErr);
+      // Continuar con el blob original por si el navegador lo soporta
+    }
+  }
 
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('No se pudo obtener el contexto 2D del Canvas'));
-          return;
+  // 2. Obtener dimensiones y dibujar en Canvas usando createImageBitmap (más rápido y sin saturar RAM en móvil)
+  // o fallback a HTMLImageElement con ObjectURL
+  return new Promise(async (resolve, reject) => {
+    let sourceWidth = 0;
+    let sourceHeight = 0;
+    let drawSource: CanvasImageSource | null = null;
+    let cleanupUrl: string | null = null;
+
+    try {
+      if (typeof createImageBitmap === 'function') {
+        try {
+          const bitmap = await createImageBitmap(processFile);
+          sourceWidth = bitmap.width;
+          sourceHeight = bitmap.height;
+          drawSource = bitmap;
+        } catch {
+          // createImageBitmap falló con este blob, intentar fallback con Image
         }
+      }
 
-        // Habilitar suavizado de alta calidad
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
+      if (!drawSource) {
+        const objectUrl = URL.createObjectURL(processFile);
+        cleanupUrl = objectUrl;
+        const img = new Image();
 
-        // Calcular recorte centrado (Center-Crop / Aspect Square)
-        const sourceWidth = img.width;
-        const sourceHeight = img.height;
-        let sx = 0;
-        let sy = 0;
-        let sWidth = sourceWidth;
-        let sHeight = sourceHeight;
+        await new Promise<void>((imgResolve, imgReject) => {
+          img.onload = () => {
+            sourceWidth = img.naturalWidth || img.width;
+            sourceHeight = img.naturalHeight || img.height;
+            drawSource = img;
+            imgResolve();
+          };
+          img.onerror = (e) => {
+            imgReject(new Error('El navegador no pudo decodificar el formato de esta imagen'));
+          };
+          img.src = objectUrl;
+        });
+      }
 
-        if (sourceWidth > sourceHeight) {
-          // Imagen apaisada (Horizontal): Recortar los lados
-          sWidth = sourceHeight;
-          sx = (sourceWidth - sourceHeight) / 2;
-        } else if (sourceHeight > sourceWidth) {
-          // Imagen vertical (Retrato): Recortar arriba y abajo
-          sHeight = sourceWidth;
-          sy = (sourceHeight - sourceWidth) / 2;
+      if (!drawSource || sourceWidth === 0 || sourceHeight === 0) {
+        if (cleanupUrl) URL.revokeObjectURL(cleanupUrl);
+        reject(new Error('No se pudieron obtener las dimensiones de la imagen'));
+        return;
+      }
+
+      // 3. Crear Canvas en memoria para recorte cuadrado (Center-Crop)
+      const canvas = document.createElement('canvas');
+      canvas.width = maxWidth;
+      canvas.height = maxHeight;
+
+      const ctx = canvas.getContext('2d', { willReadFrequently: false });
+      if (!ctx) {
+        if (cleanupUrl) URL.revokeObjectURL(cleanupUrl);
+        reject(new Error('No se pudo inicializar el contexto 2D del Canvas'));
+        return;
+      }
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      // Fondo blanco por defecto (evita fondos negros en transparencias PNG/WebP al convertir a JPEG)
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, maxWidth, maxHeight);
+
+      // Calcular recorte centrado proporcional
+      let sx = 0;
+      let sy = 0;
+      let sWidth = sourceWidth;
+      let sHeight = sourceHeight;
+
+      if (sourceWidth > sourceHeight) {
+        sWidth = sourceHeight;
+        sx = (sourceWidth - sourceHeight) / 2;
+      } else if (sourceHeight > sourceWidth) {
+        sHeight = sourceWidth;
+        sy = (sourceHeight - sourceWidth) / 2;
+      }
+
+      ctx.drawImage(drawSource, sx, sy, sWidth, sHeight, 0, 0, maxWidth, maxHeight);
+
+      // Limpiar recursos del bitmap u objectUrl
+      if ('close' in drawSource && typeof (drawSource as ImageBitmap).close === 'function') {
+        (drawSource as ImageBitmap).close();
+      }
+      if (cleanupUrl) {
+        URL.revokeObjectURL(cleanupUrl);
+      }
+
+      // 4. Exportar a WebP con fallback inteligente a JPEG
+      let targetMime: 'image/webp' | 'image/jpeg' = outputFormat;
+      let dataUrl: string = '';
+
+      try {
+        dataUrl = canvas.toDataURL(targetMime, quality);
+        if (!dataUrl.startsWith(`data:${targetMime}`)) {
+          targetMime = 'image/jpeg';
+          dataUrl = canvas.toDataURL(targetMime, quality);
         }
+      } catch {
+        targetMime = 'image/jpeg';
+        dataUrl = canvas.toDataURL(targetMime, quality);
+      }
 
-        // Dibujar en Canvas con recorte y escalado perfecto a 800x800
-        ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, maxWidth, maxHeight);
-
-        // Convertir a DataURL y Blob comprimido
-        const dataUrl = canvas.toDataURL(outputFormat, quality);
-
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              resolve({
-                dataUrl,
-                blob,
-                originalSize,
-                optimizedSize: blob.size,
-              });
-            } else {
-              reject(new Error('Falló la generación del Blob de la imagen'));
-            }
-          },
-          outputFormat,
-          quality
-        );
-      };
-
-      img.src = event.target?.result as string;
-    };
-
-    reader.readAsDataURL(file);
+      // Generar Blob final
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve({
+              dataUrl,
+              blob,
+              originalSize,
+              optimizedSize: blob.size,
+            });
+          } else {
+            // Reintento con JPEG si WebP toBlob retornó null en este navegador
+            canvas.toBlob(
+              (jpegBlob) => {
+                if (jpegBlob) {
+                  const jpegDataUrl = canvas.toDataURL('image/jpeg', quality);
+                  resolve({
+                    dataUrl: jpegDataUrl,
+                    blob: jpegBlob,
+                    originalSize,
+                    optimizedSize: jpegBlob.size,
+                  });
+                } else {
+                  reject(new Error('Falló la generación del archivo comprimido de la imagen'));
+                }
+              },
+              'image/jpeg',
+              quality
+            );
+          }
+        },
+        targetMime,
+        quality
+      );
+    } catch (err) {
+      if (cleanupUrl) URL.revokeObjectURL(cleanupUrl);
+      reject(err);
+    }
   });
 }
 

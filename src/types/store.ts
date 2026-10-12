@@ -51,6 +51,7 @@ export interface Store {
   categories?: string[]; // Categorías de productos de la tienda (Plan Emprendedor y Negocio)
   isEmailVerified?: boolean; // Validación oficial del correo del comercio
   emailVerifiedAt?: number; // Timestamp de verificación de correo
+  emailVerifiedMethod?: 'auth' | 'admin'; // Método de verificación: 'auth' (enlace de correo de Firebase) o 'admin' (aprobación manual)
   isWhatsappVerified?: boolean; // Validación anti-fraude del WhatsApp del comercio
   whatsappVerificationCode?: string; // Código de 6 dígitos enviado
   whatsappVerifiedAt?: number; // Timestamp de verificación

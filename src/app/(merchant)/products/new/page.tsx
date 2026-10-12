@@ -180,9 +180,9 @@ export default function CreateProductPage() {
     if (file) {
       try {
         const result = await compressAndCropImage(file, {
-          maxWidth: 500,
-          maxHeight: 500,
-          quality: 0.55,
+          maxWidth: 600,
+          maxHeight: 600,
+          quality: 0.70,
           outputFormat: 'image/webp',
         });
         setImagePreviews((prev) => {
@@ -200,17 +200,9 @@ export default function CreateProductPage() {
         );
       } catch (error) {
         console.error('Error optimizando imagen:', error);
-        const url = URL.createObjectURL(file);
-        setImagePreviews((prev) => {
-          const cleanPrev = prev.filter(Boolean);
-          if (maxImagesLimit === 1) {
-            return [url];
-          }
-          if (cleanPrev.length >= maxImagesLimit) {
-            return [...cleanPrev.slice(0, maxImagesLimit - 1), url];
-          }
-          return [...cleanPrev, url];
-        });
+        alert('No se pudo procesar esta foto. Por favor verifica que sea una imagen válida (JPG, PNG, WEBP o HEIC) o intenta con otra foto de tu galería.');
+      } finally {
+        e.target.value = '';
       }
     }
   };
@@ -280,7 +272,7 @@ export default function CreateProductPage() {
     // Limpiar urls vacias
     const cleanPreviews = imagePreviews.filter(Boolean);
     
-    // Subir imágenes a Firebase Cloud Storage si son base64 (reduce el peso de Firestore en 98%)
+    // Subir imágenes a Firebase Cloud Storage (reduce el peso de Firestore en 98%)
     const { uploadImageToStorage, dataURLtoBlob } = await import('@/lib/firebase/storage');
     const uploadedImages: string[] = [];
 
@@ -293,12 +285,33 @@ export default function CreateProductPage() {
           const cdnUrl = await uploadImageToStorage(blob, storagePath);
           uploadedImages.push(cdnUrl);
         } catch (uploadErr) {
-          console.error('Error subiendo imagen a Storage, fallback a dataUrl:', uploadErr);
+          console.error('Error subiendo imagen data: a Storage:', uploadErr);
           uploadedImages.push(img);
+        }
+      } else if (img.startsWith('blob:')) {
+        try {
+          const res = await fetch(img);
+          const blob = await res.blob();
+          const storagePath = `stores/${storeId}/products/prod_${Date.now()}_${i}.webp`;
+          const cdnUrl = await uploadImageToStorage(blob, storagePath);
+          uploadedImages.push(cdnUrl);
+        } catch (blobErr) {
+          console.error('Error subiendo imagen blob: a Storage:', blobErr);
+          alert('Hubo un problema de conexión al subir una imagen a la nube. Por favor intenta volver a adjuntarla.');
+          setIsSubmitting(false);
+          return;
         }
       } else {
         uploadedImages.push(img);
       }
+    }
+
+    // 🛡️ REGLA ESTRICTA ANTI-BLOB: Ningún producto puede tener una URL 'blob:' local en la base de datos
+    const hasInvalidBlob = uploadedImages.some((u) => u.startsWith('blob:'));
+    if (hasInvalidBlob) {
+      alert('Una de las imágenes no se pudo procesar para la nube. Por favor selecciona la foto nuevamente antes de guardar.');
+      setIsSubmitting(false);
+      return;
     }
 
     const defaultImage = 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80';
