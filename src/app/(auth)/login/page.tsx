@@ -12,6 +12,7 @@ import { auth, googleProvider } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/firebase/auth-context';
 
 import { TermsModal } from '@/components/ui/TermsModal';
+import { isSuperAdminEmail } from '@/lib/auth-helpers';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [authErrorType, setAuthErrorType] = useState<'user-not-found' | 'wrong-password' | 'invalid-credential' | 'other' | null>(null);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
 
   const { logout } = useAuth();
@@ -32,7 +34,7 @@ export default function LoginPage() {
       let isMounted = true;
 
       const userEmail = user.email?.toLowerCase().trim() || '';
-      if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
+      if (isSuperAdminEmail(userEmail)) {
         router.replace('/admin');
         return;
       }
@@ -87,15 +89,16 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setAuthError('');
+    setAuthErrorType(null);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
       // Limpiar caché vieja de Zustand de sesiones anteriores
       localStorage.clear();
 
       const userEmail = userCredential.user.email?.toLowerCase().trim() || '';
 
       // Si es el SuperAdmin (Dueño de APANA) ➔ Ir directamente a la Consola de Administración
-      if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
+      if (isSuperAdminEmail(userEmail)) {
         router.replace('/admin');
         return;
       }
@@ -110,15 +113,34 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       console.error('Error al iniciar sesión:', err);
+      const code = err?.code;
       let errorMsg = 'Esta cuenta no existe o los datos ingresados son incorrectos.';
-      if (err?.code === 'auth/network-request-failed') {
-        errorMsg = 'Error de red. Verifica la conexión Wi-Fi de tu celular.';
-      } else if (err?.code === 'auth/user-not-found' || err?.code === 'auth/wrong-password' || err?.code === 'auth/invalid-credential') {
-        errorMsg = 'Correo o contraseña incorrectos.';
+      let errorType: 'user-not-found' | 'wrong-password' | 'invalid-credential' | 'other' = 'other';
+
+      if (code === 'auth/user-not-found') {
+        errorMsg = 'No existe una cuenta asociada a este correo electrónico.';
+        errorType = 'user-not-found';
+      } else if (code === 'auth/wrong-password') {
+        errorMsg = 'La contraseña ingresada es incorrecta.';
+        errorType = 'wrong-password';
+      } else if (code === 'auth/invalid-credential') {
+        errorMsg = 'No existe una cuenta asociada a este correo o la contraseña es incorrecta.';
+        errorType = 'invalid-credential';
+      } else if (code === 'auth/invalid-email') {
+        errorMsg = 'El formato del correo electrónico ingresado no es válido.';
+      } else if (code === 'auth/user-disabled') {
+        errorMsg = 'Esta cuenta ha sido inhabilitada. Contacta al equipo de soporte de APANA.';
+      } else if (code === 'auth/too-many-requests') {
+        errorMsg = 'Demasiados intentos fallidos. Por tu seguridad, espera unos minutos o restablece tu contraseña.';
+        errorType = 'wrong-password';
+      } else if (code === 'auth/network-request-failed') {
+        errorMsg = 'Error de red. Verifica la conexión a internet de tu dispositivo.';
       } else if (err?.message) {
         errorMsg = `Error: ${err.message}`;
       }
+
       setAuthError(errorMsg);
+      setAuthErrorType(errorType);
     } finally {
       setLoading(false);
     }
@@ -127,6 +149,7 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setAuthError('');
+    setAuthErrorType(null);
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
       localStorage.clear();
@@ -134,7 +157,7 @@ export default function LoginPage() {
       const userEmail = userCredential.user.email?.toLowerCase().trim() || '';
 
       // Si es el SuperAdmin ➔ Ir directamente a la Consola de Administración
-      if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
+      if (isSuperAdminEmail(userEmail)) {
         router.replace('/admin');
         return;
       }
@@ -208,8 +231,41 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {authError && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl text-center">
-                {authError}
+              <div className="p-3.5 bg-red-50 border border-red-200/90 text-red-700 text-xs font-semibold rounded-xl text-center flex flex-col items-center justify-center gap-1.5 animate-in fade-in">
+                <span>{authError}</span>
+                {authErrorType === 'user-not-found' && (
+                  <Link
+                    href={`/register?email=${encodeURIComponent(email)}`}
+                    className="text-xs font-bold text-[#059669] hover:text-[#00855d] underline flex items-center gap-1 mt-0.5"
+                  >
+                    ¿Deseas registrarte gratis con este correo? →
+                  </Link>
+                )}
+                {authErrorType === 'wrong-password' && (
+                  <Link
+                    href={`/forgot-password?email=${encodeURIComponent(email)}`}
+                    className="text-xs font-bold text-[#059669] hover:text-[#00855d] underline flex items-center gap-1 mt-0.5"
+                  >
+                    ¿Olvidaste tu contraseña? Recupérala aquí →
+                  </Link>
+                )}
+                {authErrorType === 'invalid-credential' && (
+                  <div className="flex items-center justify-center gap-3 text-[11px] font-bold mt-0.5">
+                    <Link
+                      href={`/register?email=${encodeURIComponent(email)}`}
+                      className="text-[#059669] hover:text-[#00855d] underline"
+                    >
+                      Registrarme gratis
+                    </Link>
+                    <span className="text-red-300">•</span>
+                    <Link
+                      href={`/forgot-password?email=${encodeURIComponent(email)}`}
+                      className="text-slate-600 hover:text-slate-900 underline"
+                    >
+                      Recuperar contraseña
+                    </Link>
+                  </div>
+                )}
               </div>
             )}
             {/* Email Field */}

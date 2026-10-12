@@ -11,6 +11,7 @@ import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, sendEma
 import { auth, googleProvider } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { TermsModal } from '@/components/ui/TermsModal';
+import { isSuperAdminEmail } from '@/lib/auth-helpers';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -29,12 +30,20 @@ export default function RegisterPage() {
   const [redirecting, setRedirecting] = useState(false);
 
   React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const emailParam = params.get('email');
+      if (emailParam) setEmail(emailParam);
+    }
+  }, []);
+
+  React.useEffect(() => {
     if (user && !authLoading) {
       setRedirecting(true);
       let isMounted = true;
 
       const userEmail = user.email?.toLowerCase().trim() || '';
-      if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
+      if (isSuperAdminEmail(userEmail)) {
         router.replace('/admin');
         return;
       }
@@ -168,7 +177,7 @@ export default function RegisterPage() {
       const userEmail = userCredential.user.email?.toLowerCase().trim() || '';
 
       // Si es el SuperAdmin ➔ Ir directamente a la Consola de Administración
-      if (userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com') {
+      if (isSuperAdminEmail(userEmail)) {
         router.replace('/admin');
         return;
       }

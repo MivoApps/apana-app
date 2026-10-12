@@ -21,6 +21,7 @@ import { getStoreByUserIdFromFS, getProductByIdFromFS, updateProductInFS, delete
 import { compressAndCropImage, formatBytes } from '@/lib/image-optimizer';
 import { ProductVariantsEditor } from '@/components/merchant/ProductVariantsEditor';
 import { ProductOptionGroup } from '@/types/store';
+import { isSuperAdminEmail } from '@/lib/auth-helpers';
 
 interface Props {
   params: Promise<{
@@ -71,7 +72,7 @@ export default function EditProductPage({ params }: Props) {
         let targetCategories: string[] = [];
 
         const userEmail = user?.email?.toLowerCase().trim() || '';
-        const isSuperAdminUser = userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com';
+        const isSuperAdminUser = isSuperAdminEmail(userEmail);
 
         // 1. Revisar si hay tienda impersonada (SÓLO para SuperAdmin)
         if (typeof window !== 'undefined') {

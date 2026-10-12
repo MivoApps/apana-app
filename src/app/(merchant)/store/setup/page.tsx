@@ -22,6 +22,7 @@ import { slugify } from '@/lib/app-store';
 import { StoreStyle } from '@/types/store';
 import { LiveStorePreview } from '@/components/merchant/LiveStorePreview';
 import { TermsModal } from '@/components/ui/TermsModal';
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 
 // Categorías oficiales de Stitch
 const STITCH_CATEGORIES = [
@@ -50,6 +51,7 @@ const STITCH_COLORS = [
 
 import { useAuth } from '@/lib/firebase/auth-context';
 import { createOrUpdateStoreInFS } from '@/lib/firebase/firestore';
+import { PlanTrialModal } from '@/components/merchant/PlanTrialModal';
 
 export default function OnboardingWizardPage() {
   const { user, loading: authLoading, logout } = useAuth();
@@ -64,10 +66,15 @@ export default function OnboardingWizardPage() {
   const [createdSlug, setCreatedSlug] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [isTrialModalOpen, setIsTrialModalOpen] = useState(false);
 
   // Estado de validación de unicidad de nombre de tienda
   const [isCheckingSlug, setIsCheckingSlug] = useState(false);
   const [isSlugAvailable, setIsSlugAvailable] = useState<boolean | null>(null);
+
+  // Validación de teléfono peruano (9 dígitos, inicia con 9)
+  const cleanPhone = whatsappPhone.replace(/\D/g, '');
+  const isPhoneValid = cleanPhone.length === 9 && cleanPhone.startsWith('9');
 
   React.useEffect(() => {
     const cleanSlug = slugify(businessName);
@@ -194,6 +201,10 @@ export default function OnboardingWizardPage() {
     };
     const targetStyle = styleMap[selectedStyle] || 'minimalista';
 
+    // Formatear teléfono de WhatsApp peruano (+51)
+    const cleanDigits = whatsappPhone.replace(/\D/g, '');
+    const fullPhone = cleanDigits.length === 9 ? `51${cleanDigits}` : cleanDigits;
+
     // Guardar de forma persistente en Firestore si el usuario está autenticado
     let createdFsStore = null;
     if (user) {
@@ -209,7 +220,7 @@ export default function OnboardingWizardPage() {
           category,
           themeStyle: targetStyle,
           primaryColor: selectedColorHex,
-          whatsappPhone: '',
+          whatsappPhone: fullPhone,
           isWhatsappVerified: false,
           ownerEmail: user.email || '',
           ownerName: user.displayName || businessName,
@@ -226,6 +237,14 @@ export default function OnboardingWizardPage() {
     setCreatedSlug(finalSlug);
     setIsSubmitting(false);
     updateStep(5);
+    // Mostrar modal con oferta de 30 días gratis
+    setIsTrialModalOpen(true);
+  };
+
+  const handleDeclineTrial = () => {
+    setIsTrialModalOpen(false);
+    localStorage.removeItem('apana_wizard_step');
+    window.location.href = '/products/new';
   };
 
   const nextStep = async () => {
@@ -381,15 +400,15 @@ export default function OnboardingWizardPage() {
             </div>
           )}
 
-          {/* PASO 2: Nombre de Tienda */}
+          {/* PASO 2: Nombre de Tienda y WhatsApp */}
           {step === 2 && (
             <div className="flex flex-col gap-5 bg-white p-6 rounded-2xl border border-[#bccac0]/40 shadow-xs">
               <div className="flex flex-col gap-1">
                 <h1 className="text-2xl font-bold text-[#0b1c30] tracking-tight">
-                  Nombre de tu Tienda
+                  Nombre y WhatsApp de tu Tienda
                 </h1>
                 <p className="text-xs text-[#3d4a42]">
-                  Elige el nombre comercial con el que tus clientes te reconocerán.
+                  Configura el nombre de tu marca y el celular donde recibirás los pedidos de tus clientes.
                 </p>
               </div>
 
@@ -442,11 +461,69 @@ export default function OnboardingWizardPage() {
                 )}
               </div>
 
+              {/* Campo WhatsApp */}
+              <div className="flex flex-col gap-2">
+                <label htmlFor="store-whatsapp" className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <WhatsAppIcon size={14} className="text-[#059669]" />
+                  <span>WhatsApp para recibir pedidos *</span>
+                </label>
+                <div className={`relative flex rounded-xl border bg-white overflow-hidden transition-all shadow-xs ${
+                  cleanPhone.length > 0 && !cleanPhone.startsWith('9')
+                    ? 'border-amber-400 ring-2 ring-amber-400/10'
+                    : isPhoneValid
+                      ? 'border-[#059669] ring-2 ring-[#059669]/10'
+                      : 'border-[#bccac0] focus-within:border-[#059669] focus-within:ring-2 focus-within:ring-[#059669]/10'
+                }`}>
+                  <div className="flex items-center gap-1.5 px-3.5 bg-slate-50 border-r border-[#bccac0]/40 text-slate-700 font-bold text-xs select-none">
+                    <span className="text-base leading-none">🇵🇪</span>
+                    <span>+51</span>
+                  </div>
+                  <input
+                    id="store-whatsapp"
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="912 345 678"
+                    value={whatsappPhone}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/\D/g, '').slice(0, 9);
+                      setWhatsappPhone(clean);
+                    }}
+                    maxLength={9}
+                    className="w-full h-12 px-3.5 bg-white text-[#0b1c30] text-sm font-semibold placeholder:text-[#6d7a72] focus:outline-none"
+                  />
+                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                    {isPhoneValid && (
+                      <CheckCircle2 size={18} className="text-[#059669]" />
+                    )}
+                    {cleanPhone.length > 0 && !cleanPhone.startsWith('9') && (
+                      <AlertCircle size={18} className="text-amber-500" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Helper text del teléfono */}
+                {cleanPhone.length > 0 && !cleanPhone.startsWith('9') ? (
+                  <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1">
+                    <AlertCircle size={13} className="shrink-0" />
+                    El celular debe empezar con 9 (número de Perú).
+                  </p>
+                ) : isPhoneValid ? (
+                  <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                    <CheckCircle2 size={13} className="shrink-0" />
+                    Tus clientes te escribirán a este número para coordinar sus compras.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-[#6d7a72]">
+                    Ingresa los 9 dígitos de tu celular. Lo verificarás luego de publicar tu primer producto.
+                  </p>
+                )}
+              </div>
+
               <Button
                 onClick={nextStep}
                 variant="primary"
                 fullWidth
-                disabled={!businessName.trim() || isCheckingSlug || isSlugAvailable === false || isNavigatingStep}
+                disabled={!businessName.trim() || !isPhoneValid || isCheckingSlug || isSlugAvailable === false || isNavigatingStep}
                 className="h-12 text-base mt-2"
               >
                 {isNavigatingStep ? (
@@ -718,6 +795,21 @@ export default function OnboardingWizardPage() {
 
       {/* Modal de Términos y Condiciones */}
       <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
+
+      {/* Modal de Oferta 30 Días Gratis (Canva-style) */}
+      <PlanTrialModal
+        isOpen={isTrialModalOpen}
+        onClose={handleDeclineTrial}
+        storeId={user ? `store_${user.uid}` : ''}
+        storeName={businessName || 'Mi Tienda'}
+        userEmail={user?.email || ''}
+        userPhone={cleanPhone.length === 9 ? `51${cleanPhone}` : cleanPhone}
+        onSuccess={() => {
+          localStorage.removeItem('apana_wizard_step');
+          window.location.href = '/products/new?trial=activated';
+        }}
+        onContinueFree={handleDeclineTrial}
+      />
     </div>
   );
 }

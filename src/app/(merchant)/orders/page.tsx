@@ -23,6 +23,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { getStoreByUserIdFromFS, getStoreOrdersFromFS, StoreOrder } from '@/lib/firebase/firestore';
+import { isSuperAdminEmail } from '@/lib/auth-helpers';
 import { Store } from '@/types/store';
 import { exportOrdersToCSV } from '@/lib/excel-export';
 import { formatCurrency } from '@/lib/whatsapp';
@@ -62,7 +63,7 @@ export default function OrdersPage() {
   }, [user, authLoading, router]);
 
   const isProPlan = store?.plan === 'negocio';
-  const isSuperAdmin = user?.email && ['angelo@mivo.pe', 'angelocastellanos99@gmail.com'].includes(user.email.toLowerCase().trim());
+  const isSuperAdmin = isSuperAdminEmail(user?.email);
   const storeSlug = store?.slug || 'mi-tienda';
 
   const handleExportOrders = () => {

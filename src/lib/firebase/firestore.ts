@@ -15,10 +15,13 @@ import {
   limit,
   Timestamp,
   writeBatch,
-  getCountFromServer
+  getCountFromServer,
+  getDocFromServer,
+  getDocsFromServer
 } from 'firebase/firestore';
 import { db } from './config';
 import { Store, Product } from '@/types/store';
+import { getSuperAdminEmails } from '@/lib/auth-helpers';
 
 // Helper para Sanitizar Slugs (convierte "José Tienda" => "jose-tienda", "Año Nuevo" => "ano-nuevo")
 export const slugify = (text: string): string => {
@@ -179,7 +182,7 @@ export const getStoreBySlugFromFS = async (slug: string): Promise<Store | null> 
   }
 };
 
-export const getStoreByIdFromFS = async (storeId: string): Promise<Store | null> => {
+export const getStoreByIdFromFS = async (storeId: string, forceServer: boolean = false): Promise<Store | null> => {
   if (!storeId) return null;
   if (storeId === 'demo-store' || storeId === 'panaderia-don-jose') {
     const { DEMO_STORE } = await import('@/lib/mock-demo-store');
@@ -187,7 +190,12 @@ export const getStoreByIdFromFS = async (storeId: string): Promise<Store | null>
   }
   try {
     const storeRef = doc(db, 'stores', storeId);
-    const storeSnap = await getDoc(storeRef);
+    let storeSnap;
+    try {
+      storeSnap = await getDocFromServer(storeRef);
+    } catch {
+      storeSnap = await getDoc(storeRef);
+    }
     if (storeSnap.exists()) {
       return {
         id: storeSnap.id,
@@ -201,11 +209,16 @@ export const getStoreByIdFromFS = async (storeId: string): Promise<Store | null>
   }
 };
 
-export const getStoreByUserIdFromFS = async (userId: string): Promise<Store | null> => {
+export const getStoreByUserIdFromFS = async (userId: string, forceServer: boolean = false): Promise<Store | null> => {
   try {
-    // 1. Intentar consulta por documento directo store_${userId} (instantáneo O(1))
+    // 1. Intentar consulta por documento directo store_${userId} (instantáneo O(1) con datos frescos del servidor)
     const directDocRef = doc(db, 'stores', `store_${userId}`);
-    const directSnap = await getDoc(directDocRef);
+    let directSnap;
+    try {
+      directSnap = await getDocFromServer(directDocRef);
+    } catch {
+      directSnap = await getDoc(directDocRef);
+    }
 
     if (directSnap.exists()) {
       return {
@@ -217,7 +230,12 @@ export const getStoreByUserIdFromFS = async (userId: string): Promise<Store | nu
     // 2. Fallback por si la tienda fue creada con otro ID
     const storesRef = collection(db, 'stores');
     const q = query(storesRef, where('ownerId', '==', userId));
-    const querySnapshot = await getDocs(q);
+    let querySnapshot;
+    try {
+      querySnapshot = await getDocsFromServer(q);
+    } catch {
+      querySnapshot = await getDocs(q);
+    }
 
     if (!querySnapshot.empty) {
       const docData = querySnapshot.docs[0].data();
@@ -683,7 +701,7 @@ export const adminCleanSuperAdminStoresInFS = async (adminUid: string): Promise<
     }
 
     // 3. Actualizar rol a 'admin' para los superadmins si el usuario actual es uno de ellos
-    const adminEmails = ['angelo@mivo.pe', 'angelocastellanos99@gmail.com'];
+    const adminEmails = getSuperAdminEmails();
     for (const email of adminEmails) {
       try {
         const uRef = doc(db, 'users', email);

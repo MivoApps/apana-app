@@ -1,0 +1,804 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  ShoppingBag,
+  Search,
+  Check,
+  Truck,
+  ArrowRight,
+  MapPin,
+  Clock,
+  Flag,
+  Share2,
+  BookOpen,
+} from 'lucide-react';
+import { InstagramIcon } from '@/components/ui/InstagramIcon';
+import { useAppStore } from '@/lib/app-store';
+import { useCartStore } from '@/lib/cart-store';
+import { formatCurrency } from '@/lib/whatsapp';
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
+import { Store, Product } from '@/types/store';
+import { TermsModal } from '@/components/ui/TermsModal';
+import { ReportStoreModal } from '@/components/ui/ReportStoreModal';
+import { ProductOptionsModal } from '@/components/public/ProductOptionsModal';
+
+interface PublicStoreClientViewProps {
+  initialStore: Store;
+  initialProducts: Product[];
+  storeSlug: string;
+}
+
+export default function PublicStoreClientView({
+  initialStore,
+  initialProducts,
+  storeSlug,
+}: PublicStoreClientViewProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { items, getTotalItems, getTotalPrice, addItem } = useCartStore();
+
+  const [store, setStore] = useState<Store>(initialStore);
+  const [storeProducts, setStoreProducts] = useState<Product[]>(initialProducts);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('todos');
+  const [mounted, setMounted] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
+  const [selectedModalProduct, setSelectedModalProduct] = useState<Product | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+
+    // Guardar en sessionStorage para transiciones instantáneas dentro del navegador
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(`apana_public_store_${storeSlug}`, JSON.stringify(initialStore));
+        sessionStorage.setItem(`apana_public_prods_${storeSlug}`, JSON.stringify(initialProducts));
+      } catch (_) {}
+
+      // Registrar visita única de forma no bloqueante
+      const sessionVisitKey = `apana_session_visited_${initialStore.id}`;
+      if (!sessionStorage.getItem(sessionVisitKey)) {
+        sessionStorage.setItem(sessionVisitKey, 'true');
+        import('@/lib/firebase/firestore')
+          .then(({ recordAnalyticsEvent }) => {
+            recordAnalyticsEvent(initialStore.id, 'visit').catch(() => {});
+          })
+          .catch(() => {});
+      }
+    }
+  }, [initialStore, initialProducts, storeSlug]);
+
+  const handleShareStore = () => {
+    if (typeof window === 'undefined') return;
+    const shareUrl = window.location.href;
+    const shareTitle = store?.name || 'Tienda Online';
+    const shareText = `¡Hola! Te invito a visitar la tienda online de ${shareTitle}. Explora los productos y haz tus pedidos fácilmente por WhatsApp:`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: shareTitle,
+        text: shareText,
+        url: shareUrl,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2000);
+    }
+  };
+
+  const totalCartCount = mounted ? getTotalItems() : 0;
+  const isPaidPlan = store?.plan === 'emprendedor' || store?.plan === 'negocio';
+  const maxProductsAllowed = store?.plan === 'gratis' ? 25 : store?.plan === 'emprendedor' ? 150 : 99999;
+  const allowedProducts = storeProducts.slice(0, maxProductsAllowed);
+
+  const filteredProducts = allowedProducts.filter((product) => {
+    if (!product) return false;
+    const title = (product.title || '').toLowerCase();
+    const query = (searchQuery || '').toLowerCase();
+    const matchesSearch = title.includes(query);
+    const matchesCategory =
+      !isPaidPlan ||
+      selectedCategory === 'todos' ||
+      product.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  return (
+    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col font-sans relative pb-28">
+      {/* Header Fijo con Nombre de Tienda y Carrito */}
+      <header className="fixed top-0 w-full z-50 bg-[#f8f9ff]/80 backdrop-blur-xl border-b border-[#bccac0]/20">
+        <div className="h-16 px-4 max-w-[640px] mx-auto flex items-center justify-between">
+          <h1 className="font-bold text-lg text-[#0b1c30] truncate tracking-tight">
+            {store.name}
+          </h1>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleShareStore}
+              className="w-10 h-10 flex items-center justify-center rounded-full text-[#3d4a42] hover:bg-gray-100 transition-colors cursor-pointer"
+              title="Compartir tienda"
+              aria-label="Compartir tienda"
+            >
+              {copiedShare ? (
+                <Check size={19} className="text-[#059669]" />
+              ) : (
+                <Share2 size={19} />
+              )}
+            </button>
+            <Link href={`/s/${store.slug}/cart`}>
+              <button
+                aria-label="Ver Carrito"
+                className="w-10 h-10 flex items-center justify-center rounded-full text-[#3d4a42] relative hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <ShoppingBag size={22} />
+                {totalCartCount > 0 && (
+                  <span className="absolute top-1 right-1 w-4 h-4 bg-[#059669] text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                    {totalCartCount}
+                  </span>
+                )}
+              </button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Container */}
+      <main
+        className={`pt-16 pb-24 min-h-screen transition-colors ${
+          store.themeStyle === 'elegante'
+            ? 'bg-[#FAF8F5] text-stone-900'
+            : store.themeStyle === 'moderna'
+            ? 'bg-slate-50 text-[#0b1c30]'
+            : 'bg-white text-[#0b1c30]'
+        }`}
+      >
+        {/* Banner Informativo si la Tienda está Pausada */}
+        {store.status === 'pausada' && (
+          <div className="bg-amber-500 text-white px-4 py-3 text-xs text-center flex items-center justify-center gap-2 shadow-xs font-semibold">
+            <span>⏸️</span>
+            <span>Esta tienda está en pausa temporalmente y no está recibiendo nuevos pedidos en este momento.</span>
+          </div>
+        )}
+
+        {/* Banner Informativo de Tienda Demo */}
+        {store.slug === 'panaderia-don-jose' && (
+          <div className="bg-linear-to-r from-[#00855d] to-[#059669] text-white px-4 py-2.5 text-xs text-center flex flex-col sm:flex-row items-center justify-center gap-2 border-b border-emerald-700/30">
+            <span className="font-bold flex items-center gap-1.5">
+              ✨ Tienda Demo Oficial
+            </span>
+            <span className="text-emerald-100 hidden sm:inline">•</span>
+            <span className="text-emerald-50">
+              Así verán tus clientes tu tienda online y harán pedidos directos a tu WhatsApp.
+            </span>
+            <Link
+              href="/login"
+              className="font-bold underline text-white hover:text-emerald-200 ml-1 shrink-0"
+            >
+              Crear mi tienda gratis →
+            </Link>
+          </div>
+        )}
+
+        {/* Banner Informativo si la tienda no tiene WhatsApp validado */}
+        {store.slug !== 'panaderia-don-jose' && (!store.whatsappPhone || !store.isWhatsappVerified) && (
+          <div className="w-full bg-amber-50/95 border-b border-amber-200/90 text-amber-950 px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2 sticky top-0 z-30 shadow-2xs backdrop-blur-xs">
+            <span className="text-sm">🛠️</span>
+            <span>Esta tienda está configurando sus canales de atención. Muy pronto disponible para pedidos por WhatsApp.</span>
+          </div>
+        )}
+
+        <div className="flex flex-col w-full max-w-[640px] mx-auto">
+          {/* Header Tienda Info Dinámico según Tema */}
+          <div
+            className={`px-4 py-6 flex flex-col items-center gap-2 text-center transition-all ${
+              store.themeStyle === 'elegante'
+                ? 'bg-[#FAF8F5] text-stone-900 py-8 border-b border-[#E7E2D9] mb-3'
+                : store.themeStyle === 'moderna'
+                ? 'bg-white text-[#0b1c30] border-b border-slate-200/80 shadow-2xs mb-2 py-7'
+                : 'bg-white text-neutral-900 border-b border-neutral-100 py-6'
+            }`}
+          >
+            {store.logoUrl ? (
+              <div
+                className={`w-20 h-20 overflow-hidden shadow-sm transition-all bg-white flex items-center justify-center p-1 ${
+                  store.themeStyle === 'elegante'
+                    ? 'rounded-2xl border border-stone-200/60'
+                    : store.themeStyle === 'moderna'
+                    ? 'rounded-3xl shadow-md border border-slate-200/80'
+                    : 'rounded-full w-16 h-16 shadow-xs border border-slate-100'
+                }`}
+              >
+                <img src={store.logoUrl} alt={store.name} className="w-full h-full object-contain" />
+              </div>
+            ) : (
+              <div
+                style={{ backgroundColor: store.primaryColor || '#059669' }}
+                className={`w-20 h-20 text-white flex items-center justify-center font-bold text-2xl shadow-sm transition-all ${
+                  store.themeStyle === 'elegante'
+                    ? 'rounded-2xl border border-stone-200/60 font-playfair'
+                    : store.themeStyle === 'moderna'
+                    ? 'rounded-3xl shadow-md'
+                    : 'rounded-full w-16 h-16 shadow-xs'
+                }`}
+              >
+                {store.name.substring(0, 2).toUpperCase()}
+              </div>
+            )}
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <h2
+                className={`text-2xl sm:text-3xl font-bold tracking-tight ${
+                  store.themeStyle === 'elegante'
+                    ? 'text-stone-900 font-playfair'
+                    : store.themeStyle === 'moderna'
+                    ? 'text-[#0b1c30] font-space-grotesk font-extrabold'
+                    : 'text-neutral-900 font-plus-jakarta'
+                }`}
+              >
+                {store.name}
+              </h2>
+            </div>
+            {store.description && (
+              <p
+                className={`text-xs max-w-sm mx-auto leading-relaxed ${
+                  store.themeStyle === 'elegante'
+                    ? 'text-stone-600 font-sans'
+                    : store.themeStyle === 'moderna'
+                    ? 'text-slate-600 font-sans font-medium'
+                    : 'text-neutral-500 font-plus-jakarta'
+                }`}
+              >
+                {store.description}
+              </p>
+            )}
+
+            {/* Píldoras de Información Comercial */}
+            <div className="flex flex-wrap items-center justify-center gap-1.5 mt-1">
+              <span
+                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold border ${
+                  store.themeStyle === 'elegante'
+                    ? 'bg-white border-[#E7E2D9] text-stone-700 shadow-2xs'
+                    : store.themeStyle === 'moderna'
+                    ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
+                    : 'bg-neutral-100/70 border-neutral-200/60 text-neutral-600'
+                }`}
+              >
+                <Truck
+                  size={13}
+                  className={store.themeStyle === 'elegante' ? 'text-amber-700' : 'text-[#059669]'}
+                />
+                <span>
+                  {store.shippingType === 'gratis'
+                    ? 'Envío Gratis'
+                    : 'Envíos: A coordinar por WhatsApp'}
+                </span>
+              </span>
+
+              {store.city && (
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
+                    store.themeStyle === 'elegante'
+                      ? 'bg-white border-[#E7E2D9] text-stone-600 shadow-2xs'
+                      : 'bg-slate-100 border-slate-200/80 text-slate-700'
+                  }`}
+                >
+                  <MapPin size={12} className="text-slate-500" />
+                  <span>{store.city}</span>
+                </span>
+              )}
+
+              {store.schedule && (
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
+                    store.themeStyle === 'elegante'
+                      ? 'bg-white border-[#E7E2D9] text-stone-600 shadow-2xs'
+                      : 'bg-slate-100 border-slate-200/80 text-slate-700'
+                  }`}
+                >
+                  <Clock size={12} className="text-slate-500" />
+                  <span>{store.schedule}</span>
+                </span>
+              )}
+            </div>
+
+            {/* Enlaces de Redes Sociales y Compartir */}
+            <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
+              {store.socialLinks?.instagram && (
+                <a
+                  href={
+                    store.socialLinks.instagram.startsWith('http')
+                      ? store.socialLinks.instagram
+                      : `https://instagram.com/${store.socialLinks.instagram.replace('@', '')}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-pink-50 border border-pink-200 text-pink-700 hover:bg-pink-100 transition-colors shadow-2xs"
+                >
+                  <InstagramIcon size={12} />
+                  <span>Instagram</span>
+                </a>
+              )}
+              {store.socialLinks?.tiktok && (
+                <a
+                  href={
+                    store.socialLinks.tiktok.startsWith('http')
+                      ? store.socialLinks.tiktok
+                      : `https://tiktok.com/@${store.socialLinks.tiktok.replace('@', '')}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200 transition-colors shadow-2xs"
+                >
+                  <span className="text-[10px]">🎵</span>
+                  <span>TikTok</span>
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={handleShareStore}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 border border-emerald-200 text-[#006c49] hover:bg-emerald-100 transition-colors shadow-2xs cursor-pointer"
+                title="Compartir enlace de la tienda"
+              >
+                {copiedShare ? (
+                  <>
+                    <Check size={12} className="text-[#059669]" />
+                    <span>¡Enlace copiado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 size={12} />
+                    <span>Compartir tienda</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Buscador de Productos */}
+          <div className="px-4 mb-4 mt-2 w-full max-w-md mx-auto relative">
+            <Search className="absolute left-7 top-1/2 -translate-y-1/2 text-[#6d7a72]" size={18} />
+            <input
+              type="text"
+              placeholder="Buscar productos..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white border border-[#bccac0]/40 rounded-full py-3 pl-10 pr-4 text-sm text-[#0b1c30] focus:outline-none focus:ring-2 transition-all shadow-xs"
+              style={{ borderColor: store.primaryColor ? `${store.primaryColor}60` : undefined }}
+            />
+          </div>
+
+          {/* Categorías */}
+          {(store.plan === 'emprendedor' || store.plan === 'negocio') && store.categories && store.categories.length > 0 && (
+            <div className="w-full max-w-md mx-auto px-4 mb-4">
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin snap-x snap-mandatory">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory('todos')}
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 snap-start ${
+                    selectedCategory === 'todos'
+                      ? 'text-white'
+                      : 'bg-white text-[#3d4a42] border border-[#bccac0]/30 hover:bg-slate-50'
+                  }`}
+                  style={
+                    selectedCategory === 'todos'
+                      ? { backgroundColor: store.primaryColor || '#059669' }
+                      : undefined
+                  }
+                >
+                  Todos
+                </button>
+                {store.categories.map((cat, idx) => {
+                  const isSelected = selectedCategory === cat;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all shrink-0 snap-start ${
+                        isSelected
+                          ? 'text-white'
+                          : 'bg-white text-[#3d4a42] border border-[#bccac0]/30 hover:bg-slate-50'
+                      }`}
+                      style={
+                        isSelected
+                          ? { backgroundColor: store.primaryColor || '#059669' }
+                          : undefined
+                      }
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Grid de Productos */}
+          <div
+            className={`grid gap-3.5 px-4 mb-8 ${
+              store.themeStyle === 'moderna' ? 'grid-cols-1' : 'grid-cols-2'
+            }`}
+          >
+            {filteredProducts.length === 0 ? (
+              <div className="col-span-full py-12 text-center text-[#6d7a72] text-sm">
+                Esta tienda aún no tiene productos publicados.
+              </div>
+            ) : (
+              filteredProducts.map((product) => {
+                const isPaidStore = store.plan === 'emprendedor' || store.plan === 'negocio';
+                const isOutOfStock = product.inStock === false;
+                const hasDiscount = Boolean(isPaidStore && product.compareAtPrice && product.compareAtPrice > product.price);
+                const discountPercent = hasDiscount
+                  ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
+                  : 0;
+
+                const badgeText = (isPaidStore && !isOutOfStock && product.badge)
+                  ? (product.badge === 'top'
+                    ? '🔥 Top Ventas'
+                    : product.badge === 'oferta'
+                    ? '🏷️ Oferta'
+                    : product.badge === 'nuevo'
+                    ? '✨ Nuevo'
+                    : null)
+                  : null;
+
+                // TEMA MODERNA
+                if (store.themeStyle === 'moderna') {
+                  return (
+                    <article
+                      key={product.id}
+                      className={`bg-white rounded-2xl border border-slate-200/80 overflow-hidden flex flex-row items-center p-2.5 group cursor-pointer shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 relative ${
+                        isOutOfStock ? 'opacity-70 bg-slate-50' : ''
+                      }`}
+                    >
+                      <Link href={`/s/${store.slug}/p/${product.id}`} className="flex w-full flex-row items-center gap-3.5">
+                        <div className="w-24 h-24 rounded-2xl shrink-0 overflow-hidden bg-slate-100 relative">
+                          <img
+                            src={product.imageUrl || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80'}
+                            alt={product.title}
+                            className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+                              isOutOfStock ? 'grayscale contrast-75' : ''
+                            }`}
+                          />
+                          {badgeText && !isOutOfStock && (
+                            <span className="absolute top-1.5 left-1.5 bg-[#059669] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">
+                              {badgeText}
+                            </span>
+                          )}
+                          {hasDiscount && !isOutOfStock && (
+                            <span className="absolute bottom-1.5 right-1.5 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs">
+                              -{discountPercent}%
+                            </span>
+                          )}
+                          {isOutOfStock && (
+                            <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center">
+                              <span className="bg-white/95 text-[#0b1c30] text-[10px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider shadow-xs">
+                                Agotado
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 flex flex-col gap-1 text-left justify-center py-1">
+                          <div className="flex items-center gap-2">
+                            <h3
+                              className={`font-space-grotesk font-bold text-sm text-[#0b1c30] uppercase tracking-wider line-clamp-1 group-hover:text-emerald-700 transition-colors ${
+                                isOutOfStock ? 'text-slate-500' : ''
+                              }`}
+                            >
+                              {product.title}
+                            </h3>
+                            {isOutOfStock && (
+                              <span className="text-[9px] font-bold text-amber-700 bg-amber-100/80 px-1.5 py-0.5 rounded">
+                                Agotado
+                              </span>
+                            )}
+                          </div>
+                          {product.description && (
+                            <p className="text-xs text-slate-500 line-clamp-1 font-sans">
+                              {product.description}
+                            </p>
+                          )}
+                          <div className="flex items-baseline gap-2 mt-0.5">
+                            <span
+                              className={`font-space-grotesk font-extrabold text-base ${
+                                isOutOfStock ? 'text-slate-400' : ''
+                              }`}
+                              style={!isOutOfStock ? { color: store.primaryColor || '#059669' } : undefined}
+                            >
+                              {formatCurrency(product.price)}
+                            </span>
+                            {hasDiscount && (
+                              <span className="text-xs text-slate-400 line-through font-medium">
+                                {formatCurrency(product.compareAtPrice!)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    </article>
+                  );
+                }
+
+                // TEMA ELEGANTE
+                if (store.themeStyle === 'elegante') {
+                  return (
+                    <article
+                      key={product.id}
+                      className={`bg-white rounded-2xl border border-[#e8dfd5] overflow-hidden flex flex-col group cursor-pointer shadow-2xs hover:shadow-md hover:border-amber-400/50 transition-all duration-300 relative ${
+                        isOutOfStock ? 'opacity-70 bg-[#f4f1ea]' : ''
+                      }`}
+                    >
+                      <Link href={`/s/${store.slug}/p/${product.id}`} className="flex w-full flex-col">
+                        <div className="aspect-square relative overflow-hidden bg-[#FAF9F6]">
+                          <img
+                            src={product.imageUrl || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80'}
+                            alt={product.title}
+                            className={`w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 ${
+                              isOutOfStock ? 'grayscale contrast-75' : ''
+                            }`}
+                          />
+                          {badgeText && !isOutOfStock && (
+                            <span className="absolute top-2 left-2 bg-[#059669] text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-xs z-10">
+                              {badgeText}
+                            </span>
+                          )}
+                          {hasDiscount && !isOutOfStock && (
+                            <span className="absolute top-2 right-2 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-xs z-10">
+                              -{discountPercent}%
+                            </span>
+                          )}
+                          {isOutOfStock && (
+                            <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-10">
+                              <span className="bg-white/95 text-stone-900 font-playfair text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-md tracking-wider shadow-sm">
+                                Agotado
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-3.5 flex flex-col gap-1 text-center">
+                          <h3
+                            className={`font-playfair font-bold text-sm text-[#1a1a1a] line-clamp-1 group-hover:text-amber-900 transition-colors ${
+                              isOutOfStock ? 'text-stone-500' : ''
+                            }`}
+                          >
+                            {product.title}
+                          </h3>
+                          <div className="flex items-baseline justify-center gap-2 mt-0.5">
+                            <span
+                              className={`font-playfair italic font-bold text-sm tracking-wide ${
+                                isOutOfStock ? 'text-stone-400' : ''
+                              }`}
+                              style={!isOutOfStock ? { color: store.primaryColor || '#059669' } : undefined}
+                            >
+                              {formatCurrency(product.price)}
+                            </span>
+                            {hasDiscount && (
+                              <span className="text-[11px] text-stone-400 line-through font-sans">
+                                {formatCurrency(product.compareAtPrice!)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    </article>
+                  );
+                }
+
+                // TEMA MINIMALISTA
+                return (
+                  <article key={product.id} className="flex flex-col group cursor-pointer relative">
+                    <Link href={`/s/${store.slug}/p/${product.id}`} className="flex w-full flex-col gap-2">
+                      <div className="aspect-square relative overflow-hidden rounded-2xl bg-neutral-100/90">
+                        <img
+                          src={product.imageUrl || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80'}
+                          alt={product.title}
+                          className={`w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 ${
+                            isOutOfStock ? 'grayscale contrast-75' : ''
+                          }`}
+                        />
+                        {badgeText && !isOutOfStock && (
+                          <span className="absolute top-2 left-2 bg-neutral-900/80 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-md shadow-2xs z-10">
+                            {badgeText}
+                          </span>
+                        )}
+                        {hasDiscount && !isOutOfStock && (
+                          <span className="absolute top-2 right-2 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-md shadow-2xs z-10">
+                            -{discountPercent}%
+                          </span>
+                        )}
+                        {isOutOfStock && (
+                          <div className="absolute inset-0 bg-black/35 backdrop-blur-[1px] flex items-center justify-center z-10">
+                            <span className="bg-white/95 text-neutral-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider shadow-xs">
+                              Agotado
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-0.5 text-left px-0.5">
+                        <h3
+                          className={`font-plus-jakarta font-semibold text-xs text-neutral-800 line-clamp-1 group-hover:text-black transition-colors ${
+                            isOutOfStock ? 'text-neutral-400' : ''
+                          }`}
+                        >
+                          {product.title}
+                        </h3>
+                        <div className="flex items-baseline gap-1.5">
+                          <span
+                            className={`font-plus-jakarta font-bold text-xs ${
+                              isOutOfStock ? 'text-neutral-400' : 'text-neutral-900'
+                            }`}
+                          >
+                            {formatCurrency(product.price)}
+                          </span>
+                          {hasDiscount && (
+                            <span className="text-[10px] text-neutral-400 line-through font-normal">
+                              {formatCurrency(product.compareAtPrice!)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  </article>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer Tienda Pública */}
+          <footer className="py-7 px-4 text-center bg-white border-t border-[#bccac0]/20 flex flex-col items-center gap-2.5">
+            <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-[#6d7a72]">
+              <Link
+                href={`/s/${store.slug}/libro-de-reclamaciones`}
+                className="hover:text-[#0b1c30] transition-colors flex items-center gap-1 font-medium"
+              >
+                <BookOpen size={13} className="text-emerald-700" />
+                <span>Libro de Reclamaciones</span>
+              </Link>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => setIsTermsOpen(true)}
+                className="hover:text-[#0b1c30] transition-colors cursor-pointer"
+              >
+                Términos del Servicio
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => setIsReportOpen(true)}
+                className="hover:text-amber-700 transition-colors flex items-center gap-1 text-slate-500 hover:underline cursor-pointer"
+              >
+                <Flag size={12} className="text-amber-600/80" />
+                <span>Reportar tienda</span>
+              </button>
+            </div>
+
+            {(!store.plan || store.plan === 'gratis') ? (
+              <p className="text-xs text-[#6d7a72]">
+                © {new Date().getFullYear()} Creado por{' '}
+                <Link
+                  href="/"
+                  target="_blank"
+                  className="font-bold text-[#006c49] hover:text-[#059669] hover:underline transition-colors inline-flex items-center gap-0.5"
+                >
+                  APANA
+                </Link>
+                . Todos los derechos reservados.
+              </p>
+            ) : (
+              <p className="text-xs text-[#6d7a72]">
+                © {new Date().getFullYear()} <strong className="font-semibold text-slate-700">{store.name}</strong>. Todos los derechos reservados.
+              </p>
+            )}
+          </footer>
+        </div>
+      </main>
+
+      {/* Barra Flotante de Pedido en Curso */}
+      {totalCartCount > 0 && (
+        <div className="fixed bottom-20 left-4 right-4 z-40 max-w-[608px] mx-auto animate-in slide-in-from-bottom-5 duration-300">
+          <Link
+            href={`/s/${store.slug}/cart`}
+            className="w-full bg-[#0b1c30] text-white p-3.5 px-5 rounded-2xl shadow-xl flex items-center justify-between border border-white/10 hover:scale-[1.01] active:scale-[0.99] transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs text-white"
+                style={{ backgroundColor: store.primaryColor || '#059669' }}
+              >
+                {totalCartCount}
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="text-xs text-slate-300">Pedido en curso</span>
+                <span className="text-sm font-bold">{formatCurrency(getTotalPrice())}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 text-xs font-bold text-emerald-400">
+              <span>Ver mi pedido</span>
+              <ArrowRight size={16} />
+            </div>
+          </Link>
+        </div>
+      )}
+
+      {/* Botón Flotante Rápido de WhatsApp */}
+      {store.whatsappPhone && store.isWhatsappVerified && (
+        <a
+          href={`https://wa.me/${store.whatsappPhone}?text=${encodeURIComponent(
+            `¡Hola! Tengo una consulta sobre los productos de ${store.name}`
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={async () => {
+            if (store.plan === 'emprendedor') {
+              try {
+                const { recordAnalyticsEvent } = await import('@/lib/firebase/firestore');
+                await recordAnalyticsEvent(store.id, 'click');
+              } catch (_) {}
+            }
+          }}
+          className="fixed bottom-20 right-4 z-30 w-12 h-12 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all animate-in zoom-in-75 duration-300"
+          style={totalCartCount > 0 ? { bottom: '5.5rem' } : { bottom: '5rem' }}
+          title="Hacer una consulta por WhatsApp"
+        >
+          <WhatsAppIcon size={26} />
+        </a>
+      )}
+
+      {/* Floating Bottom Navigation */}
+      <nav className="fixed bottom-0 w-full z-50 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)]">
+        <div className="flex justify-around items-center h-16 px-4 max-w-[640px] mx-auto">
+          <Link
+            href={`/s/${store.slug}`}
+            className="flex flex-col items-center gap-1 font-semibold"
+            style={{ color: store.primaryColor || '#059669' }}
+          >
+            <ShoppingBag size={20} />
+            <span className="text-[11px]">Tienda</span>
+          </Link>
+          <Link
+            href={`/s/${store.slug}/cart`}
+            className="flex flex-col items-center gap-1 text-[#6d7a72] hover:text-[#0b1c30]"
+          >
+            <div className="relative">
+              <ShoppingBag size={20} />
+              {totalCartCount > 0 && (
+                <span
+                  className="absolute -top-1 -right-2 w-4 h-4 text-white text-[9px] rounded-full flex items-center justify-center font-bold"
+                  style={{ backgroundColor: store.primaryColor || '#059669' }}
+                >
+                  {totalCartCount}
+                </span>
+              )}
+            </div>
+            <span className="text-[11px] font-medium">Mi Carrito</span>
+          </Link>
+        </div>
+      </nav>
+
+      {/* Modales */}
+      <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
+      <ReportStoreModal
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+        storeId={store.id}
+        storeSlug={store.slug}
+        storeName={store.name}
+      />
+      <ProductOptionsModal
+        product={selectedModalProduct}
+        isOpen={!!selectedModalProduct}
+        onClose={() => setSelectedModalProduct(null)}
+        onAddToCart={(prod, opts) => addItem(prod, opts)}
+        primaryColor={store.primaryColor}
+        themeStyle={store.themeStyle}
+      />
+    </div>
+  );
+}

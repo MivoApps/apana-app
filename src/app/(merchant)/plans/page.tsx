@@ -25,6 +25,8 @@ import {
 import { useAuth } from '@/lib/firebase/auth-context';
 import { getStoreByUserIdFromFS } from '@/lib/firebase/firestore';
 import { Store } from '@/types/store';
+import { PlanTrialModal } from '@/components/merchant/PlanTrialModal';
+import { isSuperAdminEmail } from '@/lib/auth-helpers';
 
 declare global {
   interface Window {
@@ -47,13 +49,18 @@ export default function PlansPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  // Canva-style Trial Modal State
+  const [isTrialModalOpen, setIsTrialModalOpen] = useState(false);
+  const [trialTargetPlan, setTrialTargetPlan] = useState<'emprendedor' | 'negocio'>('emprendedor');
+  const [billingCycle, setBillingCycle] = useState<'mensual' | 'anual'>('mensual');
+
   // Cancel Modal State
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
   const loadStore = async () => {
     if (user) {
-      const fsStore = await getStoreByUserIdFromFS(user.uid);
+      const fsStore = await getStoreByUserIdFromFS(user.uid, true);
       if (fsStore) {
         setStore(fsStore);
         setCurrentPlan(fsStore.plan || 'gratis');
@@ -76,7 +83,9 @@ export default function PlansPage() {
           setErrorMsg('');
 
           const planToCharge = checkoutTargetPlan;
-          const chargeAmount = planToCharge === 'negocio' ? 3990 : 1990;
+          const chargeAmount = billingCycle === 'anual'
+            ? (planToCharge === 'negocio' ? 21990 : 13990)
+            : (planToCharge === 'negocio' ? 3990 : 1990);
 
           try {
             const res = await fetch('/api/culqi/charge', {
@@ -88,6 +97,7 @@ export default function PlansPage() {
                 email: user?.email || token.email,
                 amount: chargeAmount,
                 plan: planToCharge,
+                billingCycle,
               }),
             });
 
@@ -118,7 +128,7 @@ export default function PlansPage() {
         }
       };
     }
-  }, [store, user, checkoutTargetPlan]);
+  }, [store, user, checkoutTargetPlan, billingCycle]);
 
   const handleOpenCulqiCheckout = (targetPlan: 'emprendedor' | 'negocio' = 'emprendedor') => {
     if (!store) {
@@ -127,7 +137,9 @@ export default function PlansPage() {
     }
 
     setCheckoutTargetPlan(targetPlan);
-    const amountInCents = targetPlan === 'negocio' ? 3990 : 1990;
+    const amountInCents = billingCycle === 'anual'
+      ? (targetPlan === 'negocio' ? 21990 : 13990)
+      : (targetPlan === 'negocio' ? 3990 : 1990);
     const planName = targetPlan === 'negocio' ? 'Plan Negocio Pro' : 'Plan Emprendedor';
 
     if (typeof window !== 'undefined' && window.Culqi) {
@@ -137,7 +149,7 @@ export default function PlansPage() {
         title: 'APANA SaaS',
         currency: 'PEN',
         amount: amountInCents,
-        description: `Suscripción Mensual - ${planName}`,
+        description: `Suscripción ${billingCycle === 'anual' ? 'Anual' : 'Mensual'} - ${planName}`,
       });
       window.Culqi.options({
         lang: 'es',
@@ -254,8 +266,9 @@ export default function PlansPage() {
 
   const isPaidPlan = currentPlan !== 'gratis';
   const isCancelled = store?.cancelAtPeriodEnd || store?.subscriptionStatus === 'cancelled';
+  const isTrial = store?.subscriptionStatus === 'trial';
   const planDisplayName = currentPlan === 'emprendedor' ? 'Plan Emprendedor' : `Plan ${currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}`;
-  const isSuperAdminOrDev = process.env.NODE_ENV === 'development' || user?.email === 'angelo@mivo.pe' || user?.email === 'angelocastellanos99@gmail.com';
+  const isSuperAdminOrDev = process.env.NODE_ENV === 'development' || isSuperAdminEmail(user?.email);
 
   const handleDirectPlanSwitchForTesting = async (targetPlan: 'gratis' | 'emprendedor' | 'negocio') => {
     if (!user || !store) return;
@@ -346,21 +359,33 @@ export default function PlansPage() {
         {isPaidPlan && (
           <div className={`p-5 rounded-2xl border shadow-xs flex flex-col gap-3.5 transition-all ${isCancelled
               ? 'bg-amber-50/70 border-amber-200 text-amber-950'
-              : 'bg-white border-[#059669]/40 ring-2 ring-[#059669]/10'
+              : isTrial
+                ? 'bg-emerald-50/60 border-emerald-300 ring-2 ring-emerald-500/10'
+                : 'bg-white border-[#059669]/40 ring-2 ring-[#059669]/10'
             }`}>
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2.5">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isCancelled ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-[#059669]'
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isCancelled 
+                    ? 'bg-amber-100 text-amber-800' 
+                    : isTrial
+                      ? 'bg-emerald-100 text-[#059669]'
+                      : 'bg-emerald-100 text-[#059669]'
                   }`}>
-                  <ShieldCheck size={20} />
+                  {isTrial ? <Sparkles size={20} className="text-amber-500" /> : <ShieldCheck size={20} />}
                 </div>
                 <div>
                   <h3 className="font-extrabold text-sm text-[#0b1c30]">
                     {planDisplayName}
                   </h3>
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 ${isCancelled ? 'bg-amber-200/60 text-amber-900' : 'bg-emerald-100 text-[#059669]'
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 ${isCancelled 
+                      ? 'bg-amber-200/60 text-amber-900' 
+                      : isTrial
+                        ? 'bg-amber-100 text-amber-900 border border-amber-300/60'
+                        : 'bg-emerald-100 text-[#059669]'
                     }`}>
-                    {isCancelled ? 'Cancelación Programada' : 'Suscripción Activa'}
+                    {isCancelled 
+                      ? (isTrial ? 'Prueba Cancelada (Sin Cobro)' : 'Cancelación Programada') 
+                      : (isTrial ? '30 Días Gratis Activo' : 'Suscripción Activa')}
                   </span>
                 </div>
               </div>
@@ -371,7 +396,7 @@ export default function PlansPage() {
                   type="button"
                   disabled={isCancelling}
                   onClick={handleReactivateSubscription}
-                  className="text-xs font-bold text-[#006c49] bg-white border border-[#059669]/30 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                  className="text-xs font-bold text-[#006c49] bg-white border border-[#059669]/30 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                 >
                   <RefreshCw size={12} className={isCancelling ? 'animate-spin' : ''} />
                   <span>Reactivar renovación</span>
@@ -380,27 +405,77 @@ export default function PlansPage() {
                 <button
                   type="button"
                   onClick={() => setIsCancelModalOpen(true)}
-                  className="text-xs font-semibold text-slate-500 hover:text-red-600 transition-colors underline underline-offset-2 py-1 px-2"
+                  className="text-xs font-semibold text-slate-500 hover:text-red-600 transition-colors underline underline-offset-2 py-1 px-2 cursor-pointer"
                 >
-                  Cancelar plan
+                  {isTrial ? 'Cancelar prueba gratis' : 'Cancelar plan'}
                 </button>
               )}
             </div>
+
+            {/* Información de Tarjeta Guardada si existe */}
+            {store?.cardLastFour && (
+              <div className="flex items-center gap-2 text-xs text-slate-600 bg-white/70 px-3 py-2 rounded-xl border border-slate-200/60">
+                <CreditCard size={15} className="text-[#059669] shrink-0" />
+                <span>
+                  Método de pago: <strong>{store.cardBrand || 'Tarjeta'}</strong> terminada en <strong>•••• {store.cardLastFour}</strong>
+                </span>
+              </div>
+            )}
 
             <div className="text-xs text-[#3d4a42] leading-relaxed pt-2 border-t border-black/5 flex items-center gap-2">
               <Calendar size={14} className="text-slate-400 shrink-0" />
               {isCancelled ? (
                 <span>
-                  Mantendrás tus beneficios vigentes hasta el <strong>{formatDate(store?.nextBillingDate)}</strong>. Luego volverás al Plan Gratis.
+                  {isTrial 
+                    ? `Prueba cancelada. No se realizará ningún cobro. Mantienes beneficios hasta el ` 
+                    : `Mantendrás tus beneficios vigentes hasta el `}
+                  <strong>{formatDate(store?.nextBillingDate)}</strong>. Luego volverás al Plan Gratis.
                 </span>
               ) : (
                 <span>
-                  Tu plan se renovará automáticamente el <strong>{formatDate(store?.nextBillingDate)}</strong>.
+                  {isTrial 
+                    ? `Disfrutas de beneficios gratis hasta el ` 
+                    : `Tu plan se renovará automáticamente el `}
+                  <strong>{formatDate(store?.nextBillingDate)}</strong>.
+                  {isTrial && ` Luego se cobrará ${currentPlan === 'negocio' ? 'S/ 39.90' : 'S/ 19.90'}/mes.`}
                 </span>
               )}
             </div>
           </div>
         )}
+
+        {/* Toggle Facturación Mensual / Anual */}
+        <div className="flex items-center justify-center pt-1 pb-1">
+          <div className="bg-slate-100 p-1 rounded-2xl flex items-center shadow-inner">
+            <button
+              type="button"
+              onClick={() => setBillingCycle('mensual')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                billingCycle === 'mensual'
+                  ? 'bg-white text-[#0b1c30] shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Facturación Mensual
+            </button>
+            <button
+              type="button"
+              onClick={() => setBillingCycle('anual')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                billingCycle === 'anual'
+                  ? 'bg-[#059669] text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <span>Facturación Anual</span>
+              <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full uppercase tracking-wider ${
+                billingCycle === 'anual' ? 'bg-amber-300 text-amber-950' : 'bg-emerald-100 text-[#059669]'
+              }`}>
+                Hasta 54% OFF
+              </span>
+            </button>
+          </div>
+        </div>
 
         {/* 3 Plans Container */}
         <div className="flex flex-col gap-5">
@@ -486,9 +561,21 @@ export default function PlansPage() {
             </div>
 
             {/* Price */}
-            <div className="flex items-baseline gap-1 relative z-10">
-              <span className="text-3xl font-bold text-[#0b1c30]">S/ 19.90</span>
-              <span className="text-xs text-[#6d7a72]">/ mes</span>
+            <div className="flex flex-col gap-1 relative z-10">
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-[#0b1c30]">
+                  {billingCycle === 'anual' ? 'S/ 139.90' : 'S/ 19.90'}
+                </span>
+                <span className="text-xs text-[#6d7a72]">
+                  {billingCycle === 'anual' ? '/ año' : '/ mes'}
+                </span>
+              </div>
+              {billingCycle === 'anual' && (
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#059669]">
+                  <span className="bg-emerald-100 px-2 py-0.5 rounded-full">Equiv. S/ 11.66 / mes</span>
+                  <span>• Ahorra S/ 98.90</span>
+                </div>
+              )}
             </div>
 
             {/* Features */}
@@ -547,15 +634,30 @@ export default function PlansPage() {
                 </div>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    disabled={isProcessing}
-                    onClick={() => handleOpenCulqiCheckout('emprendedor')}
-                    className="w-full h-12 bg-[#059669] hover:bg-[#00855d] text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Lock size={16} />
-                    <span>{isProcessing && checkoutTargetPlan === 'emprendedor' ? 'Procesando...' : 'Elegir Plan Emprendedor (S/ 19.90)'}</span>
-                  </button>
+                  {!store?.hasUsedTrial ? (
+                    <button
+                      type="button"
+                      disabled={isProcessing}
+                      onClick={() => {
+                        setTrialTargetPlan('emprendedor');
+                        setIsTrialModalOpen(true);
+                      }}
+                      className="w-full h-12 bg-[#059669] hover:bg-[#00855d] text-white font-bold text-sm rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                    >
+                      <Sparkles size={16} />
+                      <span>Probar 30 Días Gratis (S/ 0.00 hoy)</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={isProcessing}
+                      onClick={() => handleOpenCulqiCheckout('emprendedor')}
+                      className="w-full h-12 bg-[#059669] hover:bg-[#00855d] text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Lock size={16} />
+                      <span>{isProcessing && checkoutTargetPlan === 'emprendedor' ? 'Procesando...' : `Elegir Plan Emprendedor (${billingCycle === 'anual' ? 'S/ 139.90 / año' : 'S/ 19.90 / mes'})`}</span>
+                    </button>
+                  )}
                   {isSuperAdminOrDev && (
                     <button
                       type="button"
@@ -590,9 +692,21 @@ export default function PlansPage() {
             </div>
 
             {/* Price */}
-            <div className="flex items-baseline gap-1 relative z-10">
-              <span className="text-3xl font-bold text-[#0b1c30]">S/ 39.90</span>
-              <span className="text-xs text-[#6d7a72]">/ mes</span>
+            <div className="flex flex-col gap-1 relative z-10">
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-[#0b1c30]">
+                  {billingCycle === 'anual' ? 'S/ 219.90' : 'S/ 39.90'}
+                </span>
+                <span className="text-xs text-[#6d7a72]">
+                  {billingCycle === 'anual' ? '/ año' : '/ mes'}
+                </span>
+              </div>
+              {billingCycle === 'anual' && (
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-700">
+                  <span className="bg-amber-100 px-2 py-0.5 rounded-full">Equiv. S/ 18.33 / mes</span>
+                  <span>• Ahorra S/ 258.90</span>
+                </div>
+              )}
             </div>
 
             {/* Features Plan Negocio Pro */}
@@ -639,15 +753,30 @@ export default function PlansPage() {
                 </div>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    disabled={isProcessing}
-                    onClick={() => handleOpenCulqiCheckout('negocio')}
-                    className="w-full h-12 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Lock size={16} />
-                    <span>{isProcessing && checkoutTargetPlan === 'negocio' ? 'Procesando...' : 'Elegir Plan Negocio (S/ 39.90)'}</span>
-                  </button>
+                  {!store?.hasUsedTrial ? (
+                    <button
+                      type="button"
+                      disabled={isProcessing}
+                      onClick={() => {
+                        setTrialTargetPlan('negocio');
+                        setIsTrialModalOpen(true);
+                      }}
+                      className="w-full h-12 bg-linear-to-r from-amber-500 via-amber-600 to-amber-700 hover:from-amber-600 hover:to-amber-800 text-white font-bold text-sm rounded-xl shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                    >
+                      <Sparkles size={16} />
+                      <span>Probar 30 Días Gratis (S/ 0.00 hoy)</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={isProcessing}
+                      onClick={() => handleOpenCulqiCheckout('negocio')}
+                      className="w-full h-12 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Lock size={16} />
+                      <span>{isProcessing && checkoutTargetPlan === 'negocio' ? 'Procesando...' : `Elegir Plan Negocio (${billingCycle === 'anual' ? 'S/ 219.90 / año' : 'S/ 39.90 / mes'})`}</span>
+                    </button>
+                  )}
                   {isSuperAdminOrDev && (
                     <button
                       type="button"
@@ -735,7 +864,7 @@ export default function PlansPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-[#0b1c30]">
-                    ¿Deseas cancelar tu plan?
+                    {isTrial ? '¿Deseas cancelar tu prueba gratuita?' : '¿Deseas cancelar tu plan?'}
                   </h3>
                   <p className="text-xs text-[#6d7a72]">
                     {planDisplayName}
@@ -744,7 +873,7 @@ export default function PlansPage() {
               </div>
               <button
                 onClick={() => setIsCancelModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors"
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer"
               >
                 <X size={16} />
               </button>
@@ -753,10 +882,13 @@ export default function PlansPage() {
             {/* Body Info */}
             <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 flex flex-col gap-2 text-xs text-amber-950 leading-relaxed">
               <p>
-                Mantendrás <strong>todos los beneficios activos</strong> hasta el <strong>{formatDate(store?.nextBillingDate)}</strong>.
+                {isTrial 
+                  ? 'No se realizará ningún cobro a tu tarjeta registrada. Mantendrás tus beneficios gratis hasta el ' 
+                  : 'Mantendrás todos los beneficios activos hasta el '}
+                <strong>{formatDate(store?.nextBillingDate)}</strong>.
               </p>
               <p className="text-[11px] text-amber-900/80">
-                Al llegar esa fecha, no se te cobrará nada adicional y tu tienda pasará al <strong>Plan Gratis</strong> (límite de 25 productos y 1 imagen por producto).
+                Al llegar esa fecha, no se renovará tu suscripción y tu tienda pasará al <strong>Plan Gratis</strong> sin sorpresas ni cobros.
               </p>
             </div>
 
@@ -765,18 +897,18 @@ export default function PlansPage() {
               <button
                 type="button"
                 onClick={() => setIsCancelModalOpen(false)}
-                className="w-full h-11 bg-[#059669] hover:bg-[#00855d] text-white font-bold text-sm rounded-xl transition-all shadow-xs"
+                className="w-full h-11 bg-[#059669] hover:bg-[#00855d] text-white font-bold text-sm rounded-xl transition-all shadow-xs cursor-pointer"
               >
-                Continuar con mi plan
+                {isTrial ? 'Continuar disfrutando mi mes gratis' : 'Continuar con mi plan'}
               </button>
 
               <button
                 type="button"
                 disabled={isCancelling}
                 onClick={handleCancelSubscription}
-                className="w-full h-11 bg-white hover:bg-red-50 text-red-600 border border-red-200 font-semibold text-xs rounded-xl transition-all"
+                className="w-full h-11 bg-white hover:bg-red-50 text-red-600 border border-red-200 font-semibold text-xs rounded-xl transition-all cursor-pointer"
               >
-                {isCancelling ? 'Procesando...' : 'Confirmar cancelación de renovación'}
+                {isCancelling ? 'Procesando...' : (isTrial ? 'Confirmar cancelación de prueba' : 'Confirmar cancelación de renovación')}
               </button>
             </div>
           </div>
@@ -789,6 +921,37 @@ export default function PlansPage() {
         strategy="afterInteractive"
         onLoad={() => setCulqiLoaded(true)}
       />
+
+      {/* Modal de Oferta 30 Días Gratis estilo Canva */}
+      {store && (
+        <PlanTrialModal
+          isOpen={isTrialModalOpen}
+          onClose={() => setIsTrialModalOpen(false)}
+          storeId={store.id}
+          storeName={store.name}
+          userEmail={user?.email || ''}
+          userPhone={store.whatsappPhone || ''}
+          initialPlan={trialTargetPlan}
+          onSuccess={(trialResult) => {
+            sessionStorage.removeItem(`apana_cache_store_${user?.uid}`);
+            if (trialResult) {
+              setStore((prev) => prev ? {
+                ...prev,
+                plan: trialResult.plan,
+                subscriptionStatus: 'trial',
+                hasUsedTrial: true,
+                trialEndDate: trialResult.trialEndDate,
+                nextBillingDate: trialResult.trialEndDate,
+                billingCycle: trialResult.billingCycle,
+              } : null);
+              setCurrentPlan(trialResult.plan);
+            }
+            setIsTrialModalOpen(false);
+            loadStore();
+          }}
+          onContinueFree={() => setIsTrialModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

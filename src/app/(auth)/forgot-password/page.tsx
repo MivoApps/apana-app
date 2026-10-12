@@ -19,6 +19,14 @@ export default function ForgotPasswordPage() {
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const emailParam = params.get('email');
+      if (emailParam) setEmail(emailParam);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!authLoading && user) {
       router.replace('/dashboard');
     }

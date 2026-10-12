@@ -34,7 +34,9 @@ import { getStoreByUserIdFromFS, getProductsByStoreIdFromFS, createOrUpdateStore
 import { StorePreviewModal } from '@/components/ui/StorePreviewModal';
 import { WhatsAppVerifyModal } from '@/components/merchant/WhatsAppVerifyModal';
 import { DashboardProgressChecklist } from '@/components/merchant/DashboardProgressChecklist';
+import { PlanTrialModal } from '@/components/merchant/PlanTrialModal';
 import { Store, Product } from '@/types/store';
+import { isSuperAdminEmail } from '@/lib/auth-helpers';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -48,6 +50,7 @@ export default function DashboardPage() {
 
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isVerifyModalOpen, setIsVerifyModalOpen] = React.useState(false);
+  const [isTrialModalOpen, setIsTrialModalOpen] = React.useState(false);
   const [analyticsData, setAnalyticsData] = React.useState<{ label: string; visits: number; clicks: number }[]>([]);
   const [copiedLink, setCopiedLink] = React.useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = React.useState(false);
@@ -67,6 +70,16 @@ export default function DashboardPage() {
     } finally {
       setIsResendingEmail(false);
     }
+  };
+
+  const formatBillingDate = (timestamp?: number) => {
+    if (!timestamp) return 'Próximo ciclo';
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('es-PE', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
   };
 
   const [globalAnnouncement, setGlobalAnnouncement] = React.useState<{ message: string; active: boolean; type?: string } | null>(null);
@@ -95,7 +108,7 @@ export default function DashboardPage() {
       if (authLoading) return;
 
       const userEmail = user?.email?.toLowerCase().trim() || '';
-      const isSuperAdminUser = userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com';
+      const isSuperAdminUser = isSuperAdminEmail(userEmail);
 
       // Verificar si hay una sesión de impersonación activa (SÓLO para SuperAdmin)
       let impersonatedStoreData: Store | null = null;
@@ -158,13 +171,8 @@ export default function DashboardPage() {
           }
         }
 
-        // Consultar tienda en Firestore con límite de tiempo (1.8s) para no congelar la pantalla
-        const fetchStoreWithTimeout = Promise.race([
-          getStoreByUserIdFromFS(user.uid),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1800))
-        ]);
-
-        const storeFromFS = await fetchStoreWithTimeout;
+        // Consultar tienda en Firestore (garantizando datos frescos del servidor)
+        const storeFromFS = await getStoreByUserIdFromFS(user.uid, true);
 
         if (!storeFromFS) {
           if (typeof window !== 'undefined') {
@@ -199,8 +207,28 @@ export default function DashboardPage() {
             } catch (_) { }
           });
         }
+
+        // Para usuarios existentes en Plan Gratis que nunca usaron el trial:
+        // Mostrar automáticamente el modal de 30 días gratis (con cooldown de 7 días si lo descartaron)
+        if (storeFromFS && (!storeFromFS.plan || storeFromFS.plan === 'gratis') && !storeFromFS.hasUsedTrial) {
+          if (typeof window !== 'undefined') {
+            const dismissedAt = localStorage.getItem(`apana_trial_dismissed_${storeFromFS.id}`);
+            const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+            const shouldAutoShow = !dismissedAt || (Date.now() - parseInt(dismissedAt, 10)) > SEVEN_DAYS_MS;
+            if (shouldAutoShow) {
+              setTimeout(() => {
+                if (isMounted) setIsTrialModalOpen(true);
+              }, 1200);
+            }
+          }
+        }
       } catch (err) {
         console.warn('Aviso sincronizando dashboard:', err);
+        // Si falló la consulta o el cliente está offline y no hay tienda en caché, dirigir a setup
+        if (isMounted && !fsStore) {
+          router.replace('/store/setup');
+          return;
+        }
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -288,7 +316,7 @@ export default function DashboardPage() {
           <h1 className="font-bold text-lg text-[#0b1c30]">Inicio</h1>
           <div className="flex items-center gap-1">
             {/* Solo visible para el Propietario SuperAdmin */}
-            {(user?.email?.toLowerCase().trim() === 'angelo@mivo.pe' || user?.email?.toLowerCase().trim() === 'angelocastellanos99@gmail.com') && (
+            {isSuperAdminEmail(user?.email) && (
               <Link
                 href="/admin"
                 title="Panel SuperAdmin (Propietario)"
@@ -346,6 +374,79 @@ export default function DashboardPage() {
             <div className="flex-1 font-medium leading-relaxed">
               {globalAnnouncement.message}
             </div>
+          </div>
+        )}
+
+        {/* Banner de Promoción 30 Días Gratis estilo Canva (Solo para Plan Gratis) */}
+        {currentPlan === 'gratis' && !fsStore?.hasUsedTrial && (
+          <div className="p-4 rounded-2xl bg-linear-to-r from-emerald-600 via-teal-600 to-[#059669] text-white shadow-md relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+            <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="flex items-start gap-3 relative z-10">
+              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs text-white flex items-center justify-center shrink-0">
+                <Crown size={22} className="text-amber-300 animate-bounce" />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-black uppercase tracking-wider bg-amber-400 text-amber-950 px-2 py-0.2 rounded-full">
+                    30 Días Gratis
+                  </span>
+                  <span className="text-[11px] text-emerald-100 font-medium">S/ 0.00 hoy</span>
+                </div>
+                <h4 className="text-sm sm:text-base font-black text-white leading-tight">
+                  Lleva tu emprendimiento al siguiente nivel
+                </h4>
+                <p className="text-xs text-emerald-100 leading-snug">
+                  Prueba el Plan Emprendedor o Negocio Pro sin costo por 30 días.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsTrialModalOpen(true)}
+              className="relative z-10 self-start sm:self-auto px-4 py-2.5 bg-white hover:bg-emerald-50 text-[#059669] font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+            >
+              <span>Activar mi mes gratis</span>
+              <Sparkles size={14} className="text-amber-500" />
+            </button>
+          </div>
+        )}
+
+        {/* Badge Informativo si el comerciante está en su Periodo de Prueba Activo */}
+        {/* Badge Informativo si el comerciante está en su Periodo de Prueba Activo (o cancelado pero aún con beneficios vigentes) */}
+        {fsStore?.subscriptionStatus === 'trial' && (
+          <div className={`p-3.5 rounded-2xl border text-xs animate-in fade-in flex items-center justify-between ${
+            fsStore.cancelAtPeriodEnd
+              ? 'bg-amber-50/80 border-amber-200/80 text-amber-950'
+              : 'bg-emerald-50 border border-emerald-200/80 text-emerald-900'
+          }`}>
+            <div className="flex items-center gap-2.5">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                fsStore.cancelAtPeriodEnd ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-[#059669]'
+              }`}>
+                <Sparkles size={18} />
+              </div>
+              <div className="flex flex-col">
+                <span className={`font-bold ${fsStore.cancelAtPeriodEnd ? 'text-amber-900' : 'text-[#059669]'}`}>
+                  {fsStore.cancelAtPeriodEnd
+                    ? `Prueba Cancelada (Sin Cobro) • Beneficios de ${currentPlan === 'negocio' ? 'Negocio Pro' : 'Emprendedor'} activos`
+                    : `Periodo de Prueba Gratis Activo (${currentPlan === 'negocio' ? 'Negocio Pro' : 'Emprendedor'})`}
+                </span>
+                <span className={`text-[11px] ${fsStore.cancelAtPeriodEnd ? 'text-amber-800/90' : 'text-emerald-700'}`}>
+                  {fsStore.cancelAtPeriodEnd
+                    ? `Mantendrás todos tus beneficios premium hasta el ${formatBillingDate(fsStore?.trialEndDate || fsStore?.nextBillingDate)}. Al finalizar, tu tienda pasará al Plan Gratis sin cobros a tu tarjeta.`
+                    : `Disfrutas de todos los beneficios premium sin costo hasta el ${formatBillingDate(fsStore?.trialEndDate || fsStore?.nextBillingDate)}.`}
+                </span>
+              </div>
+            </div>
+            <Link
+              href="/plans"
+              className={`text-xs font-bold hover:underline underline-offset-2 shrink-0 ml-2 ${
+                fsStore.cancelAtPeriodEnd ? 'text-amber-900' : 'text-[#059669]'
+              }`}
+            >
+              {fsStore.cancelAtPeriodEnd ? 'Reactivar' : 'Ver detalles'}
+            </Link>
           </div>
         )}
 
@@ -774,6 +875,56 @@ export default function DashboardPage() {
             </Link>
           </div>
         </nav>
+      )}
+      {/* Modal de Oferta 30 Días Gratis estilo Canva */}
+      {fsStore && (
+        <PlanTrialModal
+          isOpen={isTrialModalOpen}
+          onClose={() => {
+            if (fsStore?.id && typeof window !== 'undefined') {
+              localStorage.setItem(`apana_trial_dismissed_${fsStore.id}`, Date.now().toString());
+            }
+            setIsTrialModalOpen(false);
+          }}
+          storeId={fsStore.id}
+          storeName={fsStore.name}
+          userEmail={user?.email || ''}
+          userPhone={fsStore.whatsappPhone || ''}
+          onSuccess={(trialResult) => {
+            // Actualización optimista inmediata en memoria y caché
+            setFsStore((prev) => {
+              if (!prev) return null;
+              const updated: Store = {
+                ...prev,
+                plan: trialResult?.plan || 'emprendedor',
+                subscriptionStatus: 'trial',
+                hasUsedTrial: true,
+                trialEndDate: trialResult?.trialEndDate || Date.now() + 30 * 24 * 60 * 60 * 1000,
+                nextBillingDate: trialResult?.trialEndDate || Date.now() + 30 * 24 * 60 * 60 * 1000,
+                billingCycle: trialResult?.billingCycle || 'mensual',
+              };
+              if (typeof window !== 'undefined' && user) {
+                sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(updated));
+              }
+              return updated;
+            });
+            setIsTrialModalOpen(false);
+            if (user) {
+              getStoreByUserIdFromFS(user.uid, true).then((fresh) => {
+                if (fresh) {
+                  setFsStore(fresh);
+                  sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(fresh));
+                }
+              }).catch(() => {});
+            }
+          }}
+          onContinueFree={() => {
+            if (fsStore?.id && typeof window !== 'undefined') {
+              localStorage.setItem(`apana_trial_dismissed_${fsStore.id}`, Date.now().toString());
+            }
+            setIsTrialModalOpen(false);
+          }}
+        />
       )}
     </div>
   );

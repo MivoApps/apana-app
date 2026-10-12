@@ -32,13 +32,22 @@ export interface Store {
   shippingType?: 'coordinar' | 'gratis'; // 'coordinar' por defecto
   shippingNotes?: string;
   plan?: StorePlan | string; // Tipo de suscripción: 'gratis' | 'emprendedor' | 'negocio'
-  subscriptionStatus?: 'active' | 'cancelled' | 'cancel_at_period_end' | 'expiring_soon' | 'grace_period' | 'expired' | 'free';
+  subscriptionStatus?: 'active' | 'trial' | 'cancelled' | 'cancel_at_period_end' | 'expiring_soon' | 'grace_period' | 'expired' | 'free';
   cancelAtPeriodEnd?: boolean;
   subscriptionStartDate?: number;
+  trialStartDate?: number;
+  trialEndDate?: number;
+  hasUsedTrial?: boolean;
   nextBillingDate?: number;
   lastPaymentDate?: number;
   lastPaymentAmount?: number;
   lastCulqiChargeId?: string;
+  culqiCustomerId?: string;
+  culqiCardId?: string;
+  cardLastFour?: string;
+  cardBrand?: string;
+  billingCycle?: 'mensual' | 'anual';
+  renewalAmount?: number;
   categories?: string[]; // Categorías de productos de la tienda (Plan Emprendedor y Negocio)
   isEmailVerified?: boolean; // Validación oficial del correo del comercio
   emailVerifiedAt?: number; // Timestamp de verificación de correo
@@ -47,6 +56,10 @@ export interface Store {
   whatsappVerifiedAt?: number; // Timestamp de verificación
   downgradedAt?: number; // Timestamp cuando pasó a Plan Gratis
   dataRetentionUntil?: number; // Timestamp fin del período de gracia de 6 meses (180 días)
+  trialReminderSent?: boolean; // Recordatorio de día 23 enviado por WhatsApp
+  trialReminderSentAt?: number; // Timestamp de envío del recordatorio de día 23
+  trialReminderPendingPhone?: boolean; // Pendiente de envío porque la tienda no tenía teléfono configurado
+  trialReminderLastError?: string | null; // Último error al intentar enviar el recordatorio
   
   // Auditoría y Límite Anti-Fraude de Cambios de Nombre y Teléfono (Máx 2 cada 30 días)
   nameChangesHistory?: number[]; // Timestamps de cambios de nombre de la tienda

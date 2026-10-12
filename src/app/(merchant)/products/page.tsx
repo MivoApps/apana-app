@@ -28,6 +28,7 @@ import { useAuth } from '@/lib/firebase/auth-context';
 import { getStoreByUserIdFromFS, getProductsByStoreIdFromFS, deleteProductFromFS, updateProductInFS } from '@/lib/firebase/firestore';
 import { Store, Product } from '@/types/store';
 import { exportProductsToCSV } from '@/lib/excel-export';
+import { isSuperAdminEmail } from '@/lib/auth-helpers';
 
 export default function ProductGalleryPage() {
   const router = useRouter();
@@ -62,7 +63,7 @@ export default function ProductGalleryPage() {
       }
 
       const userEmail = user?.email?.toLowerCase().trim() || '';
-      const isSuperAdminUser = userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com';
+      const isSuperAdminUser = isSuperAdminEmail(userEmail);
 
       // 0. Revisar si hay sesión de impersonación activa (SÓLO para SuperAdmin)
       let impersonatedStoreData: Store | null = null;
@@ -136,7 +137,7 @@ export default function ProductGalleryPage() {
   const products = fsProducts;
   const currentPlan = fsStore?.plan || 'gratis';
   const isProPlan = currentPlan === 'negocio';
-  const isSuperAdmin = Boolean(user?.email && ['angelo@mivo.pe', 'angelocastellanos99@gmail.com'].includes(user.email.toLowerCase().trim()));
+  const isSuperAdmin = isSuperAdminEmail(user?.email);
   const isFreePlan = !fsStore?.plan || currentPlan === 'gratis';
   const maxProducts = isFreePlan ? 25 : currentPlan === 'emprendedor' ? 150 : 99999;
   const inStockCount = products.filter((p) => p.inStock).length;
@@ -148,7 +149,7 @@ export default function ProductGalleryPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleExportCatalog = () => {
-    const isSuperAdmin = user?.email && ['angelo@mivo.pe', 'angelocastellanos99@gmail.com'].includes(user.email.toLowerCase().trim());
+    const isSuperAdmin = isSuperAdminEmail(user?.email);
     if (isProPlan || isSuperAdmin) {
       exportProductsToCSV(products, fsStore?.name || 'mi-tienda', fsStore?.slug || 'mi-tienda');
     } else {

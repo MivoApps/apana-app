@@ -88,11 +88,9 @@ import {
   ReclamacionItem,
   GlobalAnnouncement
 } from '@/lib/firebase/firestore';
+import { isSuperAdminEmail, getSuperAdminEmails } from '@/lib/auth-helpers';
 
-const SUPERADMIN_EMAILS = [
-  'angelo@mivo.pe',
-  'angelocastellanos99@gmail.com'
-];
+const SUPERADMIN_EMAILS = getSuperAdminEmails();
 
 export default function SuperAdminPage() {
   const router = useRouter();
@@ -281,7 +279,7 @@ export default function SuperAdminPage() {
     }
 
     const userEmail = user.email?.toLowerCase().trim() || '';
-    if (!SUPERADMIN_EMAILS.includes(userEmail)) {
+    if (!isSuperAdminEmail(userEmail)) {
       setIsAuthorized(false);
       setIsLoading(false);
       setTimeout(() => {

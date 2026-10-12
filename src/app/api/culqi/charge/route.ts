@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase/config';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { tokenId, storeId, email, amount = 1990, plan = 'emprendedor' } = body;
+    const { tokenId, storeId, email, amount, plan = 'emprendedor', billingCycle = 'mensual' } = body;
 
     if (!tokenId || !storeId) {
       return NextResponse.json(
@@ -15,8 +15,15 @@ export async function POST(request: Request) {
     }
 
     const targetPlan = plan === 'negocio' ? 'negocio' : 'emprendedor';
+    const targetCycle: 'mensual' | 'anual' = billingCycle === 'anual' ? 'anual' : 'mensual';
     const planName = targetPlan === 'negocio' ? 'Plan Negocio Pro' : 'Plan Emprendedor';
     const culqiSecretKey = process.env.CULQI_SECRET_KEY || 'sk_test_demo_key';
+
+    // Determinar monto según ciclo si no viene especificado
+    const defaultAmountInCents = targetCycle === 'anual'
+      ? (targetPlan === 'negocio' ? 21990 : 13990)
+      : (targetPlan === 'negocio' ? 3990 : 1990);
+    const finalAmount = amount !== undefined ? amount : defaultAmountInCents;
 
     // 1. Simulación o llamada real a la API de Culqi Charges
     let chargeResult: any = null;
@@ -30,11 +37,11 @@ export async function POST(request: Request) {
           'Authorization': `Bearer ${culqiSecretKey}`,
         },
         body: JSON.stringify({
-          amount: amount,
+          amount: finalAmount,
           currency_code: 'PEN',
           email: email || 'cliente@apana.app',
           source_id: tokenId,
-          description: `Suscripción Mensual APANA - ${planName}`,
+          description: `Suscripción ${targetCycle === 'anual' ? 'Anual' : 'Mensual'} APANA - ${planName}`,
         }),
       });
 
@@ -55,21 +62,25 @@ export async function POST(request: Request) {
       };
     }
 
-    // 2. Calcular los 30 días de suscripción
+    // 2. Calcular los días de suscripción (365 días para anual, 30 días para mensual)
     const now = Date.now();
-    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-    const nextBillingDate = now + thirtyDaysMs;
+    const durationMs = targetCycle === 'anual'
+      ? 365 * 24 * 60 * 60 * 1000
+      : 30 * 24 * 60 * 60 * 1000;
+    const nextBillingDate = now + durationMs;
 
     // 3. Actualizar la tienda en Firestore con el Plan Seleccionado
     const storeRef = doc(db, 'stores', storeId);
     await updateDoc(storeRef, {
       plan: targetPlan,
       subscriptionStatus: 'active',
+      billingCycle: targetCycle,
+      renewalAmount: finalAmount / 100,
       cancelAtPeriodEnd: false,
       subscriptionStartDate: now,
       nextBillingDate: nextBillingDate,
       lastPaymentDate: now,
-      lastPaymentAmount: amount / 100,
+      lastPaymentAmount: finalAmount / 100,
       lastCulqiChargeId: chargeResult.id,
       downgradedAt: null,
       dataRetentionUntil: null,
@@ -80,12 +91,13 @@ export async function POST(request: Request) {
     try {
       await addDoc(collection(db, 'payment_records'), {
         storeId,
-        amount: amount / 100,
+        amount: finalAmount / 100,
         currency: 'PEN',
         email,
         culqiChargeId: chargeResult.id,
         status: 'approved',
         plan: targetPlan,
+        billingCycle: targetCycle,
         createdAt: now,
       });
     } catch (e) {
@@ -96,7 +108,8 @@ export async function POST(request: Request) {
       success: true,
       chargeId: chargeResult.id,
       nextBillingDate,
-      message: `¡${planName} activado exitosamente por 30 días!`,
+      billingCycle: targetCycle,
+      message: `¡${planName} activado exitosamente por ${targetCycle === 'anual' ? '1 año' : '30 días'}!`,
     });
   } catch (error: any) {
     console.error('Error en /api/culqi/charge:', error);

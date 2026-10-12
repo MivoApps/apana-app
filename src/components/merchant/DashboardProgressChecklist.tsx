@@ -41,15 +41,15 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
   // 1. Validar que tengamos usuario y tienda antes de renderizar
   const isLoaded = Boolean(user && store);
   const step1StoreCreated = Boolean(store?.name && store?.slug);
-  const step2EmailVerified = Boolean(user?.emailVerified || store?.isEmailVerified);
+  const step2Product = Boolean(products && products.length > 0);
   const step3Whatsapp = Boolean(store?.whatsappPhone && store?.isWhatsappVerified === true);
-  const step4Product = Boolean(products && products.length > 0);
+  const step4EmailVerified = Boolean(user?.emailVerified || store?.isEmailVerified);
 
   const completedCount = [
     step1StoreCreated, 
-    step2EmailVerified, 
+    step2Product,
     step3Whatsapp, 
-    step4Product
+    step4EmailVerified
   ].filter(Boolean).length;
 
   const totalSteps = 4;
@@ -188,34 +188,36 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
       actionText: 'Listo',
       href: null,
       onClick: null,
-      description: 'Nombre comercial y enlace único asignado.',
+      description: 'Nombre comercial y WhatsApp de pedidos asignado.',
     },
     {
       id: 2,
-      title: 'Confirmar tu correo electrónico',
-      completed: step2EmailVerified,
-      actionText: step2EmailVerified ? 'Verificado' : (isResendingEmail ? 'Enviando...' : 'Reenviar confirmación'),
-      href: null,
-      onClick: step2EmailVerified ? null : onResendEmail,
-      description: user?.email ? `Enviado a ${user.email} (revisa bandeja/spam)` : 'Protege y asegura tu cuenta de comerciante.',
+      title: 'Subir tu primer producto',
+      completed: step2Product,
+      actionText: step2Product ? `${products.length} productos` : 'Agregar producto',
+      href: step2Product ? null : '/products/new',
+      onClick: null,
+      description: 'Sube fotos claras, precio y variantes de tu producto.',
     },
     {
       id: 3,
-      title: 'Conectar tu WhatsApp de pedidos',
+      title: 'Verificar tu WhatsApp de pedidos',
       completed: step3Whatsapp,
-      actionText: step3Whatsapp ? 'Conectado' : (store?.whatsappPhone ? 'Verificar línea' : 'Conectar WhatsApp'),
+      actionText: step3Whatsapp ? 'Verificado' : (store?.whatsappPhone ? 'Verificar línea' : 'Conectar WhatsApp'),
       href: null,
       onClick: step3Whatsapp ? null : onOpenVerifyModal,
-      description: 'Tus clientes te enviarán el pedido listo para despachar.',
+      description: store?.whatsappPhone 
+        ? `Línea asignada: +${store.whatsappPhone}. Verifica tu código para recibir pedidos.`
+        : 'Tus clientes te enviarán el pedido listo para despachar.',
     },
     {
       id: 4,
-      title: 'Subir tu primer producto',
-      completed: step4Product,
-      actionText: step4Product ? `${products.length} productos` : 'Agregar producto',
-      href: step4Product ? null : '/products/new',
-      onClick: null,
-      description: 'Sube fotos claras, precio y variantes de tu producto.',
+      title: 'Confirmar tu correo electrónico',
+      completed: step4EmailVerified,
+      actionText: step4EmailVerified ? 'Verificado' : (isResendingEmail ? 'Enviando...' : 'Reenviar confirmación'),
+      href: null,
+      onClick: step4EmailVerified ? null : onResendEmail,
+      description: user?.email ? `Enviado a ${user.email} (revisa bandeja/spam)` : 'Protege y asegura tu cuenta de comerciante.',
     },
   ];
 

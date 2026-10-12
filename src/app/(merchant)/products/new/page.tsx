@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   AlertTriangle,
   Zap,
+  Sparkles,
   X
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -19,6 +20,7 @@ import { useAuth } from '@/lib/firebase/auth-context';
 import { addProductToFS } from '@/lib/firebase/firestore';
 import { ProductVariantsEditor } from '@/components/merchant/ProductVariantsEditor';
 import { ProductOptionGroup } from '@/types/store';
+import { isSuperAdminEmail } from '@/lib/auth-helpers';
 
 const DEMO_IMAGES = [
   {
@@ -92,7 +94,7 @@ export default function CreateProductPage() {
       }
 
       const userEmail = user?.email?.toLowerCase().trim() || '';
-      const isSuperAdminUser = userEmail === 'angelo@mivo.pe' || userEmail === 'angelocastellanos99@gmail.com';
+      const isSuperAdminUser = isSuperAdminEmail(userEmail);
 
       // 0. Revisar si hay tienda impersonada (SÓLO para SuperAdmin)
       let impersonatedStoreData: any = null;
@@ -451,6 +453,26 @@ export default function CreateProductPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-6 mt-2">
+            
+            {/* Banner de Bienvenida: Primer Producto */}
+            {productsCount === 0 && !checkingLimit && (
+              <div className="bg-linear-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 rounded-2xl p-4 flex items-start gap-3.5 shadow-2xs animate-in fade-in">
+                <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                  <Sparkles size={18} />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md w-fit">
+                    Paso 2 de 4: Catálogo
+                  </span>
+                  <h3 className="text-sm font-bold text-[#0b1c30]">
+                    ¡Publica tu primer producto!
+                  </h3>
+                  <p className="text-xs text-[#3d4a42] leading-snug">
+                    Sube su foto, nombre y precio. Apenas lo guardes, verificaremos tu WhatsApp para que puedas empezar a recibir pedidos.
+                  </p>
+                </div>
+              </div>
+            )}
             
             {/* Zona de Carga de Imágenes (Diseño escalable y dinámico) */}
             <div className="flex flex-col gap-2">

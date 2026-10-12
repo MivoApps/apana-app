@@ -27,13 +27,15 @@ googleProvider.setCustomParameters({ prompt: 'select_account' });
 // Configuración optimizada de Firestore:
 // 1. experimentalAutoDetectLongPolling: true elimina el timeout fantasma de 60s de WebChannel en Chrome/Safari y redes móviles.
 // 2. persistentLocalCache: Permite carga instantánea desde IndexedDB y soporte offline multi-pestaña en el navegador.
+const databaseId = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID || '(default)';
+
 export const db = initializeFirestore(app, {
   ignoreUndefinedProperties: true,
   experimentalAutoDetectLongPolling: true,
   localCache: typeof window !== 'undefined'
     ? persistentLocalCache({ tabManager: persistentMultipleTabManager() })
     : undefined,
-});
+}, databaseId);
 export const storage = getStorage(app);
 
 export default app;

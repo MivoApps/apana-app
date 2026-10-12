@@ -14,10 +14,12 @@ import {
 import { Button } from '@/components/ui/Button';
 
 export const LandingPricing: React.FC = () => {
+  const [billingCycle, setBillingCycle] = React.useState<'mensual' | 'anual'>('mensual');
+
   return (
     <section id="planes" className="py-20 md:py-28 max-w-6xl mx-auto px-4 sm:px-6 relative">
       {/* Section Header */}
-      <div className="text-center max-w-2xl mx-auto mb-16">
+      <div className="text-center max-w-2xl mx-auto mb-12">
         <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#059669]/10 text-[#00855d] text-xs font-bold mb-3 border border-[#059669]/20 shadow-2xs">
           <Sparkles size={13} className="text-[#059669]" />
           <span>Planes Transparentes</span>
@@ -28,6 +30,39 @@ export const LandingPricing: React.FC = () => {
         <p className="mt-3 text-sm sm:text-base text-[#3d4a42]">
           Comienza gratis sin tarjeta de crédito y mejora cuando tu tienda o tus ventas crezcan.
         </p>
+
+        {/* Toggle Facturación Mensual / Anual */}
+        <div className="flex items-center justify-center mt-6">
+          <div className="bg-slate-100 p-1.5 rounded-2xl flex items-center shadow-inner">
+            <button
+              type="button"
+              onClick={() => setBillingCycle('mensual')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                billingCycle === 'mensual'
+                  ? 'bg-white text-[#0b1c30] shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              Facturación Mensual
+            </button>
+            <button
+              type="button"
+              onClick={() => setBillingCycle('anual')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                billingCycle === 'anual'
+                  ? 'bg-[#059669] text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <span>Facturación Anual</span>
+              <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full uppercase tracking-wider ${
+                billingCycle === 'anual' ? 'bg-amber-300 text-amber-950' : 'bg-emerald-100 text-[#059669]'
+              }`}>
+                Hasta 54% OFF
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* 3 Main Subscription Plans Grid */}
@@ -126,11 +161,21 @@ export const LandingPricing: React.FC = () => {
               </span>
             </div>
 
-            <div className="flex items-baseline gap-1 mb-2">
-              <span className="text-4xl sm:text-5xl font-black text-[#0b1c30]">
-                S/ 19.90
-              </span>
-              <span className="text-sm text-slate-500">/ mes</span>
+            <div className="flex flex-col gap-1 mb-2">
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl sm:text-5xl font-black text-[#0b1c30]">
+                  {billingCycle === 'anual' ? 'S/ 139.90' : 'S/ 19.90'}
+                </span>
+                <span className="text-sm text-slate-500">
+                  {billingCycle === 'anual' ? '/ año' : '/ mes'}
+                </span>
+              </div>
+              {billingCycle === 'anual' && (
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#059669]">
+                  <span className="bg-emerald-100 px-2 py-0.5 rounded-full">Equiv. S/ 11.66 / mes</span>
+                  <span>• Ahorra S/ 98.90</span>
+                </div>
+              )}
             </div>
             <p className="text-xs text-[#3d4a42] mb-6">
               Para negocios en crecimiento que quieren mayor capacidad, fotos múltiples y métricas.
@@ -227,11 +272,21 @@ export const LandingPricing: React.FC = () => {
               </span>
             </div>
 
-            <div className="flex items-baseline gap-1 mb-2">
-              <span className="text-4xl sm:text-5xl font-black text-[#0b1c30]">
-                S/ 39.90
-              </span>
-              <span className="text-sm text-slate-500">/ mes</span>
+            <div className="flex flex-col gap-1 mb-2">
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl sm:text-5xl font-black text-[#0b1c30]">
+                  {billingCycle === 'anual' ? 'S/ 219.90' : 'S/ 39.90'}
+                </span>
+                <span className="text-sm text-slate-500">
+                  {billingCycle === 'anual' ? '/ año' : '/ mes'}
+                </span>
+              </div>
+              {billingCycle === 'anual' && (
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700">
+                  <span className="bg-amber-100 px-2 py-0.5 rounded-full">Equiv. S/ 18.33 / mes</span>
+                  <span>• Ahorra S/ 258.90</span>
+                </div>
+              )}
             </div>
             <p className="text-xs text-[#3d4a42] mb-6">
               Para negocios que ya están creciendo.

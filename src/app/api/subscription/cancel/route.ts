@@ -34,10 +34,13 @@ export async function POST(request: Request) {
       );
     }
 
+    const isCurrentlyInTrial = storeData.subscriptionStatus === 'trial' || (storeData.trialEndDate && Date.now() < storeData.trialEndDate);
+
     if (action === 'cancel') {
       await updateDoc(storeRef, {
         cancelAtPeriodEnd: true,
-        subscriptionStatus: 'cancelled',
+        // Si está en periodo de prueba, conservar 'trial' para no quitarle los beneficios hasta el último día
+        subscriptionStatus: isCurrentlyInTrial ? 'trial' : 'cancelled',
         updatedAt: serverTimestamp(),
       });
 
@@ -45,9 +48,10 @@ export async function POST(request: Request) {
       try {
         await addDoc(collection(db, 'subscription_events'), {
           storeId,
-          type: 'cancellation_requested',
+          type: isCurrentlyInTrial ? 'trial_cancellation_requested' : 'cancellation_requested',
           previousPlan: storeData.plan || 'emprendedor',
-          nextBillingDate: storeData.nextBillingDate || null,
+          isTrial: isCurrentlyInTrial,
+          effectiveEndDate: storeData.trialEndDate || storeData.nextBillingDate || null,
           createdAt: Date.now(),
         });
       } catch (e) {
@@ -56,22 +60,27 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: 'Cancelación programada exitosamente. Mantendrás tus beneficios hasta el fin de tu ciclo.',
+        message: isCurrentlyInTrial
+          ? 'Prueba cancelada exitosamente. Mantendrás todos tus beneficios premium sin cobros hasta el fin de tus 30 días.'
+          : 'Cancelación programada exitosamente. Mantendrás tus beneficios hasta el fin de tu ciclo.',
         cancelAtPeriodEnd: true,
-        subscriptionStatus: 'cancelled',
+        subscriptionStatus: isCurrentlyInTrial ? 'trial' : 'cancelled',
       });
     } else if (action === 'reactivate') {
+      const targetStatus = isCurrentlyInTrial ? 'trial' : 'active';
       await updateDoc(storeRef, {
         cancelAtPeriodEnd: false,
-        subscriptionStatus: 'active',
+        subscriptionStatus: targetStatus,
         updatedAt: serverTimestamp(),
       });
 
       return NextResponse.json({
         success: true,
-        message: '¡Suscripción reactivada! Tu plan continuará renovándose automáticamente.',
+        message: isCurrentlyInTrial
+          ? '¡Renovación reactivada! Tu plan continuará activo y se renovará automáticamente al culminar tus 30 días.'
+          : '¡Suscripción reactivada! Tu plan continuará renovándose automáticamente.',
         cancelAtPeriodEnd: false,
-        subscriptionStatus: 'active',
+        subscriptionStatus: targetStatus,
       });
     } else {
       return NextResponse.json(
