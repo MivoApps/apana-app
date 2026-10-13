@@ -32,32 +32,74 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!store || store.status === 'eliminada') {
     return {
-      title: 'Tienda no encontrada | APANA',
+      title: 'Tienda no disponible | APANA',
       description: 'La tienda solicitada no existe o ha sido dada de baja.',
     };
   }
 
-  const title = `${store.name} | Catálogo Online en APANA`;
+  const title = `${store.name} 🛍️ | Catálogo Oficial`;
   const description =
-    store.description ||
-    `Explora el catálogo de productos de ${store.name} y haz tus pedidos fácilmente por WhatsApp.`;
+    store.description
+      ? `${store.description.slice(0, 150)} • Haz tu pedido fácil por WhatsApp.`
+      : `Explora el catálogo oficial de ${store.name} y haz tus pedidos directamente por WhatsApp. Envíos y atención personalizada.`;
+
+  // Determinación inteligente de la imagen para OpenGraph (WhatsApp, Instagram, Facebook)
+  let shareImage =
+    (store.logoUrl && !store.logoUrl.startsWith('blob:') ? store.logoUrl : null) ||
+    (store.bannerUrl && !store.bannerUrl.startsWith('blob:') ? store.bannerUrl : null);
+
+  if (!shareImage) {
+    // Si la tienda aún no subió logo o banner, utilizamos la foto de su primer producto activo
+    try {
+      const prods = await getProductsByStoreIdFromFS(store.id);
+      const prodWithImg = prods.find((p) => {
+        const firstArrImg = (p.imageUrls || []).find((img) => img && !img.startsWith('blob:'));
+        return (p.imageUrl && !p.imageUrl.startsWith('blob:')) || Boolean(firstArrImg);
+      });
+      if (prodWithImg) {
+        shareImage =
+          (prodWithImg.imageUrl && !prodWithImg.imageUrl.startsWith('blob:') ? prodWithImg.imageUrl : null) ||
+          (prodWithImg.imageUrls || []).find((img) => img && !img.startsWith('blob:')) ||
+          null;
+      }
+    } catch {
+      // Ignorar fallback a productos si falla la consulta
+    }
+  }
+
+  if (!shareImage) {
+    shareImage = 'https://beapana.com/apana-real-preview.png';
+  }
+
+  const storeUrl = `https://beapana.com/s/${encodeURIComponent(store.slug)}`;
 
   return {
     title,
     description,
+    alternates: {
+      canonical: storeUrl,
+    },
     openGraph: {
       title,
       description,
-      url: `https://beapana.com/s/${store.slug}`,
-      siteName: 'APANA',
-      images: store.logoUrl ? [{ url: store.logoUrl, alt: store.name }] : undefined,
+      url: storeUrl,
+      siteName: `${store.name} en APANA`,
+      images: [
+        {
+          url: shareImage,
+          width: 1200,
+          height: 630,
+          alt: `${store.name} - Catálogo Online`,
+        },
+      ],
       type: 'website',
+      locale: 'es_PE',
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: store.logoUrl ? [store.logoUrl] : undefined,
+      images: [shareImage],
     },
   };
 }

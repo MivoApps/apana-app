@@ -1,93 +1,10 @@
-import { Metadata } from 'next';
-import { getStoreBySlugFromFS } from '@/lib/firebase/firestore';
+import React from 'react';
 
 interface Props {
-  params: Promise<{
-    storeSlug: string;
-  }>;
   children: React.ReactNode;
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {
-  const { storeSlug } = await params;
-  const store = await getStoreBySlugFromFS(storeSlug);
-
-  if (!store) {
-    return {
-      title: 'Tienda no encontrada | APANA',
-      description: 'La tienda online que buscas no existe o ha cambiado de enlace.',
-    };
-  }
-
-  const title = `${store.name} | Tienda Online`;
-  const description = store.description 
-    ? store.description.slice(0, 160) 
-    : `Explora la tienda online oficial de ${store.name}. Haz tu pedido online y recíbelo por WhatsApp de forma fácil y rápida.`;
-  const storeUrl = `https://beapana.com/s/${encodeURIComponent(store.slug)}`;
-  const shareImage = store.logoUrl || store.bannerUrl || 'https://beapana.com/apana-real-preview.png';
-
-  return {
-    title,
-    description,
-    alternates: {
-      canonical: storeUrl,
-    },
-    openGraph: {
-      title: `${store.name} - Tienda Online y Pedidos por WhatsApp`,
-      description,
-      url: storeUrl,
-      type: 'website',
-      locale: 'es_PE',
-      siteName: store.name,
-      images: [
-        {
-          url: shareImage,
-          width: 800,
-          height: 800,
-          alt: `${store.name} en APANA`,
-        },
-      ],
-    },
-    twitter: {
-      card: 'summary',
-      title: `${store.name} | Tienda Online`,
-      description,
-      images: [shareImage],
-    },
-  };
+export default function StoreLayout({ children }: Props) {
+  return <>{children}</>;
 }
 
-export default async function StoreLayout({ params, children }: Props) {
-  const { storeSlug } = await params;
-  const store = await getStoreBySlugFromFS(storeSlug);
-
-  const jsonLd = store
-    ? {
-        '@context': 'https://schema.org',
-        '@type': 'Store',
-        '@id': `https://beapana.com/s/${encodeURIComponent(store.slug)}#store`,
-        name: store.name,
-        description: store.description || `Tienda online oficial y pedidos por WhatsApp de ${store.name}`,
-        url: `https://beapana.com/s/${encodeURIComponent(store.slug)}`,
-        telephone: store.whatsappPhone ? `+${store.whatsappPhone}` : undefined,
-        image: store.bannerUrl || undefined,
-        priceRange: '$$',
-        address: {
-          '@type': 'PostalAddress',
-          addressCountry: 'PE',
-        },
-      }
-    : null;
-
-  return (
-    <>
-      {jsonLd && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-      )}
-      {children}
-    </>
-  );
-}
