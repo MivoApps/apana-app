@@ -742,7 +742,7 @@ export default function PublicStoreClientView({
       {/* Botón Flotante Rápido de WhatsApp */}
       {store.whatsappPhone && store.isWhatsappVerified && (
         <a
-          href={`https://wa.me/${store.whatsappPhone}?text=${encodeURIComponent(
+          href={`https://api.whatsapp.com/send?phone=${store.whatsappPhone}&text=${encodeURIComponent(
             `¡Hola! Tengo una consulta sobre los productos de ${store.name}`
           )}`}
           target="_blank"

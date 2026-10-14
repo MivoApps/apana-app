@@ -187,10 +187,10 @@ export default function ProductGalleryPage() {
     if (!activeStore) return;
     const prodUrl = typeof window !== 'undefined'
       ? `${window.location.origin}/s/${activeStore.slug}/p/${product.id}`
-      : `https://apana.app/s/${activeStore.slug}/p/${product.id}`;
+      : `https://beapana.com/s/${activeStore.slug}/p/${product.id}`;
 
     const message = `🛍️ *${product.title}* en *${activeStore.name}*\n💰 Precio: ${formatCurrency(product.price)}\n\n👉 Puedes verlo y pedirlo directamente aquí: ${prodUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://api.whatsapp.com/send/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const handleDeleteProduct = async (productId: string) => {

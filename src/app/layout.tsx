@@ -61,8 +61,16 @@ export const metadata: Metadata = {
   creator: "APANA",
   publisher: "APANA",
   icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon-48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    shortcut: ["/favicon.ico"],
   },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -107,13 +115,34 @@ const organizationSchema = {
       "@type": "Organization",
       "@id": "https://beapana.com/#organization",
       "name": "APANA",
+      "alternateName": ["BeApana", "APANA Perú", "Apana App"],
       "url": "https://beapana.com",
-      "logo": "https://beapana.com/logo.svg",
-      "description": "Software as a Service (SaaS) para la creación de tiendas online interactivos y recepción de pedidos por WhatsApp.",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://beapana.com/icon-512.png",
+        "width": 512,
+        "height": 512
+      },
+      "image": "https://beapana.com/icon-512.png",
+      "description": "Plataforma líder en Perú para que emprendedores, negocios y marcas creen su tienda online, compartan su catálogo y reciban pedidos por WhatsApp.",
+      "sameAs": [
+        "https://www.instagram.com/beapana"
+      ],
       "address": {
         "@type": "PostalAddress",
         "addressCountry": "PE"
       }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://beapana.com/#website",
+      "url": "https://beapana.com",
+      "name": "APANA",
+      "alternateName": ["BeApana", "APANA Perú"],
+      "publisher": {
+        "@id": "https://beapana.com/#organization"
+      },
+      "inLanguage": "es-PE"
     },
     {
       "@type": "SoftwareApplication",
@@ -143,6 +172,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${plusJakartaSans.variable} ${spaceGrotesk.variable} ${playfairDisplay.variable} antialiased`}
     >
       <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/icon-48.png" type="image/png" sizes="48x48" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}

@@ -288,7 +288,7 @@ export default function DashboardPage() {
 
   const publicUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/s/${storeSlug}`
-    : `https://apana.app/s/${storeSlug}`;
+    : `https://beapana.com/s/${storeSlug}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(publicUrl);
@@ -297,8 +297,8 @@ export default function DashboardPage() {
   };
 
   const handleShareWhatsApp = () => {
-    const text = `¡Hola! Te invito a visitar mi tienda digital en APANA y hacer tus pedidos directamente aquí: ${publicUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    const text = `🛍️ ¡Hola! Te invito a visitar mi tienda digital en APANA y hacer tus pedidos directamente aquí: ${publicUrl}`;
+    window.open(`https://api.whatsapp.com/send/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const handleToggleStoreStatus = async () => {

@@ -108,8 +108,8 @@ export function openUniversalWhatsApp(rawPhone: string, text: string): void {
     const mobileUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
     window.open(mobileUrl, '_blank', 'noopener,noreferrer');
   } else {
-    // Computadora / Escritorio
-    const desktopUrl = `https://wa.me/${cleanPhone}?text=${encodedText}`;
+    // Computadora / Escritorio: usar api.whatsapp.com evita la corrupción de caracteres Unicode de wa.me
+    const desktopUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
     window.open(desktopUrl, '_blank', 'noopener,noreferrer');
   }
 }
