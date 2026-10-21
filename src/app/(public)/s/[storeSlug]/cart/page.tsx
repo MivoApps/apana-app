@@ -10,7 +10,10 @@ import {
   Minus,
   Trash2,
   CheckCircle2,
-  ShieldCheck
+  ShieldCheck,
+  Store as StoreIcon,
+  MapPin,
+  Clock,
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { useCartStore } from '@/lib/cart-store';
@@ -67,10 +70,12 @@ export default function PublicCartPage({ params }: Props) {
   const totalPrice = getTotalPrice();
   const totalCount = getTotalItems();
 
+  const isPickup = store?.shippingType === 'solo_recojo';
+
   const getPaymentMethodLabel = () => {
     if (paymentMethod === 'yape') return 'Yape / Plin';
     if (paymentMethod === 'transferencia') return 'Transferencia Bancaria';
-    if (paymentMethod === 'efectivo') return 'Efectivo / Contra entrega';
+    if (paymentMethod === 'efectivo') return isPickup ? 'Efectivo al retirar' : 'Efectivo / Contra entrega';
     return '';
   };
 
@@ -83,9 +88,11 @@ export default function PublicCartPage({ params }: Props) {
     // 1. Generar enlace inmediatamente y de forma síncrona
     const link = generateWhatsAppLink(store, items, {
       customerName: customerName.trim(),
-      customerAddress: customerAddress.trim(),
+      customerAddress: isPickup ? '' : customerAddress.trim(),
       paymentMethod: paymentLabel,
       notes: notes.trim(),
+      isPickup: isPickup,
+      pickupAddress: store.pickupAddress || store.city || '',
     });
 
     // 2. Disparar analíticas y registro de orden en segundo plano sin bloquear la apertura de WhatsApp
@@ -102,7 +109,9 @@ export default function PublicCartPage({ params }: Props) {
         recordStoreOrderInFS(store.id, {
           storeId: store.id,
           customerName: customerName.trim() || 'Cliente WhatsApp',
-          customerAddress: customerAddress.trim() || '',
+          customerAddress: isPickup
+            ? `Recojo en Tienda: ${store.pickupAddress || store.city || 'Local comercial'}`
+            : (customerAddress.trim() || ''),
           paymentMethod: paymentLabel || 'WhatsApp',
           items: items.map((it) => ({
             id: it.product.id,
@@ -292,21 +301,52 @@ export default function PublicCartPage({ params }: Props) {
                 })}
               </div>
 
+              {/* Tarjeta Informativa de Recojo (Solo si la tienda es solo_recojo) */}
+              {isPickup && (
+                <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 flex flex-col gap-3 shadow-2xs">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-100 text-[#006c49] flex items-center justify-center shrink-0 mt-0.5">
+                      <StoreIcon size={19} />
+                    </div>
+                    <div className="flex flex-col text-xs text-[#0b1c30]">
+                      <span className="font-extrabold text-[11px] text-[#006c49] uppercase tracking-wider">
+                        Modalidad: Solo Recojo en Tienda
+                      </span>
+                      <div className="flex items-center gap-1.5 text-slate-800 font-semibold text-sm mt-0.5">
+                        <MapPin size={14} className="text-[#059669] shrink-0" />
+                        <span>{store?.pickupAddress || store?.city || 'Local comercial de la tienda'}</span>
+                      </div>
+                      {store?.schedule && (
+                        <div className="flex items-center gap-1.5 text-slate-600 text-xs mt-1">
+                          <Clock size={13} className="text-slate-400 shrink-0" />
+                          <span>Horario: {store.schedule}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-white/90 rounded-xl p-2.5 border border-emerald-100 text-[11px] text-slate-600 leading-snug">
+                    💬 <strong>Coordinación por WhatsApp:</strong> Al enviar tu pedido, el comercio te confirmará por chat cuándo puedes pasar a retirarlo.
+                  </div>
+                </div>
+              )}
+
               {/* Tarjeta de Datos de Entrega y Pago del Cliente */}
               <div className={`bg-white rounded-2xl p-5 border shadow-xs flex flex-col gap-4 ${isElegant ? 'border-[#E7E2D9]' : isModern ? 'border-slate-200' : 'border-neutral-100'
                 }`}>
                 <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
                   <h3 className={`text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 ${isElegant ? 'font-playfair text-stone-900 font-bold' : ''
                     }`}>
-                    <span>📍 Datos para tu Entrega y Pago</span>
+                    <span>{isPickup ? '🏬 Datos para tu Retiro y Pago' : '📍 Datos para tu Entrega y Pago'}</span>
                   </h3>
                   <span className="text-[10px] text-slate-400 font-medium">Opcional</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Nombre */}
+                {isPickup ? (
+                  /* Formulario Simplificado para Recojo en Tienda (Sin pedir dirección de envío) */
                   <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-semibold text-slate-600">Tu Nombre</label>
+                    <label className="text-[11px] font-semibold text-slate-600">
+                      Tu Nombre (para rotular e identificar tu pedido)
+                    </label>
                     <input
                       type="text"
                       placeholder="Ej: María Gómez"
@@ -315,19 +355,34 @@ export default function PublicCartPage({ params }: Props) {
                       className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
                     />
                   </div>
+                ) : (
+                  /* Formulario Estándar para Delivery */
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Nombre */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-semibold text-slate-600">Tu Nombre</label>
+                      <input
+                        type="text"
+                        placeholder="Ej: María Gómez"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
+                      />
+                    </div>
 
-                  {/* Dirección / Distrito */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-semibold text-slate-600">Distrito / Dirección</label>
-                    <input
-                      type="text"
-                      placeholder="Ej: Miraflores, Lima"
-                      value={customerAddress}
-                      onChange={(e) => setCustomerAddress(e.target.value)}
-                      className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
-                    />
+                    {/* Dirección / Distrito */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-semibold text-slate-600">Distrito / Dirección</label>
+                      <input
+                        type="text"
+                        placeholder="Ej: Miraflores, Lima"
+                        value={customerAddress}
+                        onChange={(e) => setCustomerAddress(e.target.value)}
+                        className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Selector de Método de Pago */}
                 <div className="flex flex-col gap-1.5">
@@ -366,7 +421,7 @@ export default function PublicCartPage({ params }: Props) {
                         }`}
                     >
                       <span>💵</span>
-                      <span>Efectivo</span>
+                      <span>{isPickup ? 'Efectivo al retirar' : 'Efectivo'}</span>
                     </button>
                   </div>
                 </div>
@@ -376,7 +431,7 @@ export default function PublicCartPage({ params }: Props) {
                   <label className="text-[11px] font-semibold text-slate-600">Notas o indicación especial</label>
                   <input
                     type="text"
-                    placeholder="Deseas comentarnos algo?"
+                    placeholder={isPickup ? "Deseas comentarnos algo? (ej. Pasará otra persona a recogerlo)" : "Deseas comentarnos algo?"}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
@@ -392,9 +447,13 @@ export default function PublicCartPage({ params }: Props) {
                   <span className="font-semibold text-[#0b1c30]">{formatCurrency(totalPrice)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm pb-3 border-b border-gray-100">
-                  <span className="text-[#6d7a72]">Envío estimado</span>
-                  <span className={`font-semibold ${store?.shippingType === 'gratis' ? 'text-[#059669]' : 'text-slate-600 text-xs'}`}>
-                    {store?.shippingType === 'gratis' ? 'Gratis' : 'A coordinar por WhatsApp'}
+                  <span className="text-[#6d7a72]">{isPickup ? 'Modalidad de entrega' : 'Envío estimado'}</span>
+                  <span className={`font-semibold ${isPickup || store?.shippingType === 'gratis' ? 'text-[#059669]' : 'text-slate-600 text-xs'}`}>
+                    {isPickup
+                      ? 'Recojo en tienda (Gratis)'
+                      : store?.shippingType === 'gratis'
+                      ? 'Gratis'
+                      : 'A coordinar por WhatsApp'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center pt-1">

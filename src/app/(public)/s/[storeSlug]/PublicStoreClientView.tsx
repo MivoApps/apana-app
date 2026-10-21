@@ -14,6 +14,7 @@ import {
   Flag,
   Share2,
   BookOpen,
+  Store as StoreIcon,
 } from 'lucide-react';
 import { InstagramIcon } from '@/components/ui/InstagramIcon';
 import { useAppStore } from '@/lib/app-store';
@@ -271,18 +272,42 @@ export default function PublicStoreClientView({
                     : 'bg-neutral-100/70 border-neutral-200/60 text-neutral-600'
                 }`}
               >
-                <Truck
-                  size={13}
-                  className={store.themeStyle === 'elegante' ? 'text-amber-700' : 'text-[#059669]'}
-                />
-                <span>
-                  {store.shippingType === 'gratis'
-                    ? 'Envío Gratis'
-                    : 'Envíos: A coordinar por WhatsApp'}
-                </span>
+                {store.shippingType === 'solo_recojo' ? (
+                  <>
+                    <StoreIcon
+                      size={13}
+                      className={store.themeStyle === 'elegante' ? 'text-amber-700' : 'text-[#059669]'}
+                    />
+                    <span>Solo recojo en tienda</span>
+                  </>
+                ) : (
+                  <>
+                    <Truck
+                      size={13}
+                      className={store.themeStyle === 'elegante' ? 'text-amber-700' : 'text-[#059669]'}
+                    />
+                    <span>
+                      {store.shippingType === 'gratis'
+                        ? 'Envío Gratis'
+                        : 'Envíos: A coordinar por WhatsApp'}
+                    </span>
+                  </>
+                )}
               </span>
 
-              {store.city && (
+              {(store.shippingType === 'solo_recojo' && store.pickupAddress) ? (
+                <span
+                  title={`Punto de recojo: ${store.pickupAddress}`}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border max-w-[240px] truncate ${
+                    store.themeStyle === 'elegante'
+                      ? 'bg-white border-[#E7E2D9] text-stone-600 shadow-2xs'
+                      : 'bg-slate-100 border-slate-200/80 text-slate-700'
+                  }`}
+                >
+                  <MapPin size={12} className="text-slate-500 shrink-0" />
+                  <span className="truncate">{store.pickupAddress}</span>
+                </span>
+              ) : store.city ? (
                 <span
                   className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
                     store.themeStyle === 'elegante'
@@ -293,7 +318,7 @@ export default function PublicStoreClientView({
                   <MapPin size={12} className="text-slate-500" />
                   <span>{store.city}</span>
                 </span>
-              )}
+              ) : null}
 
               {store.schedule && (
                 <span

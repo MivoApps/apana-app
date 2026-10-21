@@ -29,8 +29,10 @@ export interface Store {
     tiktok?: string;
   };
   schedule?: string; // ej. "Lun a Sáb: 9:00 am - 8:00 pm"
-  shippingType?: 'coordinar' | 'gratis'; // 'coordinar' por defecto
+  shippingType?: 'coordinar' | 'gratis' | 'solo_recojo'; // 'coordinar' por defecto
   shippingNotes?: string;
+  pickupAddress?: string; // Dirección o punto de recojo físico de la tienda
+  pickupNotes?: string; // Instrucciones opcionales para el recojo
   plan?: StorePlan | string; // Tipo de suscripción: 'gratis' | 'emprendedor' | 'negocio'
   subscriptionStatus?: 'active' | 'trial' | 'cancelled' | 'cancel_at_period_end' | 'expiring_soon' | 'grace_period' | 'expired' | 'free';
   cancelAtPeriodEnd?: boolean;

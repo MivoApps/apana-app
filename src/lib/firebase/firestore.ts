@@ -296,6 +296,8 @@ export const createOrUpdateStoreInFS = async (
     schedule: storeData.schedule !== undefined ? storeData.schedule : (existingData?.schedule ?? ''),
     shippingType: storeData.shippingType !== undefined ? storeData.shippingType : (existingData?.shippingType ?? 'coordinar'),
     shippingNotes: storeData.shippingNotes !== undefined ? storeData.shippingNotes : (existingData?.shippingNotes ?? ''),
+    pickupAddress: storeData.pickupAddress !== undefined ? storeData.pickupAddress : (existingData?.pickupAddress ?? ''),
+    pickupNotes: storeData.pickupNotes !== undefined ? storeData.pickupNotes : (existingData?.pickupNotes ?? ''),
     socialLinks: storeData.socialLinks !== undefined ? storeData.socialLinks : (existingData?.socialLinks ?? { instagram: '', facebook: '', tiktok: '' }),
     plan: storeData.plan || (existingData?.plan ?? 'gratis'),
     subscriptionStatus: storeData.subscriptionStatus || (existingData?.subscriptionStatus ?? 'free'),

@@ -85,7 +85,8 @@ export default function SettingsPage() {
   // Nuevos campos comerciales opcionales
   const [city, setCity] = useState('');
   const [schedule, setSchedule] = useState('');
-  const [shippingType, setShippingType] = useState<'coordinar' | 'gratis'>('coordinar');
+  const [shippingType, setShippingType] = useState<'coordinar' | 'gratis' | 'solo_recojo'>('coordinar');
+  const [pickupAddress, setPickupAddress] = useState('');
   const [instagram, setInstagram] = useState('');
   const [tiktok, setTiktok] = useState('');
 
@@ -195,6 +196,7 @@ export default function SettingsPage() {
           city: city,
           schedule: schedule,
           shippingType: shippingType,
+          pickupAddress: pickupAddress,
           socialLinks: {
             instagram: instagram,
             tiktok: tiktok,
@@ -361,6 +363,7 @@ export default function SettingsPage() {
           setCity(parsed.city || '');
           setSchedule(parsed.schedule || '');
           setShippingType(parsed.shippingType || 'coordinar');
+          setPickupAddress(parsed.pickupAddress || '');
           setInstagram(parsed.socialLinks?.instagram || '');
           setTiktok(parsed.socialLinks?.tiktok || '');
           setLegalBusinessName(parsed.legalBusinessName || '');
@@ -396,6 +399,7 @@ export default function SettingsPage() {
         setCity(storeFromFS.city || '');
         setSchedule(storeFromFS.schedule || '');
         setShippingType(storeFromFS.shippingType || 'coordinar');
+        setPickupAddress(storeFromFS.pickupAddress || '');
         setInstagram(storeFromFS.socialLinks?.instagram || '');
         setTiktok(storeFromFS.socialLinks?.tiktok || '');
         setLegalBusinessName(storeFromFS.legalBusinessName || '');
@@ -426,6 +430,7 @@ export default function SettingsPage() {
       city !== (currentStore.city || '') ||
       schedule !== (currentStore.schedule || '') ||
       shippingType !== (currentStore.shippingType || 'coordinar') ||
+      pickupAddress !== (currentStore.pickupAddress || '') ||
       instagram !== (currentStore.socialLinks?.instagram || '') ||
       tiktok !== (currentStore.socialLinks?.tiktok || '') ||
       legalBusinessName !== (currentStore.legalBusinessName || '') ||
@@ -500,6 +505,7 @@ export default function SettingsPage() {
           city: city,
           schedule: schedule,
           shippingType: shippingType,
+          pickupAddress: pickupAddress.trim(),
           plan: fsStore?.plan,
           isWhatsappVerified: fsStore?.isWhatsappVerified,
           legalBusinessName: legalBusinessName.trim(),
@@ -872,12 +878,12 @@ export default function SettingsPage() {
               />
             </div>
 
-            {/* Modalidad de Envío (Radio Buttons) */}
+            {/* Modalidad de Entrega (Radio Buttons) */}
             <div className="flex flex-col gap-2 pt-1">
               <label className="text-xs font-semibold text-[#0b1c30]">
-                Modalidad de Envío para tus Clientes
+                Modalidad de Entrega para tus Clientes
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 {/* Opción 1: A coordinar por interno (POR DEFECTO) */}
                 <label
                   onClick={() => setShippingType('coordinar')}
@@ -898,7 +904,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <span className="text-[10px] text-slate-500 font-medium leading-tight">
-                    Por defecto: Costo y entrega se pactan por WhatsApp.
+                    Delivery: Costo y entrega se pactan por WhatsApp.
                   </span>
                 </label>
 
@@ -922,10 +928,55 @@ export default function SettingsPage() {
                     />
                   </div>
                   <span className="text-[10px] text-slate-500 font-medium leading-tight">
-                    Se muestra "Envío Gratis" en tu tienda y carrito.
+                    Delivery sin costo adicional para tus clientes.
+                  </span>
+                </label>
+
+                {/* Opción 3: Solo Recojo en Tienda */}
+                <label
+                  onClick={() => setShippingType('solo_recojo')}
+                  className={`p-3.5 rounded-xl border flex flex-col gap-1 cursor-pointer transition-all ${
+                    shippingType === 'solo_recojo'
+                      ? 'bg-emerald-50/80 border-[#059669] ring-2 ring-[#059669] shadow-xs'
+                      : 'bg-gray-50/70 border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-[#0b1c30]">🏬 Solo Recojo</span>
+                    <input
+                      type="radio"
+                      name="shippingType"
+                      checked={shippingType === 'solo_recojo'}
+                      onChange={() => setShippingType('solo_recojo')}
+                      className="accent-[#059669]"
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-medium leading-tight">
+                    Sin delivery. Retiro presencial en tu local o stand.
                   </span>
                 </label>
               </div>
+
+              {/* Campo para dirección de recojo cuando se elige solo_recojo */}
+              {shippingType === 'solo_recojo' && (
+                <div className="flex flex-col gap-1.5 p-3.5 bg-emerald-50/40 border border-emerald-200/80 rounded-xl mt-1">
+                  <label htmlFor="pickupAddress" className="text-xs font-semibold text-[#0b1c30] flex items-center gap-1.5">
+                    <MapPin size={13} className="text-[#059669]" />
+                    Dirección o Punto de Recojo para tus Clientes
+                  </label>
+                  <input
+                    id="pickupAddress"
+                    type="text"
+                    placeholder="ej. Av. Larco 123, Stand 14, Miraflores o C.C. Arenales Tda 20"
+                    value={pickupAddress}
+                    onChange={(e) => setPickupAddress(e.target.value)}
+                    className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
+                  />
+                  <p className="text-[11px] text-slate-500 leading-tight">
+                    Tus clientes verán este punto exacto en tu catálogo y en el carrito para saber dónde retirar su compra.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Redes Sociales */}

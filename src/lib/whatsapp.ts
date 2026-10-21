@@ -14,6 +14,8 @@ export interface WhatsAppOrderDetails {
   customerAddress?: string;
   paymentMethod?: string;
   notes?: string;
+  isPickup?: boolean;
+  pickupAddress?: string;
 }
 
 export function generateWhatsAppLink(
@@ -34,12 +36,20 @@ export function generateWhatsAppLink(
   let customerAddress = '';
   let paymentMethod = '';
   let notes = '';
+  let isPickup = store.shippingType === 'solo_recojo';
+  let pickupAddress = store.pickupAddress || store.city || '';
 
   if (typeof detailsOrName === 'object' && detailsOrName !== null) {
     customerName = detailsOrName.customerName || '';
     customerAddress = detailsOrName.customerAddress || '';
     paymentMethod = detailsOrName.paymentMethod || '';
     notes = detailsOrName.notes || '';
+    if (detailsOrName.isPickup !== undefined) {
+      isPickup = detailsOrName.isPickup;
+    }
+    if (detailsOrName.pickupAddress) {
+      pickupAddress = detailsOrName.pickupAddress;
+    }
   } else {
     customerName = detailsOrName || '';
     notes = legacyNotes || '';
@@ -49,7 +59,19 @@ export function generateWhatsAppLink(
   message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   // Datos del Cliente si existen
-  if (customerName.trim() || customerAddress.trim() || paymentMethod.trim()) {
+  if (isPickup) {
+    if (customerName.trim()) {
+      message += `👤 *Cliente:* ${customerName.trim()}\n`;
+    }
+    message += `🏬 *Modalidad:* 📍 Recojo en Tienda\n`;
+    if (pickupAddress.trim()) {
+      message += `📍 *Punto de Recojo:* ${pickupAddress.trim()}\n`;
+    }
+    if (paymentMethod.trim()) {
+      message += `💳 *Método de Pago:* ${paymentMethod.trim()}\n`;
+    }
+    message += `\n`;
+  } else if (customerName.trim() || customerAddress.trim() || paymentMethod.trim()) {
     if (customerName.trim()) {
       message += `👤 *Cliente:* ${customerName.trim()}\n`;
     }
@@ -80,6 +102,10 @@ export function generateWhatsAppLink(
   const total = items.reduce((sum, item) => sum + ((item.calculatedPrice ?? item.product.price) * item.quantity), 0);
   message += `━━━━━━━━━━━━━━━━━━━━━\n`;
   message += `💰 *TOTAL A PAGAR: ${formatCurrency(total)}*\n`;
+
+  if (isPickup) {
+    message += `\n💬 _Hola, realicé este pedido para recojo en tienda. Quedo atento(a) a su confirmación de cuándo puedo pasar a retirarlo._\n`;
+  }
 
   if (notes && notes.trim()) {
     message += `\n📝 *Notas del cliente:* ${notes.trim()}\n`;
