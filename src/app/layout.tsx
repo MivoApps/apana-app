@@ -149,14 +149,67 @@ const organizationSchema = {
       "@id": "https://beapana.com/#software",
       "name": "APANA App",
       "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Web",
+      "operatingSystem": "Web, Android, iOS",
       "url": "https://beapana.com",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "reviewCount": "128",
+        "bestRating": "5",
+        "worstRating": "1"
+      },
       "offers": {
         "@type": "Offer",
         "price": "0",
         "priceCurrency": "PEN"
       },
-      "description": "Plataforma de comercio conversacional que permite a emprendedores crear su tienda online y recibir pedidos automáticos por WhatsApp."
+      "description": "Plataforma líder en Perú para que emprendedores creen su tienda online, catálogo digital interactivo y reciban pedidos por WhatsApp."
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://beapana.com/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "¿Cuáles son los planes disponibles en APANA?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Contamos con 3 planes: Plan Gratis (S/ 0 para siempre, hasta 25 productos, 1 foto, QR y pedidos por WhatsApp), Plan Emprendedor (S/ 19.90/mes con hasta 150 productos, 4 fotos, variantes con precios diferenciales, categorías y métricas), y Plan Negocio Pro (S/ 39.90/mes con productos ilimitados, fotos por variante y exportación a Excel)."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿APANA cobra comisión por venta de productos?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. En APANA cobras el 100% de tus ventas directamente a través de Yape, Plin, transferencia bancaria o contra entrega, sin ninguna comisión por venta."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Cuánto tiempo toma tener mi tienda online lista en Perú?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Tu tienda online puede estar lista en aproximadamente 3 minutos. Solo ingresas el nombre de tu negocio, tu número de WhatsApp y subes tus primeros productos con fotos y precios."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Mis clientes necesitan instalar alguna aplicación para comprar?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Tu tienda online funciona directamente en el navegador del celular de tus clientes (Chrome, Safari, etc.). Solo deben tocar tu enlace o escanear tu código QR impreso."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Cómo funcionan las opciones y variantes de producto?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Las variantes permiten que un mismo producto tenga diferentes presentaciones (como Tallas, Colores, Sabores o Tamaños) con precios diferenciales individuales y control de stock."
+          }
+        }
+      ]
     }
   ]
 };
