@@ -53,17 +53,37 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           <div className="space-y-1.5">
             <h4 className="font-bold text-[#0b1c30] text-xs flex items-center gap-1.5">
               <FileText size={14} className="text-[#059669]" />
-              1. Naturaleza de la Plataforma y Titularidad
+              1. Naturaleza de la Plataforma (SaaS)
             </h4>
             <p>
-              La plataforma tecnológica, marca y software denominado <strong>APANA</strong> es de titularidad, desarrollo y operación exclusiva de <strong>MIVO (Mivo E.I.R.L.)</strong>. Es una herramienta SaaS de tiendas online que no intermedia en cobros ni procesa pagos.
+              La plataforma tecnológica, marca y software denominado <strong>APANA</strong> es operado exclusivamente por <strong>MIVO (Mivo E.I.R.L. con RUC: 20616379276)</strong>. Es un proveedor de software en la nube que no intermedia pagos, transferencias bancarias ni custodia fondos.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <h4 className="font-bold text-[#0b1c30] text-xs flex items-center gap-1.5">
+              <Scale size={14} className="text-[#059669]" />
+              2. Autonomía Tributaria y de Consumo
+            </h4>
+            <p>
+              El Comerciante titular es el único responsable legal frente a sus compradores, SUNAT e INDECOPI por la emisión de comprobantes de pago, entrega de pedidos, garantías y atención de su Libro de Reclamaciones.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <h4 className="font-bold text-[#0b1c30] text-xs flex items-center gap-1.5">
+              <ShieldCheck size={14} className="text-[#059669]" />
+              3. Alcance del Sello «Identidad Oficial Verificada»
+            </h4>
+            <p>
+              El distintivo certifica únicamente la coincidencia de datos tributarios (DNI o RUC) en los registros públicos oficiales del Estado peruano (SUNAT / RENIEC). No constituye aval comercial, garantía de transacciones ni representación solidaria de APANA.
             </p>
           </div>
 
           <div className="space-y-1.5">
             <h4 className="font-bold text-[#0b1c30] text-xs flex items-center gap-1.5">
               <FileText size={14} className="text-[#059669]" />
-              2. Prohibición de Suplantación
+              4. Prohibición de Suplantación
             </h4>
             <p>
               Está estrictamente prohibido usar números ajenos o marcas registradas no autorizadas. Las cuentas fraudulentas serán suspendidas de inmediato y reportadas a las autoridades.
@@ -73,10 +93,10 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
           <div className="space-y-1.5">
             <h4 className="font-bold text-[#0b1c30] text-xs flex items-center gap-1.5">
               <FileText size={14} className="text-[#059669]" />
-              3. Deslinde de Responsabilidad y Contacto
+              5. Deslinde de Responsabilidad y Contacto
             </h4>
             <p>
-              APANA no es responsable por los acuerdos comerciales, envíos o calidad de productos. Canal oficial de soporte y denuncias: <a href="mailto:soporte@beapana.com" className="text-[#059669] font-semibold hover:underline">soporte@beapana.com</a>.
+              APANA no es responsable por los acuerdos comerciales, envíos o calidad de productos acordados privadamente vía WhatsApp. Canal oficial de soporte y denuncias: <a href="mailto:soporte@beapana.com" className="text-[#059669] font-semibold hover:underline">soporte@beapana.com</a>.
             </p>
           </div>
         </div>

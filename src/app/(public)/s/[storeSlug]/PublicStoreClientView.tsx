@@ -14,7 +14,10 @@ import {
   Flag,
   Share2,
   BookOpen,
+  FileText,
   Store as StoreIcon,
+  ShieldCheck,
+  X,
 } from 'lucide-react';
 import { InstagramIcon } from '@/components/ui/InstagramIcon';
 import { useAppStore } from '@/lib/app-store';
@@ -23,6 +26,7 @@ import { formatCurrency } from '@/lib/whatsapp';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { Store, Product } from '@/types/store';
 import { TermsModal } from '@/components/ui/TermsModal';
+import { StorePoliciesModal } from '@/components/ui/StorePoliciesModal';
 import { ReportStoreModal } from '@/components/ui/ReportStoreModal';
 import { ProductOptionsModal } from '@/components/public/ProductOptionsModal';
 
@@ -50,9 +54,11 @@ export default function PublicStoreClientView({
   const [selectedCategory, setSelectedCategory] = useState<string>('todos');
   const [mounted, setMounted] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [isPoliciesOpen, setIsPoliciesOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
   const [selectedModalProduct, setSelectedModalProduct] = useState<Product | null>(null);
+  const [isVerifiedModalOpen, setIsVerifiedModalOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -114,18 +120,22 @@ export default function PublicStoreClientView({
   });
 
   return (
-    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col font-sans relative pb-28">
+    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col font-sans relative pb-24 md:pb-12">
       {/* Header Fijo con Nombre de Tienda y Carrito */}
       <header className="fixed top-0 w-full z-50 bg-[#f8f9ff]/80 backdrop-blur-xl border-b border-[#bccac0]/20">
-        <div className="h-16 px-4 max-w-[640px] mx-auto flex items-center justify-between">
+        <div className="h-16 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto flex items-center justify-between">
           <h1 className="font-bold text-lg text-[#0b1c30] truncate tracking-tight">
             {store.name}
           </h1>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleShareStore}
-              className="w-10 h-10 flex items-center justify-center rounded-full text-[#3d4a42] hover:bg-gray-100 transition-colors cursor-pointer"
+              className={`w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
+                store.themeStyle === 'elegante'
+                  ? 'text-stone-700 hover:bg-stone-200/50'
+                  : 'text-[#3d4a42] hover:bg-gray-100'
+              }`}
               title="Compartir tienda"
               aria-label="Compartir tienda"
             >
@@ -135,18 +145,47 @@ export default function PublicStoreClientView({
                 <Share2 size={19} />
               )}
             </button>
-            <Link href={`/s/${store.slug}/cart`}>
-              <button
-                aria-label="Ver Carrito"
-                className="w-10 h-10 flex items-center justify-center rounded-full text-[#3d4a42] relative hover:bg-gray-100 transition-colors cursor-pointer"
-              >
-                <ShoppingBag size={22} />
-                {totalCartCount > 0 && (
-                  <span className="absolute top-1 right-1 w-4 h-4 bg-[#059669] text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+            <Link
+              href={`/s/${store.slug}/cart`}
+              className={`group flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-sm active:scale-95 ${
+                totalCartCount > 0
+                  ? store.themeStyle === 'elegante'
+                    ? 'bg-[#FAF8F5] border-[#d6c4b2] text-stone-900 hover:border-amber-700/60'
+                    : 'bg-white border-emerald-300 text-[#0b1c30] hover:border-emerald-500'
+                  : store.themeStyle === 'elegante'
+                  ? 'bg-white/80 border-[#E7E2D9] text-stone-700 hover:bg-white hover:border-stone-400'
+                  : 'bg-white/90 border-[#bccac0]/40 text-[#3d4a42] hover:bg-white hover:border-slate-400'
+              }`}
+              title="Ver Carrito de Compras"
+            >
+              <ShoppingBag
+                size={18}
+                className={`transition-transform group-hover:scale-110 shrink-0 ${
+                  totalCartCount > 0
+                    ? store.themeStyle === 'elegante'
+                      ? 'text-amber-800'
+                      : 'text-emerald-700'
+                    : 'text-slate-600'
+                }`}
+              />
+              <span className="text-xs font-bold hidden sm:inline">Carrito</span>
+              {totalCartCount > 0 ? (
+                <>
+                  <span
+                    className="px-1.5 py-0.5 rounded-full text-[10px] font-black text-white min-w-4 text-center shadow-2xs"
+                    style={{ backgroundColor: store.primaryColor || '#059669' }}
+                  >
                     {totalCartCount}
                   </span>
-                )}
-              </button>
+                  <span className="text-xs font-extrabold hidden md:inline border-l border-slate-200/80 pl-2 text-slate-800">
+                    {formatCurrency(getTotalPrice())}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                  0
+                </span>
+              )}
             </Link>
           </div>
         </div>
@@ -193,19 +232,19 @@ export default function PublicStoreClientView({
         {store.slug !== 'panaderia-don-jose' && (!store.whatsappPhone || !store.isWhatsappVerified) && (
           <div className="w-full bg-amber-50/95 border-b border-amber-200/90 text-amber-950 px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2 sticky top-0 z-30 shadow-2xs backdrop-blur-xs">
             <span className="text-sm">🛠️</span>
-            <span>Esta tienda está configurando sus canales de atención. Muy pronto disponible para pedidos por WhatsApp.</span>
+            <span>Esta tienda se está terminando de configurar. Muy pronto disponible para pedidos por WhatsApp.</span>
           </div>
         )}
 
-        <div className="flex flex-col w-full max-w-[640px] mx-auto">
+        <div className="flex flex-col w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8">
           {/* Header Tienda Info Dinámico según Tema */}
           <div
-            className={`px-4 py-6 flex flex-col items-center gap-2 text-center transition-all ${
+            className={`px-4 py-6 sm:py-8 flex flex-col items-center gap-2 text-center transition-all max-w-3xl mx-auto w-full ${
               store.themeStyle === 'elegante'
-                ? 'bg-[#FAF8F5] text-stone-900 py-8 border-b border-[#E7E2D9] mb-3'
+                ? 'bg-[#FAF8F5] text-stone-900 border-b sm:border border-[#E7E2D9] mb-4 sm:rounded-3xl'
                 : store.themeStyle === 'moderna'
-                ? 'bg-white text-[#0b1c30] border-b border-slate-200/80 shadow-2xs mb-2 py-7'
-                : 'bg-white text-neutral-900 border-b border-neutral-100 py-6'
+                ? 'bg-white text-[#0b1c30] border-b sm:border border-slate-200/80 shadow-2xs mb-4 py-7 sm:rounded-3xl'
+                : 'bg-white text-neutral-900 border-b sm:border border-neutral-100 py-6 mb-4 sm:rounded-3xl'
             }`}
           >
             {store.logoUrl ? (
@@ -234,18 +273,33 @@ export default function PublicStoreClientView({
                 {store.name.substring(0, 2).toUpperCase()}
               </div>
             )}
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <h2
-                className={`text-2xl sm:text-3xl font-bold tracking-tight ${
-                  store.themeStyle === 'elegante'
-                    ? 'text-stone-900 font-playfair'
-                    : store.themeStyle === 'moderna'
-                    ? 'text-[#0b1c30] font-space-grotesk font-extrabold'
-                    : 'text-neutral-900 font-plus-jakarta'
-                }`}
-              >
-                {store.name}
-              </h2>
+            <div className="flex flex-col items-center justify-center gap-1.5">
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <h2
+                  className={`text-2xl sm:text-3xl font-bold tracking-tight ${
+                    store.themeStyle === 'elegante'
+                      ? 'text-stone-900 font-playfair'
+                      : store.themeStyle === 'moderna'
+                      ? 'text-[#0b1c30] font-space-grotesk font-extrabold'
+                      : 'text-neutral-900 font-plus-jakarta'
+                  }`}
+                >
+                  {store.name}
+                </h2>
+              </div>
+
+              {/* Badge de Identidad Oficial Verificada */}
+              {store.legalTaxId && store.legalBusinessName && (
+                <button
+                  type="button"
+                  onClick={() => setIsVerifiedModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-[#006c49] border border-emerald-200/90 shadow-2xs hover:bg-emerald-100 hover:border-emerald-300 transition-all cursor-pointer group active:scale-95"
+                  title="Ver acreditación oficial de identidad en RENIEC / SUNAT"
+                >
+                  <ShieldCheck size={14} className="text-[#059669] shrink-0 group-hover:scale-110 transition-transform" />
+                  <span>Identidad Oficial Verificada</span>
+                </button>
+              )}
             </div>
             {store.description && (
               <p
@@ -388,22 +442,22 @@ export default function PublicStoreClientView({
           </div>
 
           {/* Buscador de Productos */}
-          <div className="px-4 mb-4 mt-2 w-full max-w-md mx-auto relative">
-            <Search className="absolute left-7 top-1/2 -translate-y-1/2 text-[#6d7a72]" size={18} />
+          <div className="mb-4 mt-2 w-full max-w-xl mx-auto relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6d7a72]" size={18} />
             <input
               type="text"
               placeholder="Buscar productos..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-[#bccac0]/40 rounded-full py-3 pl-10 pr-4 text-sm text-[#0b1c30] focus:outline-none focus:ring-2 transition-all shadow-xs"
+              className="w-full bg-white border border-[#bccac0]/40 rounded-full py-3 pl-11 pr-4 text-sm text-[#0b1c30] focus:outline-none focus:ring-2 transition-all shadow-xs"
               style={{ borderColor: store.primaryColor ? `${store.primaryColor}60` : undefined }}
             />
           </div>
 
           {/* Categorías */}
           {(store.plan === 'emprendedor' || store.plan === 'negocio') && store.categories && store.categories.length > 0 && (
-            <div className="w-full max-w-md mx-auto px-4 mb-4">
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin snap-x snap-mandatory">
+            <div className="w-full max-w-xl mx-auto mb-5">
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin snap-x snap-mandatory justify-start sm:justify-center">
                 <button
                   type="button"
                   onClick={() => setSelectedCategory('todos')}
@@ -446,10 +500,12 @@ export default function PublicStoreClientView({
             </div>
           )}
 
-          {/* Grid de Productos */}
+          {/* Grid de Productos Responsivo según Tema */}
           <div
-            className={`grid gap-3.5 px-4 mb-8 ${
-              store.themeStyle === 'moderna' ? 'grid-cols-1' : 'grid-cols-2'
+            className={`grid gap-3.5 sm:gap-4 lg:gap-6 mb-8 ${
+              store.themeStyle === 'moderna'
+                ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4'
             }`}
           >
             {filteredProducts.length === 0 ? (
@@ -688,6 +744,7 @@ export default function PublicStoreClientView({
 
           {/* Footer Tienda Pública */}
           <footer className="py-7 px-4 text-center bg-white border-t border-[#bccac0]/20 flex flex-col items-center gap-2.5">
+
             <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-[#6d7a72]">
               <Link
                 href={`/s/${store.slug}/libro-de-reclamaciones`}
@@ -699,19 +756,28 @@ export default function PublicStoreClientView({
               <span>•</span>
               <button
                 type="button"
-                onClick={() => setIsTermsOpen(true)}
-                className="hover:text-[#0b1c30] transition-colors cursor-pointer"
+                onClick={() => setIsPoliciesOpen(true)}
+                className="hover:text-[#0b1c30] transition-colors cursor-pointer font-medium text-[#006c49] hover:underline flex items-center gap-1"
               >
-                Términos del Servicio
+                <FileText size={13} className="text-[#006c49]" />
+                <span>Políticas de la Tienda</span>
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => setIsTermsOpen(true)}
+                className="hover:text-[#0b1c30] transition-colors cursor-pointer text-slate-400 hover:text-slate-600 text-[11px]"
+              >
+                Términos APANA
               </button>
               <span>•</span>
               <button
                 type="button"
                 onClick={() => setIsReportOpen(true)}
-                className="hover:text-amber-700 transition-colors flex items-center gap-1 text-slate-500 hover:underline cursor-pointer"
+                className="hover:text-amber-700 transition-colors flex items-center gap-1 text-slate-400 hover:underline cursor-pointer text-[11px]"
               >
                 <Flag size={12} className="text-amber-600/80" />
-                <span>Reportar tienda</span>
+                <span>Reportar</span>
               </button>
             </div>
 
@@ -738,7 +804,7 @@ export default function PublicStoreClientView({
 
       {/* Barra Flotante de Pedido en Curso */}
       {totalCartCount > 0 && (
-        <div className="fixed bottom-20 left-4 right-4 z-40 max-w-[608px] mx-auto animate-in slide-in-from-bottom-5 duration-300">
+        <div className="fixed bottom-20 md:bottom-8 left-4 right-4 md:left-1/2 md:-translate-x-1/2 z-40 max-w-[500px] mx-auto animate-in slide-in-from-bottom-5 duration-300">
           <Link
             href={`/s/${store.slug}/cart`}
             className="w-full bg-[#0b1c30] text-white p-3.5 px-5 rounded-2xl shadow-xl flex items-center justify-between border border-white/10 hover:scale-[1.01] active:scale-[0.99] transition-all"
@@ -780,16 +846,15 @@ export default function PublicStoreClientView({
               } catch (_) {}
             }
           }}
-          className="fixed bottom-20 right-4 z-30 w-12 h-12 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all animate-in zoom-in-75 duration-300"
-          style={totalCartCount > 0 ? { bottom: '5.5rem' } : { bottom: '5rem' }}
+          className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-30 w-12 h-12 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all animate-in zoom-in-75 duration-300"
           title="Hacer una consulta por WhatsApp"
         >
           <WhatsAppIcon size={26} />
         </a>
       )}
 
-      {/* Floating Bottom Navigation */}
-      <nav className="fixed bottom-0 w-full z-50 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)]">
+      {/* Floating Bottom Navigation (Solo Móvil) */}
+      <nav className="md:hidden fixed bottom-0 w-full z-50 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)]">
         <div className="flex justify-around items-center h-16 px-4 max-w-[640px] mx-auto">
           <Link
             href={`/s/${store.slug}`}
@@ -820,6 +885,7 @@ export default function PublicStoreClientView({
       </nav>
 
       {/* Modales */}
+      <StorePoliciesModal isOpen={isPoliciesOpen} onClose={() => setIsPoliciesOpen(false)} store={store} />
       <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
       <ReportStoreModal
         isOpen={isReportOpen}
@@ -836,6 +902,81 @@ export default function PublicStoreClientView({
         primaryColor={store.primaryColor}
         themeStyle={store.themeStyle}
       />
+
+      {/* Modal Informativo: Identidad Oficial Verificada */}
+      {isVerifiedModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setIsVerifiedModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 flex flex-col gap-4 text-left animate-in zoom-in-95 duration-200 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setIsVerifiedModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-[#006c49] border border-emerald-200/80 flex items-center justify-center shrink-0 shadow-xs">
+                <ShieldCheck size={26} className="text-[#059669]" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md">
+                  Acreditación Oficial
+                </span>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#0b1c30] mt-0.5">
+                  Identidad Oficial Verificada
+                </h3>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Esta tienda ha acreditado fehacientemente su identidad formal contrastando sus datos en los registros públicos oficiales del Estado peruano (<strong>{store.legalTaxIdType === 'DNI' || store.legalTaxId?.length === 8 ? 'RENIEC' : 'SUNAT'}</strong>).
+            </p>
+
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-2.5 text-xs">
+              <div className="flex flex-col">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Razón Social / Titular:</span>
+                <span className="font-extrabold text-slate-900 text-sm mt-0.5">{store.legalBusinessName}</span>
+              </div>
+
+              <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                <span className="text-[11px] font-medium text-slate-500">Documento Oficial:</span>
+                <span className="font-mono font-bold text-slate-800 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                  {store.legalTaxIdType || (store.legalTaxId?.length === 11 ? 'RUC' : 'DNI')}: {store.legalTaxId}
+                </span>
+              </div>
+
+              {(store.legalAddress || store.pickupAddress) && (
+                <div className="flex flex-col pt-1 border-t border-slate-200/60">
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Ubicación / Dirección:</span>
+                  <span className="text-slate-700 font-medium mt-0.5">{store.legalAddress || store.pickupAddress}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 pt-1">
+              <Link
+                href={`/s/${store.slug}/libro-de-reclamaciones`}
+                className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 text-[#006c49] rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                onClick={() => setIsVerifiedModalOpen(false)}
+              >
+                <BookOpen size={14} className="text-[#059669]" />
+                <span>Ver Libro de Reclamaciones Oficial ➔</span>
+              </Link>
+
+              <p className="text-[10px] text-slate-400 text-center leading-normal pt-1">
+                APANA provee la plataforma tecnológica SaaS. Las ventas, entregas y emisión de comprobantes son responsabilidad exclusiva de este comercio.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

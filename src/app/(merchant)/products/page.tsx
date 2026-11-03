@@ -29,11 +29,19 @@ import { getStoreByUserIdFromFS, getProductsByStoreIdFromFS, deleteProductFromFS
 import { Store, Product } from '@/types/store';
 import { exportProductsToCSV } from '@/lib/excel-export';
 import { isSuperAdminEmail } from '@/lib/auth-helpers';
+import { MerchantSidebar } from '@/components/merchant/MerchantSidebar';
 
 export default function ProductGalleryPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const { deleteProduct } = useAppStore();
+
+  const handleLogout = async () => {
+    sessionStorage.clear();
+    localStorage.clear();
+    await logout();
+    window.location.href = '/login';
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<'todos' | 'activos' | 'inactivos'>('todos');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('todas');
@@ -264,26 +272,77 @@ export default function ProductGalleryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col font-sans relative pb-28">
-      {/* Top App Header */}
-      <header className="fixed top-0 w-full z-40 bg-[#f8f9ff]/80 backdrop-blur-xl border-b border-[#bccac0]/20">
-        <div className="h-14 flex items-center justify-between px-4 max-w-[640px] mx-auto">
-          <h1 className="font-bold text-lg text-[#0b1c30]">
-            {activeStore ? activeStore.name : 'Mis Productos'}
-          </h1>
-          <Link href="/settings" title="Ir a Ajustes" className="transition-transform active:scale-95">
-            <div
-              style={{ backgroundColor: activeStore?.primaryColor || '#059669' }}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-2xs hover:opacity-90 cursor-pointer"
-            >
-              {activeStore ? activeStore.name.substring(0, 2).toUpperCase() : 'MI'}
-            </div>
-          </Link>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex font-sans relative pb-24 md:pb-12">
+      {/* Sidebar Fija para Desktop */}
+      <MerchantSidebar
+        currentPath="products"
+        store={activeStore}
+        userEmail={user?.email}
+        onLogout={handleLogout}
+      />
 
-      {/* Main Content Area */}
-      <main className="pt-16 px-4 max-w-[640px] w-full mx-auto flex flex-col gap-4">
+      <div className="flex-1 flex flex-col min-w-0 md:pl-64">
+        {/* Top App Header (Mobile) */}
+        <header className="md:hidden fixed top-0 w-full z-40 bg-[#f8f9ff]/80 backdrop-blur-xl border-b border-[#bccac0]/20">
+          <div className="h-14 flex items-center justify-between px-4 sm:px-6">
+            <h1 className="font-bold text-lg text-[#0b1c30]">
+              {activeStore ? activeStore.name : 'Mis Productos'}
+            </h1>
+            <Link href="/settings" title="Ir a Ajustes" className="transition-transform active:scale-95">
+              <div
+                style={{ backgroundColor: activeStore?.primaryColor || '#059669' }}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-2xs hover:opacity-90 cursor-pointer"
+              >
+                {activeStore ? activeStore.name.substring(0, 2).toUpperCase() : 'MI'}
+              </div>
+            </Link>
+          </div>
+        </header>
+
+        {/* Top Header Desktop */}
+        <div className="hidden md:flex items-center justify-between px-6 md:px-8 pt-7 pb-4">
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-black text-[#0b1c30] tracking-tight">Catálogo de Productos</h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Administra tu inventario, precios y disponibilidad para WhatsApp
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {isProPlan ? (
+              <button
+                type="button"
+                onClick={() => exportProductsToCSV(products, activeStore?.name || 'tienda', activeStore?.slug || 'tienda')}
+                className="h-9 px-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                title="Descargar catálogo en archivo CSV / Excel"
+              >
+                <FileSpreadsheet size={15} className="text-emerald-700" />
+                <span>Exportar Excel</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowProUpgradeModal(true)}
+                className="h-9 px-3.5 rounded-xl bg-white hover:bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                title="Desbloquear exportación a Excel con Plan Negocio Pro"
+              >
+                <FileSpreadsheet size={15} className="text-amber-600" />
+                <span>Exportar Excel (Pro)</span>
+              </button>
+            )}
+
+            <Link
+              href="/products/new?from=products"
+              className="h-9 px-4 rounded-xl bg-[#059669] hover:bg-[#00855d] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus size={15} />
+              <span>Nuevo Producto</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <main className="pt-16 md:pt-2 px-4 sm:px-6 md:px-8 w-full flex flex-col gap-5">
 
         {/* Barra / Tarjeta de Capacidad de Productos o Estatus Pro */}
         {isProPlan ? (
@@ -489,7 +548,7 @@ export default function ProductGalleryPage() {
               </button>
             )}
 
-            <Link href={isLimitReached ? '/plans' : '/products/new'}>
+            <Link href={isLimitReached ? '/plans' : '/products/new?from=products'}>
               <button
                 className={`text-white text-xs font-semibold px-3.5 h-9 rounded-xl flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer ${isLimitReached
                     ? 'bg-amber-600 hover:bg-amber-700'
@@ -514,7 +573,7 @@ export default function ProductGalleryPage() {
                 : 'Intenta con otro término de búsqueda o cambia los filtros.'}
             </p>
             {products.length === 0 && (
-              <Link href="/products/new">
+              <Link href="/products/new?from=products">
                 <button className="bg-[#059669] text-white text-xs font-semibold px-4 py-2 rounded-xl mt-1">
                   Publicar mi primer producto
                 </button>
@@ -523,9 +582,9 @@ export default function ProductGalleryPage() {
           </div>
         ) : viewMode === 'list' ? (
           /* ========================================================
-             VISTA 1: LISTA HORIZONTAL (1 COLUMNA)
+             VISTA 1: LISTA HORIZONTAL (RESPONSIVA EN DESKTOP)
              ======================================================== */
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
             {filteredProducts.map((product) => (
               <div
                 key={product.id}
@@ -640,7 +699,7 @@ export default function ProductGalleryPage() {
           /* ========================================================
              VISTA 2: CUADRÍCULA / GRID (2 COLUMNAS)
              ======================================================== */
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
             {filteredProducts.map((product) => (
               <div
                 key={product.id}
@@ -745,6 +804,7 @@ export default function ProductGalleryPage() {
           </div>
         )}
       </main>
+      </div>
 
       {/* Overlay de Carga al Eliminar Producto */}
       {isDeleting && (
@@ -758,8 +818,8 @@ export default function ProductGalleryPage() {
       )}
 
       {/* Bottom Nav Bar (Inicio, Productos, Ajustes) */}
-      <nav className={`fixed bottom-0 w-full z-50 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)] ${isDeleting ? 'pointer-events-none opacity-50' : ''}`}>
-        <div className="h-16 flex items-center justify-around max-w-[640px] mx-auto">
+      <nav className={`md:hidden fixed bottom-0 w-full z-50 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)] ${isDeleting ? 'pointer-events-none opacity-50' : ''}`}>
+        <div className="h-16 flex items-center justify-around max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <Link
             href="/dashboard"
             className="flex flex-col items-center gap-1 text-[#6d7a72] hover:text-[#0b1c30]"

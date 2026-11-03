@@ -320,6 +320,7 @@ export const createOrUpdateStoreInFS = async (
     legalTaxIdType: storeData.legalTaxIdType !== undefined ? storeData.legalTaxIdType : (existingData?.legalTaxIdType ?? 'RUC'),
     legalTaxId: storeData.legalTaxId !== undefined ? storeData.legalTaxId : (existingData?.legalTaxId ?? ''),
     legalAddress: storeData.legalAddress !== undefined ? storeData.legalAddress : (existingData?.legalAddress ?? ''),
+    storePolicies: storeData.storePolicies !== undefined ? storeData.storePolicies : (existingData?.storePolicies ?? ''),
     createdAt: existingData?.createdAt ?? null,
   };
 
@@ -997,7 +998,19 @@ export const adminCleanSuperAdminStoresInFS = async (adminUid: string): Promise<
 
 export const adminUpdateStoreDetailsInFS = async (
   storeId: string,
-  data: { name: string; slug: string; whatsappPhone: string; plan: 'gratis' | 'emprendedor' | 'negocio'; status: 'activa' | 'pausada'; isWhatsappVerified?: boolean }
+  data: {
+    name: string;
+    slug: string;
+    whatsappPhone: string;
+    plan: 'gratis' | 'emprendedor' | 'negocio';
+    status: 'activa' | 'pausada';
+    isWhatsappVerified?: boolean;
+    legalBusinessName?: string;
+    legalTaxIdType?: 'RUC' | 'DNI';
+    legalTaxId?: string;
+    legalAddress?: string;
+    storePolicies?: string;
+  }
 ): Promise<string> => {
   try {
     const validatedSlug = await generateUniqueStoreSlugInFS(data.slug || data.name, storeId);
@@ -1463,6 +1476,7 @@ export interface ReclamacionItem {
   id: string;
   claimCode: string;
   storeId?: string; // Si pertenece a una tienda específica (vacío si es de APANA central)
+  storeOwnerId?: string; // UID del dueño de la tienda
   storeSlug?: string;
   storeName?: string;
   fullName: string;
@@ -1506,15 +1520,62 @@ export const createReclamacionInFS = async (data: Omit<ReclamacionItem, 'id' | '
   }
 };
 
-export const getStoreReclamacionesFromFS = async (storeId: string): Promise<ReclamacionItem[]> => {
+export const getStoreReclamacionesFromFS = async (
+  storeId: string,
+  storeSlug?: string,
+  ownerId?: string
+): Promise<ReclamacionItem[]> => {
   try {
     const reclamacionesRef = collection(db, 'reclamaciones');
-    const q = query(reclamacionesRef, where('storeId', '==', storeId));
-    const snap = await getDocs(q);
     const list: ReclamacionItem[] = [];
-    snap.docs.forEach((d) => {
-      list.push({ id: d.id, ...d.data() } as ReclamacionItem);
-    });
+    const seenIds = new Set<string>();
+
+    // 1. Consulta principal por storeId
+    try {
+      const q = query(reclamacionesRef, where('storeId', '==', storeId));
+      const snap = await getDocs(q);
+      snap.docs.forEach((d) => {
+        if (!seenIds.has(d.id)) {
+          seenIds.add(d.id);
+          list.push({ id: d.id, ...d.data() } as ReclamacionItem);
+        }
+      });
+    } catch (e1) {
+      console.warn('Consulta de reclamos por storeId:', e1);
+    }
+
+    // 2. Consulta de respaldo por storeSlug
+    if (storeSlug) {
+      try {
+        const qSlug = query(reclamacionesRef, where('storeSlug', '==', storeSlug));
+        const snapSlug = await getDocs(qSlug);
+        snapSlug.docs.forEach((d) => {
+          if (!seenIds.has(d.id)) {
+            seenIds.add(d.id);
+            list.push({ id: d.id, ...d.data() } as ReclamacionItem);
+          }
+        });
+      } catch (e2) {
+        console.warn('Consulta de reclamos por storeSlug:', e2);
+      }
+    }
+
+    // 3. Consulta de respaldo por storeOwnerId
+    if (ownerId) {
+      try {
+        const qOwner = query(reclamacionesRef, where('storeOwnerId', '==', ownerId));
+        const snapOwner = await getDocs(qOwner);
+        snapOwner.docs.forEach((d) => {
+          if (!seenIds.has(d.id)) {
+            seenIds.add(d.id);
+            list.push({ id: d.id, ...d.data() } as ReclamacionItem);
+          }
+        });
+      } catch (e3) {
+        console.warn('Consulta de reclamos por storeOwnerId:', e3);
+      }
+    }
+
     return list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   } catch (error) {
     console.warn('Aviso obteniendo reclamaciones de la tienda:', error);

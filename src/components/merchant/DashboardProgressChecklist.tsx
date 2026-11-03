@@ -44,15 +44,22 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
   const step2Product = Boolean(products && products.length > 0);
   const step3Whatsapp = Boolean(store?.whatsappPhone && store?.isWhatsappVerified === true);
   const step4EmailVerified = Boolean(user?.emailVerified || store?.isEmailVerified);
+  const step5LegalIdentity = Boolean(
+    store?.legalTaxId &&
+    store.legalTaxId.trim().length > 0 &&
+    store?.legalBusinessName &&
+    store.legalBusinessName.trim().length > 0
+  );
 
   const completedCount = [
     step1StoreCreated, 
     step2Product,
     step3Whatsapp, 
-    step4EmailVerified
+    step4EmailVerified,
+    step5LegalIdentity,
   ].filter(Boolean).length;
 
-  const totalSteps = 4;
+  const totalSteps = 5;
   const progressPercent = Math.round((completedCount / totalSteps) * 100);
   const isComplete = isLoaded && completedCount === totalSteps;
 
@@ -195,7 +202,7 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
       title: 'Subir tu primer producto',
       completed: step2Product,
       actionText: step2Product ? `${products.length} productos` : 'Agregar producto',
-      href: step2Product ? null : '/products/new',
+      href: step2Product ? null : '/products/new?from=dashboard',
       onClick: null,
       description: 'Sube fotos claras, precio y variantes de tu producto.',
     },
@@ -218,6 +225,17 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
       href: null,
       onClick: step4EmailVerified ? null : onResendEmail,
       description: user?.email ? `Enviado a ${user.email} (revisa bandeja/spam)` : 'Protege y asegura tu cuenta de comerciante.',
+    },
+    {
+      id: 5,
+      title: 'Sello de Identidad Verificada (DNI o RUC)',
+      completed: step5LegalIdentity,
+      actionText: step5LegalIdentity ? 'Verificado' : 'Obtener Sello',
+      href: step5LegalIdentity ? null : '/settings?tab=legal',
+      onClick: null,
+      description: step5LegalIdentity
+        ? `${store?.legalTaxIdType || 'DOC'}: ${store?.legalTaxId} (${store?.legalBusinessName})`
+        : 'Acredita tu negocio ante SUNAT/RENIEC para activar el sello oficial y Libro de Reclamaciones.',
     },
   ];
 
@@ -242,7 +260,7 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Completa estos 4 pasos para empezar a recibir pedidos por WhatsApp hoy mismo.
+              Configura tu tienda, activa tus canales y obtén tu sello oficial para vender por WhatsApp.
             </p>
           </div>
         </div>

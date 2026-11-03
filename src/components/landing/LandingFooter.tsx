@@ -88,7 +88,7 @@ export const LandingFooter: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <MapPin size={14} className="text-[#059669] shrink-0" />
-                <span>Lima, Perú • Operado por Mivo E.I.R.L.</span>
+                <span>Lima, Perú • Operado por Mivo E.I.R.L. (RUC: 20616379276)</span>
               </div>
             </div>
           </div>
@@ -194,7 +194,7 @@ export const LandingFooter: React.FC = () => {
 
         {/* Bottom copyright line */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#6d7a72] gap-4">
-          <p>© {new Date().getFullYear()} APANA • Operado por Mivo E.I.R.L. Todos los derechos reservados.</p>
+          <p>© {new Date().getFullYear()} APANA • Operado por Mivo E.I.R.L. (RUC: 20616379276). Todos los derechos reservados.</p>
           <div className="flex items-center gap-4 text-xs text-slate-500">
             <Link href="/terms" className="hover:underline">
               Términos del Servicio

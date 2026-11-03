@@ -10,7 +10,8 @@ import {
   Check, 
   ChevronLeft, 
   ChevronRight, 
-  Share2 
+  Share2,
+  ShieldCheck 
 } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
 import { formatCurrency } from '@/lib/whatsapp';
@@ -35,6 +36,8 @@ export default function PublicProductDetailClientView({
 }: ClientProps) {
   const router = useRouter();
   const { addItem } = useCartStore();
+  const cartItemCount = useCartStore((s) => s.items.reduce((total, item) => total + item.quantity, 0));
+  const cartTotalPrice = useCartStore((s) => s.getTotalPrice());
   const [added, setAdded] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -306,15 +309,79 @@ export default function PublicProductDetailClientView({
   const isModern = activeStore?.themeStyle === 'moderna';
   const brandColor = activeStore?.primaryColor || '#059669';
 
+  const renderActionButtons = () => {
+    if (targetProduct.inStock === false) {
+      return (
+        <div className="w-full h-12 bg-slate-100 text-slate-500 rounded-xl font-bold text-sm flex items-center justify-center border border-slate-200 cursor-not-allowed">
+          🚫 Producto Agotado Temporalmente
+        </div>
+      );
+    }
+
+    if (activeStore?.status === 'pausada') {
+      return (
+        <div className="flex flex-col gap-2">
+          <div className="w-full h-12 bg-amber-100 text-amber-900 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center border border-amber-200 cursor-not-allowed">
+            ⏸️ Tienda en Pausa Temporal
+          </div>
+          <p className="text-[11px] text-amber-800 text-center leading-tight">
+            Esta tienda no está recibiendo nuevos pedidos en este momento.
+          </p>
+        </div>
+      );
+    }
+
+    if (activeStore?.slug !== 'panaderia-don-jose' && (!activeStore?.whatsappPhone || !activeStore?.isWhatsappVerified)) {
+      return (
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            disabled
+            className="w-full h-12 bg-slate-200 text-slate-500 font-bold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 cursor-not-allowed shadow-none select-none"
+          >
+            <span>⏳ Pedidos no disponibles temporalmente</span>
+          </button>
+          <p className="text-[11px] text-amber-950 bg-amber-50 border border-amber-200/80 rounded-xl p-2.5 text-center leading-tight">
+            Esta tienda se está terminando de configurar. Vuelve pronto para realizar tu compra.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col gap-2.5 w-full">
+        <button
+          onClick={handleBuyNow}
+          style={{ backgroundColor: brandColor }}
+          className={`w-full h-12 text-white font-bold text-base shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            isElegant ? 'rounded-2xl font-playfair tracking-wide' : isModern ? 'rounded-2xl uppercase font-space-grotesk' : 'rounded-xl font-plus-jakarta'
+          }`}
+        >
+          Comprar ahora
+        </button>
+
+        <button
+          onClick={handleAddToCart}
+          className={`w-full h-12 bg-white text-[#0b1c30] rounded-xl font-semibold text-sm hover:bg-gray-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer border ${
+            isElegant ? 'border-[#E7E2D9] text-stone-800 rounded-2xl' : 'border-[#bccac0]'
+          }`}
+        >
+          {added ? <Check size={18} className="text-[#059669]" /> : <ShoppingCart size={18} />}
+          {added ? '¡Añadido al Carrito!' : 'Añadir al carrito'}
+        </button>
+      </div>
+    );
+  };
+
   return (
-    <div className={`min-h-screen flex flex-col font-sans relative pb-32 transition-colors ${
+    <div className={`min-h-screen flex flex-col font-sans relative pb-32 md:pb-16 transition-colors ${
       isElegant
         ? 'bg-[#FAF8F5] text-stone-900'
         : isModern
         ? 'bg-slate-50 text-[#0b1c30]'
         : 'bg-white text-neutral-900'
     }`}>
-      {/* Header Fijo con logo y back */}
+      {/* Header Fijo con logo, back, share y carrito */}
       <header className={`fixed top-0 w-full z-50 backdrop-blur-xl border-b transition-colors ${
         isElegant
           ? 'bg-[#FAF8F5]/90 border-[#E7E2D9]'
@@ -322,326 +389,399 @@ export default function PublicProductDetailClientView({
           ? 'bg-white/90 border-slate-200/80 shadow-2xs'
           : 'bg-white/90 border-neutral-100'
       }`}>
-        <div className="h-16 px-4 max-w-[640px] mx-auto flex items-center justify-between">
+        <div className="h-16 px-4 sm:px-6 md:px-8 max-w-6xl mx-auto flex items-center justify-between">
           <button
             onClick={handleBack}
-            className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
+            className={`h-10 px-2 sm:px-3 flex items-center gap-1.5 rounded-full transition-colors cursor-pointer ${
               isElegant ? 'text-stone-800 hover:bg-stone-200/50' : 'text-[#0b1c30] hover:bg-gray-100'
             }`}
+            title="Volver"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={19} />
+            <span className="text-xs font-bold hidden sm:inline">Volver</span>
           </button>
+
           <Link
             href={`/s/${storeSlug}`}
-            className={`w-9 h-9 flex items-center justify-center font-bold text-sm shadow-xs hover:scale-105 active:scale-95 transition-all overflow-hidden ${
-              isElegant ? 'rounded-xl border border-stone-200/60 font-playfair' : isModern ? 'rounded-2xl' : 'rounded-full'
-            }`}
-            style={!activeStore?.logoUrl ? { backgroundColor: brandColor } : undefined}
+            className="flex items-center gap-2.5 group"
             title="Ir a la tienda"
           >
-            {activeStore?.logoUrl ? (
-              <img src={activeStore.logoUrl} alt={activeStore.name} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-white">
-                {activeStore ? activeStore.name.substring(0, 2).toUpperCase() : 'AP'}
-              </span>
-            )}
+            <div
+              className={`w-9 h-9 flex items-center justify-center font-bold text-sm shadow-xs group-hover:scale-105 active:scale-95 transition-all overflow-hidden ${
+                isElegant ? 'rounded-xl border border-stone-200/60 font-playfair' : isModern ? 'rounded-2xl' : 'rounded-full'
+              }`}
+              style={!activeStore?.logoUrl ? { backgroundColor: brandColor } : undefined}
+            >
+              {activeStore?.logoUrl ? (
+                <img src={activeStore.logoUrl} alt={activeStore.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white">
+                  {activeStore ? activeStore.name.substring(0, 2).toUpperCase() : 'AP'}
+                </span>
+              )}
+            </div>
+            <span className={`font-bold text-sm hidden md:inline truncate max-w-[220px] ${
+              isElegant ? 'font-playfair text-stone-900' : isModern ? 'font-space-grotesk text-[#0b1c30]' : 'text-neutral-900'
+            }`}>
+              {activeStore?.name}
+            </span>
           </Link>
-          <button
-            type="button"
-            onClick={handleShareProduct}
-            className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
-              isElegant ? 'text-stone-800 hover:bg-stone-200/50' : 'text-[#0b1c30] hover:bg-gray-100'
-            }`}
-            title="Compartir producto"
-          >
-            {copiedShare ? <Check size={18} className="text-[#059669]" /> : <Share2 size={18} />}
-          </button>
+
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button
+              type="button"
+              onClick={handleShareProduct}
+              className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
+                isElegant ? 'text-stone-800 hover:bg-stone-200/50' : 'text-[#0b1c30] hover:bg-gray-100'
+              }`}
+              title="Compartir producto"
+            >
+              {copiedShare ? <Check size={18} className="text-[#059669]" /> : <Share2 size={18} />}
+            </button>
+
+            <Link
+              href={`/s/${storeSlug}/cart`}
+              className={`group flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-sm active:scale-95 ${
+                cartItemCount > 0
+                  ? isElegant
+                    ? 'bg-[#FAF8F5] border-[#d6c4b2] text-stone-900 hover:border-amber-700/60'
+                    : 'bg-white border-emerald-300 text-[#0b1c30] hover:border-emerald-500'
+                  : isElegant
+                  ? 'bg-white/80 border-[#E7E2D9] text-stone-700 hover:bg-white hover:border-stone-400'
+                  : 'bg-white/90 border-[#bccac0]/40 text-[#3d4a42] hover:bg-white hover:border-slate-400'
+              }`}
+              title="Ver carrito de compras"
+            >
+              <ShoppingCart
+                size={18}
+                className={`transition-transform group-hover:scale-110 shrink-0 ${
+                  cartItemCount > 0
+                    ? isElegant
+                      ? 'text-amber-800'
+                      : 'text-emerald-700'
+                    : 'text-slate-600'
+                }`}
+              />
+              <span className="text-xs font-bold hidden sm:inline">Carrito</span>
+              {cartItemCount > 0 ? (
+                <>
+                  <span
+                    className="px-1.5 py-0.5 rounded-full text-[10px] font-black text-white min-w-4 text-center shadow-2xs"
+                    style={{ backgroundColor: brandColor }}
+                  >
+                    {cartItemCount}
+                  </span>
+                  <span className="text-xs font-extrabold hidden md:inline border-l border-slate-200/80 pl-2 text-slate-800">
+                    {formatCurrency(cartTotalPrice)}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                  0
+                </span>
+              )}
+            </Link>
+          </div>
         </div>
       </header>
 
       {/* Main Container */}
       <main className="pt-16">
-        <div className="flex flex-col w-full max-w-[640px] mx-auto">
-          {/* Galería de Imágenes Interactiva con Flechas y Swipe */}
-          <div className={`flex flex-col w-full pb-2 border-b ${
-            isElegant ? 'bg-[#FAF8F5] border-[#E7E2D9]' : isModern ? 'bg-slate-100 border-slate-200' : 'bg-white border-neutral-100'
-          }`}>
-            <div
-              className="w-full aspect-square overflow-hidden relative select-none touch-pan-y"
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
-              <img
-                src={productImages[activeImageIndex] || productImages[0]}
-                alt={targetProduct.title}
-                className="w-full h-full object-cover transition-all duration-300 pointer-events-none"
-                onError={(e) => {
-                  e.currentTarget.src = DEFAULT_PRODUCT_IMG;
-                }}
-              />
+        <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-10">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-start">
+            
+            {/* Columna Izquierda: Galería de Imágenes */}
+            <div className="md:col-span-6 lg:col-span-7 flex flex-col gap-3">
+              <div className={`flex flex-col w-full md:rounded-3xl overflow-hidden border ${
+                isElegant ? 'bg-[#FAF8F5] border-[#E7E2D9]' : isModern ? 'bg-slate-100 border-slate-200' : 'bg-white border-neutral-100 md:border-slate-200/80 md:shadow-2xs'
+              }`}>
+                <div
+                  className="w-full aspect-square overflow-hidden relative select-none touch-pan-y"
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                >
+                  <img
+                    src={productImages[activeImageIndex] || productImages[0]}
+                    alt={targetProduct.title}
+                    className="w-full h-full object-cover transition-all duration-300 pointer-events-none"
+                    onError={(e) => {
+                      e.currentTarget.src = DEFAULT_PRODUCT_IMG;
+                    }}
+                  />
 
+                  {productImages.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handlePrevImage}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/70 active:scale-90 text-white flex items-center justify-center backdrop-blur-xs transition-all cursor-pointer shadow-md z-20"
+                        title="Foto anterior"
+                      >
+                        <ChevronLeft size={20} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleNextImage}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/70 active:scale-90 text-white flex items-center justify-center backdrop-blur-xs transition-all cursor-pointer shadow-md z-20"
+                        title="Siguiente foto"
+                      >
+                        <ChevronRight size={20} />
+                      </button>
+
+                      <span className="absolute bottom-3 right-3 bg-black/65 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full backdrop-blur-xs shadow-xs">
+                        {activeImageIndex + 1} / {productImages.length}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+              
               {productImages.length > 1 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handlePrevImage}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/70 active:scale-90 text-white flex items-center justify-center backdrop-blur-xs transition-all cursor-pointer shadow-md z-20"
-                    title="Foto anterior"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleNextImage}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/70 active:scale-90 text-white flex items-center justify-center backdrop-blur-xs transition-all cursor-pointer shadow-md z-20"
-                    title="Siguiente foto"
-                  >
-                    <ChevronRight size={20} />
-                  </button>
-
-                  <span className="absolute bottom-3 right-3 bg-black/65 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full backdrop-blur-xs shadow-xs">
-                    {activeImageIndex + 1} / {productImages.length}
-                  </span>
-                </>
+                <div className="flex gap-2.5 pt-2 overflow-x-auto justify-start md:justify-center">
+                  {productImages.map((imgUrl, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setActiveImageIndex(idx)}
+                      className={`w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden border-2 shrink-0 transition-all cursor-pointer ${
+                        activeImageIndex === idx
+                          ? isElegant ? 'border-amber-700 scale-105 shadow-2xs' : 'border-[#059669] scale-105 shadow-2xs'
+                          : 'border-transparent opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img
+                        src={imgUrl}
+                        alt={`Miniatura ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = DEFAULT_PRODUCT_IMG;
+                        }}
+                      />
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
-            
-            {productImages.length > 1 && (
-              <div className="flex gap-2 px-4 pt-3 overflow-x-auto justify-center">
-                {productImages.map((imgUrl, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setActiveImageIndex(idx)}
-                    className={`w-12 h-12 rounded-lg overflow-hidden border-2 shrink-0 transition-all cursor-pointer ${
-                      activeImageIndex === idx
-                        ? isElegant ? 'border-amber-700 scale-105 shadow-2xs' : 'border-[#059669] scale-105 shadow-2xs'
-                        : 'border-transparent opacity-60 hover:opacity-100'
-                    }`}
-                  >
-                    <img
-                      src={imgUrl}
-                      alt={`Miniatura ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = DEFAULT_PRODUCT_IMG;
-                      }}
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* Content Section */}
-          <div className="px-6 py-6 flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              {(() => {
-                return (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {targetProduct.category && (
-                      <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${
-                        isElegant
-                          ? 'bg-amber-100/70 border-amber-300 text-amber-900'
-                          : isModern
-                          ? 'bg-blue-100/70 border-blue-200 text-blue-900'
-                          : 'bg-neutral-100 border-neutral-200 text-neutral-700 font-medium'
-                      }`}>
-                        {targetProduct.category}
-                      </span>
-                    )}
-                    {isPaidStore && targetProduct.badge && targetProduct.inStock !== false && (
-                      <span className="text-[11px] font-bold uppercase tracking-wider bg-[#059669] text-white px-2.5 py-0.5 rounded-md shadow-2xs">
-                        {targetProduct.badge === 'top'
-                          ? '🔥 Top Ventas'
-                          : targetProduct.badge === 'oferta'
-                          ? '🏷️ Oferta'
-                          : '✨ Nuevo'}
-                      </span>
-                    )}
-                    {targetProduct.inStock === false && (
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-md">
-                        Agotado temporalmente
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
-
-              <h1 className={`text-2xl sm:text-3xl font-bold leading-tight ${
-                isElegant
-                  ? 'font-playfair text-stone-900'
-                  : isModern
-                  ? 'font-space-grotesk font-extrabold text-[#0b1c30] uppercase tracking-wide'
-                  : 'font-plus-jakarta text-neutral-900 tracking-tight'
-              }`}>
-                {targetProduct.title}
-              </h1>
-
-              {/* Precios con Descuento */}
-              {(() => {
-                const hasDiscount = Boolean(isPaidStore && targetProduct.compareAtPrice && targetProduct.compareAtPrice > targetProduct.price);
-                const discountPct = hasDiscount
-                  ? Math.round(((targetProduct.compareAtPrice! - targetProduct.price) / targetProduct.compareAtPrice!) * 100)
-                  : 0;
-
-                return (
-                  <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    <span className={`text-2xl sm:text-3xl font-bold block ${
-                      targetProduct.inStock === false
-                        ? 'text-slate-400'
-                        : isElegant
-                        ? 'font-playfair italic text-stone-900'
+            {/* Columna Derecha: Detalles del Producto y Botones Sticky en Desktop */}
+            <div className="md:col-span-6 lg:col-span-5 flex flex-col gap-5 md:sticky md:top-24 md:bg-white md:p-6 lg:p-7 md:rounded-3xl md:border md:border-slate-200/80 md:shadow-xs">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {targetProduct.category && (
+                    <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${
+                      isElegant
+                        ? 'bg-amber-100/70 border-amber-300 text-amber-900'
                         : isModern
-                        ? 'font-space-grotesk font-extrabold'
-                        : 'font-plus-jakarta text-neutral-900'
-                    }`}
-                      style={targetProduct.inStock !== false && isModern ? { color: brandColor } : undefined}
-                    >
-                      {formatCurrency(unitPrice)}
+                        ? 'bg-blue-100/70 border-blue-200 text-blue-900'
+                        : 'bg-neutral-100 border-neutral-200 text-neutral-700 font-medium'
+                    }`}>
+                      {targetProduct.category}
                     </span>
+                  )}
+                  {isPaidStore && targetProduct.badge && targetProduct.inStock !== false && (
+                    <span className="text-[11px] font-bold uppercase tracking-wider bg-[#059669] text-white px-2.5 py-0.5 rounded-md shadow-2xs">
+                      {targetProduct.badge === 'top'
+                        ? '🔥 Top Ventas'
+                        : targetProduct.badge === 'oferta'
+                        ? '🏷️ Oferta'
+                        : '✨ Nuevo'}
+                    </span>
+                  )}
+                  {targetProduct.inStock === false && (
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-md">
+                      Agotado temporalmente
+                    </span>
+                  )}
+                </div>
 
-                    {hasDiscount && (
-                      <span className="text-base sm:text-lg text-slate-400 line-through font-medium">
-                        {formatCurrency(targetProduct.compareAtPrice!)}
-                      </span>
-                    )}
+                <h1 className={`text-2xl sm:text-3xl font-bold leading-tight ${
+                  isElegant
+                    ? 'font-playfair text-stone-900'
+                    : isModern
+                    ? 'font-space-grotesk font-extrabold text-[#0b1c30] uppercase tracking-wide'
+                    : 'font-plus-jakarta text-neutral-900 tracking-tight'
+                }`}>
+                  {targetProduct.title}
+                </h1>
 
-                    {hasDiscount && discountPct > 0 && (
-                      <span className="bg-red-600 text-white text-xs font-black px-2.5 py-0.5 rounded-full shadow-2xs">
-                        -{discountPct}% OFF
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Selector de Variantes / Opciones */}
-            {options.length > 0 && (
-              <div className={`space-y-4 pt-2 pb-2 border-t border-b my-1 ${
-                isElegant ? 'border-[#E7E2D9]' : 'border-gray-100'
-              }`}>
-                {options.map((group: ProductOptionGroup) => {
-                  const currentSelectedValId = selectedValues[group.id];
+                {/* Precios con Descuento */}
+                {(() => {
+                  const hasDiscount = Boolean(isPaidStore && targetProduct.compareAtPrice && targetProduct.compareAtPrice > targetProduct.price);
+                  const discountPct = hasDiscount
+                    ? Math.round(((targetProduct.compareAtPrice! - targetProduct.price) / targetProduct.compareAtPrice!) * 100)
+                    : 0;
 
                   return (
-                    <div key={group.id} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className={`text-xs font-bold uppercase tracking-wider ${
-                          isElegant ? 'text-stone-800 font-playfair' : 'text-[#0b1c30]'
-                        }`}>
-                          {group.title}:
-                        </label>
-                        <span className={`text-xs font-bold ${
-                          isElegant ? 'text-amber-800' : 'text-[#059669]'
-                        }`}>
-                          {(() => {
-                            const selectedVal = group.values.find((v: ProductOptionValue) => v.id === currentSelectedValId);
-                            if (!selectedVal) return '';
-                            const cleanName = (!selectedVal.priceDifference || selectedVal.priceDifference === 0)
-                              ? selectedVal.name.replace(/\s+0+(\.0+)?$/, '').trim()
-                              : selectedVal.name;
-                            return cleanName;
-                          })()}
+                    <div className="flex items-center gap-3 mt-1 flex-wrap">
+                      <span className={`text-2xl sm:text-3xl font-bold block ${
+                        targetProduct.inStock === false
+                          ? 'text-slate-400'
+                          : isElegant
+                          ? 'font-playfair italic text-stone-900'
+                          : isModern
+                          ? 'font-space-grotesk font-extrabold'
+                          : 'font-plus-jakarta text-neutral-900'
+                      }`}
+                        style={targetProduct.inStock !== false && isModern ? { color: brandColor } : undefined}
+                      >
+                        {formatCurrency(unitPrice)}
+                      </span>
+
+                      {hasDiscount && (
+                        <span className="text-base sm:text-lg text-slate-400 line-through font-medium">
+                          {formatCurrency(targetProduct.compareAtPrice!)}
                         </span>
-                      </div>
+                      )}
 
-                      <div className="flex flex-wrap gap-2">
-                        {group.values.map((val: ProductOptionValue) => {
-                          const isSelected = currentSelectedValId === val.id;
-                          const hasDiff = val.priceDifference && val.priceDifference > 0;
-                          const cleanValName = (!val.priceDifference || val.priceDifference === 0)
-                            ? val.name.replace(/\s+0+(\.0+)?$/, '').trim()
-                            : val.name;
-
-                          return (
-                            <button
-                              key={val.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedValues((prev) => ({
-                                  ...prev,
-                                  [group.id]: val.id,
-                                }));
-                                if (val.imageUrl) {
-                                  const imgIdx = productImages.findIndex((img) => img === val.imageUrl);
-                                  if (imgIdx !== -1) {
-                                    setActiveImageIndex(imgIdx);
-                                  }
-                                }
-                              }}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                                isSelected
-                                  ? isElegant
-                                    ? 'bg-amber-900 text-white shadow-sm ring-2 ring-amber-400/30'
-                                    : isModern
-                                    ? 'bg-[#059669] text-white shadow-md shadow-[#059669]/20 ring-2 ring-[#059669]/30 scale-[1.02]'
-                                    : 'bg-neutral-900 text-white shadow-2xs'
-                                  : isElegant
-                                  ? 'bg-white hover:bg-amber-50/50 text-stone-800 border border-[#E7E2D9]'
-                                  : isModern
-                                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200/80'
-                                  : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-700 border border-neutral-200/80'
-                              }`}
-                            >
-                              {isSelected && <Check size={13} className="stroke-[3]" />}
-                              {val.imageUrl && (
-                                <img
-                                  src={val.imageUrl}
-                                  alt={cleanValName}
-                                  className="w-4 h-4 rounded-md object-cover border border-black/10 shrink-0"
-                                />
-                              )}
-                              <span>{cleanValName}</span>
-                              {hasDiff && (
-                                <span className={`text-[10px] ml-0.5 ${
-                                  isSelected ? 'text-amber-100 font-normal' : isElegant ? 'text-amber-800' : 'text-[#059669]'
-                                }`}>
-                                  (+{formatCurrency(val.priceDifference!)})
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      {hasDiscount && discountPct > 0 && (
+                        <span className="bg-red-600 text-white text-xs font-black px-2.5 py-0.5 rounded-full shadow-2xs">
+                          -{discountPct}% OFF
+                        </span>
+                      )}
                     </div>
                   );
-                })}
+                })()}
               </div>
-            )}
 
-            {/* Descripción del Producto */}
-            {targetProduct.description && (
-              <p className={`text-sm leading-relaxed mt-1 whitespace-pre-line ${
-                isElegant ? 'text-stone-600 font-sans' : isModern ? 'text-slate-600 font-sans' : 'text-neutral-600 font-plus-jakarta'
-              }`}>
-                {targetProduct.description}
-              </p>
-            )}
+              {/* Selector de Variantes / Opciones */}
+              {options.length > 0 && (
+                <div className={`space-y-4 pt-2 pb-2 border-t border-b my-1 ${
+                  isElegant ? 'border-[#E7E2D9]' : 'border-gray-100'
+                }`}>
+                  {options.map((group: ProductOptionGroup) => {
+                    const currentSelectedValId = selectedValues[group.id];
+
+                    return (
+                      <div key={group.id} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className={`text-xs font-bold uppercase tracking-wider ${
+                            isElegant ? 'text-stone-800 font-playfair' : 'text-[#0b1c30]'
+                          }`}>
+                            {group.title}:
+                          </label>
+                          <span className={`text-xs font-bold ${
+                            isElegant ? 'text-amber-800' : 'text-[#059669]'
+                          }`}>
+                            {(() => {
+                              const selectedVal = group.values.find((v: ProductOptionValue) => v.id === currentSelectedValId);
+                              if (!selectedVal) return '';
+                              const cleanName = (!selectedVal.priceDifference || selectedVal.priceDifference === 0)
+                                ? selectedVal.name.replace(/\s+0+(\.0+)?$/, '').trim()
+                                : selectedVal.name;
+                              return cleanName;
+                            })()}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {group.values.map((val: ProductOptionValue) => {
+                            const isSelected = currentSelectedValId === val.id;
+                            const hasDiff = val.priceDifference && val.priceDifference > 0;
+                            const cleanValName = (!val.priceDifference || val.priceDifference === 0)
+                              ? val.name.replace(/\s+0+(\.0+)?$/, '').trim()
+                              : val.name;
+
+                            return (
+                              <button
+                                key={val.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedValues((prev) => ({
+                                    ...prev,
+                                    [group.id]: val.id,
+                                  }));
+                                  if (val.imageUrl) {
+                                    const imgIdx = productImages.findIndex((img) => img === val.imageUrl);
+                                    if (imgIdx !== -1) {
+                                      setActiveImageIndex(imgIdx);
+                                    }
+                                  }
+                                }}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                  isSelected
+                                    ? isElegant
+                                      ? 'bg-amber-900 text-white shadow-sm ring-2 ring-amber-400/30'
+                                      : isModern
+                                      ? 'bg-[#059669] text-white shadow-md shadow-[#059669]/20 ring-2 ring-[#059669]/30 scale-[1.02]'
+                                      : 'bg-neutral-900 text-white shadow-2xs'
+                                    : isElegant
+                                    ? 'bg-white hover:bg-amber-50/50 text-stone-800 border border-[#E7E2D9]'
+                                    : isModern
+                                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200/80'
+                                    : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-700 border border-neutral-200/80'
+                                }`}
+                              >
+                                {isSelected && <Check size={13} className="stroke-[3]" />}
+                                {val.imageUrl && (
+                                  <img
+                                    src={val.imageUrl}
+                                    alt={cleanValName}
+                                    className="w-4 h-4 rounded-md object-cover border border-black/10 shrink-0"
+                                  />
+                                )}
+                                <span>{cleanValName}</span>
+                                {hasDiff && (
+                                  <span className={`text-[10px] ml-0.5 ${
+                                    isSelected ? 'text-amber-100 font-normal' : isElegant ? 'text-amber-800' : 'text-[#059669]'
+                                  }`}>
+                                    (+{formatCurrency(val.priceDifference!)})
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Descripción del Producto */}
+              {targetProduct.description && (
+                <div className="pt-1">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    Descripción
+                  </h4>
+                  <p className={`text-sm leading-relaxed whitespace-pre-line ${
+                    isElegant ? 'text-stone-600 font-sans' : isModern ? 'text-slate-600 font-sans' : 'text-neutral-600 font-plus-jakarta'
+                  }`}>
+                    {targetProduct.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Acciones de Compra en Desktop (Integradas en la columna derecha) */}
+              <div className="hidden md:flex flex-col gap-3 pt-4 border-t border-slate-100">
+                {renderActionButtons()}
+                <div className="flex items-center justify-center gap-2 pt-1 text-[11px] text-slate-500">
+                  <ShieldCheck size={14} className="text-[#059669]" />
+                  <span>Atención y coordinación directa por WhatsApp</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Related Products Section */}
+          {/* Sección de Productos Relacionados */}
           {relatedProducts.length > 0 && (
-            <div className={`px-6 py-6 border-t mt-2 ${
-              isElegant ? 'border-[#E7E2D9]' : 'border-gray-100'
+            <div className={`mt-14 pt-8 border-t ${
+              isElegant ? 'border-[#E7E2D9]' : 'border-gray-200/80'
             }`}>
-              <h3 className={`text-lg font-bold mb-4 ${
+              <h3 className={`text-xl font-bold mb-6 ${
                 isElegant ? 'font-playfair text-stone-900' : isModern ? 'font-space-grotesk text-[#0b1c30]' : 'text-neutral-900'
               }`}>
                 También te podría gustar
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
                 {relatedProducts.map((rel) => (
                   <Link
                     key={rel.id}
                     href={`/s/${storeSlug}/p/${rel.id}`}
                     className="flex flex-col gap-2 group"
                   >
-                    <div className={`aspect-square rounded-xl overflow-hidden relative ${
-                      isElegant ? 'bg-[#FAF8F5] border border-[#E7E2D9]' : 'bg-gray-50'
+                    <div className={`aspect-square rounded-2xl overflow-hidden relative ${
+                      isElegant ? 'bg-[#FAF8F5] border border-[#E7E2D9]' : 'bg-gray-50 border border-slate-100 shadow-2xs'
                     }`}>
                       <img
                         src={rel.imageUrl}
@@ -678,59 +818,11 @@ export default function PublicProductDetailClientView({
         </div>
       </main>
 
-      {/* Fixed Bottom Actions */}
-      <div className={`fixed bottom-0 left-0 w-full backdrop-blur-xl border-t p-4 pb-safe flex flex-col gap-2.5 z-50 max-w-[640px] mx-auto left-0 right-0 ${
+      {/* Fixed Bottom Actions (Solo para Móvil < md) */}
+      <div className={`md:hidden fixed bottom-0 left-0 right-0 w-full backdrop-blur-xl border-t p-4 pb-safe flex flex-col gap-2.5 z-50 ${
         isElegant ? 'bg-[#FAF8F5]/95 border-[#E7E2D9]' : 'bg-white/95 border-[#bccac0]/30'
       }`}>
-        {targetProduct.inStock === false ? (
-          <div className="w-full h-12 bg-slate-100 text-slate-500 rounded-xl font-bold text-sm flex items-center justify-center border border-slate-200 cursor-not-allowed">
-            🚫 Producto Agotado Temporalmente
-          </div>
-        ) : activeStore?.status === 'pausada' ? (
-          <div className="flex flex-col gap-2">
-            <div className="w-full h-12 bg-amber-100 text-amber-900 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center border border-amber-200 cursor-not-allowed">
-              ⏸️ Tienda en Pausa Temporal
-            </div>
-            <p className="text-[11px] text-amber-800 text-center leading-tight">
-              Esta tienda no está recibiendo nuevos pedidos en este momento.
-            </p>
-          </div>
-        ) : activeStore?.slug !== 'panaderia-don-jose' && (!activeStore?.whatsappPhone || !activeStore?.isWhatsappVerified) ? (
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              disabled
-              className="w-full h-12 bg-slate-200 text-slate-500 font-bold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 cursor-not-allowed shadow-none select-none"
-            >
-              <span>⏳ Pedidos no disponibles temporalmente</span>
-            </button>
-            <p className="text-[11px] text-amber-950 bg-amber-50 border border-amber-200/80 rounded-xl p-2.5 text-center leading-tight">
-              Esta tienda aún está configurando su línea de WhatsApp. Vuelve pronto para realizar tu compra.
-            </p>
-          </div>
-        ) : (
-          <>
-            <button
-              onClick={handleBuyNow}
-              style={{ backgroundColor: brandColor }}
-              className={`w-full h-12 text-white font-bold text-base shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                isElegant ? 'rounded-2xl font-playfair tracking-wide' : isModern ? 'rounded-2xl uppercase font-space-grotesk' : 'rounded-xl font-plus-jakarta'
-              }`}
-            >
-              Comprar ahora
-            </button>
-
-            <button
-              onClick={handleAddToCart}
-              className={`w-full h-12 bg-white text-[#0b1c30] rounded-xl font-semibold text-sm hover:bg-gray-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer border ${
-                isElegant ? 'border-[#E7E2D9] text-stone-800 rounded-2xl' : 'border-[#bccac0]'
-              }`}
-            >
-              {added ? <Check size={18} className="text-[#059669]" /> : <ShoppingCart size={18} />}
-              {added ? '¡Añadido al Carrito!' : 'Añadir al carrito'}
-            </button>
-          </>
-        )}
+        {renderActionButtons()}
       </div>
     </div>
   );

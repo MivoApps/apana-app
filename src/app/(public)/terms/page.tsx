@@ -74,7 +74,7 @@ export default function TermsPage() {
               2. Naturaleza del Servicio y Titularidad
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              La plataforma tecnológica, marca y software denominado <strong>APANA</strong> es de titularidad, desarrollo y operación exclusiva de <strong>MIVO (Mivo E.I.R.L.)</strong> con domicilio legal en Lima, Perú.
+              La plataforma tecnológica, marca y software denominado <strong>APANA</strong> es de titularidad, desarrollo y operación exclusiva de <strong>MIVO (Mivo E.I.R.L. con RUC: 20616379276)</strong> con domicilio legal en Lima, Perú.
             </p>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               APANA es un proveedor de tecnología en la nube (Software as a Service - SaaS) que facilita a emprendedores y comercios la creación de tiendas online interactivas y la generación de enlaces de contacto directo hacia la aplicación WhatsApp.
@@ -84,11 +84,39 @@ export default function TermsPage() {
             </p>
           </section>
 
-          {/* Section 3: Prohibición Estricta de Suplantación */}
+          {/* Section 3: Autonomía Tributaria y de Consumo */}
+          <section className="space-y-3">
+            <h2 className="text-lg sm:text-xl font-bold text-[#0b1c30] flex items-center gap-2">
+              <Scale size={18} className="text-[#059669]" />
+              3. Autonomía Comercial, Tributaria (SUNAT) y de Protección al Consumidor (INDECOPI)
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              APANA únicamente provee infraestructura de software en la nube (SaaS). Cada Comerciante actúa de forma autónoma e independiente, siendo el único responsable legal, fiscal y administrativo frente a sus compradores, la Superintendencia Nacional de Aduanas y de Administración Tributaria (SUNAT) y el Instituto Nacional de Defensa de la Competencia y de la Protección de la Propiedad Intelectual (INDECOPI).
+            </p>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              El Comerciante asume con exclusividad la emisión de comprobantes de pago (boletas de venta, facturas o notas de venta autorizadas), la veracidad del stock y precios publicados, las condiciones de despacho y entrega, la idoneidad y rotulado de los productos, y la atención y resolución de quejas o reclamos formulados por los consumidores a través de su respectivo Libro de Reclamaciones.
+            </p>
+          </section>
+
+          {/* Section 4: Sello Identidad Oficial Verificada */}
+          <section className="space-y-3 bg-emerald-50/40 border border-emerald-100 rounded-2xl p-5 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-bold text-[#0b1c30] flex items-center gap-2">
+              <ShieldCheck size={18} className="text-[#059669]" />
+              4. Alcance del Sello «Identidad Oficial Verificada»
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              El distintivo o sello de <strong>«Identidad Oficial Verificada»</strong> exhibido en determinadas tiendas públicas de la plataforma certifica única y exclusivamente que el Comerciante titular ha ingresado un número de documento oficial (DNI o RUC) cuya validez de existencia y razón social / nombres y apellidos coincidió con los registros de consulta pública de la RENIEC o SUNAT al momento de su verificación automatizada.
+            </p>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              <strong>Dicho distintivo no constituye aval crediticio, recomendación comercial, auditoría de solvencia patrimonial ni garantía solidaria por parte de APANA</strong> respecto a los bienes o servicios ofrecidos o la idoneidad moral del comerciante. APANA no interviene en las transferencias bancarias, pagos contra entrega, billeteras electrónicas (Yape, Plin) o pactos comerciales concertados de forma privada entre el Comerciante y sus clientes vía WhatsApp.
+            </p>
+          </section>
+
+          {/* Section 5: Prohibición Estricta de Suplantación */}
           <section className="space-y-3">
             <h2 className="text-lg sm:text-xl font-bold text-[#0b1c30] flex items-center gap-2">
               <FileText size={18} className="text-[#059669]" />
-              3. Prohibición de Suplantación y Actividades Ilícitas
+              5. Prohibición de Suplantación y Actividades Ilícitas
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               Queda terminantemente prohibido:
@@ -103,41 +131,41 @@ export default function TermsPage() {
             </p>
           </section>
 
-          {/* Section 4: Limitación de Responsabilidad */}
+          {/* Section 6: Limitación de Responsabilidad */}
           <section className="space-y-3">
             <h2 className="text-lg sm:text-xl font-bold text-[#0b1c30] flex items-center gap-2">
               <FileText size={18} className="text-[#059669]" />
-              4. Deslinde y Limitación de Responsabilidad
+              6. Deslinde y Limitación de Responsabilidad
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               APANA no se responsabiliza por pérdidas económicas, daños o perjuicios resultantes de transacciones acordadas entre comerciantes y compradores a través de WhatsApp, ni por interrupciones atribuibles a proveedores de telecomunicaciones o políticas internas de Meta / WhatsApp.
             </p>
           </section>
 
-          {/* Section 5: Política de Cancelaciones y Reembolsos */}
+          {/* Section 7: Política de Cancelaciones y Reembolsos */}
           <section className="space-y-3 bg-slate-50 border border-slate-200/80 rounded-2xl p-5 sm:p-6">
             <h2 className="text-lg sm:text-xl font-bold text-[#0b1c30] flex items-center gap-2">
               <RefreshCw size={18} className="text-[#059669]" />
-              5. Política de Cancelación de Suscripción y Reembolsos
+              7. Política de Cancelación de Suscripción y Reembolsos
             </h2>
             <div className="space-y-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
               <p>
-                <strong>5.1. Cancelación de Suscripción:</strong> Los planes de pago de APANA (Plan Emprendedor y Plan Negocio Pro) operan bajo modalidad de suscripción mensual recurrente <strong>sin contratos de permanencia obligatoria</strong>. El usuario puede cancelar su suscripción en cualquier momento y con un solo clic desde la sección <em>Planes</em> de su panel de administración.
+                <strong>7.1. Cancelación de Suscripción:</strong> Los planes de pago de APANA (Plan Emprendedor y Plan Negocio Pro) operan bajo modalidad de suscripción mensual recurrente <strong>sin contratos de permanencia obligatoria</strong>. El usuario puede cancelar su suscripción en cualquier momento y con un solo clic desde la sección <em>Planes</em> de su panel de administración.
               </p>
               <p>
-                <strong>5.2. Efecto de la Cancelación:</strong> Al cancelar la suscripción, el usuario conservará el acceso ininterrumpido a todas las funciones de su plan hasta el término exacto del periodo mensual facturado. Posteriormente, su cuenta pasará automáticamente al Plan Gratis sin cargos adicionales.
+                <strong>7.2. Efecto de la Cancelación:</strong> Al cancelar la suscripción, el usuario conservará el acceso ininterrumpido a todas las funciones de su plan hasta el término exacto del periodo mensual facturado. Posteriormente, su cuenta pasará automáticamente al Plan Gratis sin cargos adicionales.
               </p>
               <p>
-                <strong>5.3. Reembolsos y Devoluciones:</strong> Al tratarse de un servicio de software en la nube de consumo y activación inmediata (SaaS), los periodos ya iniciados y facturados no son sujetos a reembolso proporcional, excepto en situaciones donde se demuestre una falla técnica crítica atribuible directamente a la plataforma que haya impedido el uso total del servicio, solicitada dentro de los primeros 7 (siete) días calendario posteriores al cobro respectivo a través de <a href="mailto:soporte@beapana.com" className="text-[#059669] font-bold hover:underline">soporte@beapana.com</a>.
+                <strong>7.3. Reembolsos y Devoluciones:</strong> Al tratarse de un servicio de software en la nube de consumo y activación inmediata (SaaS), los periodos ya iniciados y facturados no son sujetos a reembolso proporcional, excepto en situaciones donde se demuestre una falla técnica crítica atribuible directamente a la plataforma que haya impedido el uso total del servicio, solicitada dentro de los primeros 7 (siete) días calendario posteriores al cobro respectivo a través de <a href="mailto:soporte@beapana.com" className="text-[#059669] font-bold hover:underline">soporte@beapana.com</a>.
               </p>
             </div>
           </section>
 
-          {/* Section 6: Contacto y Soporte */}
+          {/* Section 8: Contacto y Soporte */}
           <section className="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-5 sm:p-6 space-y-3">
             <h3 className="font-bold text-base text-[#0b1c30] flex items-center gap-2">
               <BookOpen size={18} className="text-[#059669]" />
-              6. Datos de Contacto y Libro de Reclamaciones
+              8. Datos de Contacto y Libro de Reclamaciones
             </h3>
             <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
               Para consultas contractuales, soporte técnico, facturación o reportes de uso indebido:
@@ -145,7 +173,7 @@ export default function TermsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-[#0b1c30] font-medium pt-1">
               <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-2xs">
                 <span className="text-slate-500 block text-[11px]">Razón Social / Operador:</span>
-                <strong className="text-emerald-950 font-bold">Mivo E.I.R.L.</strong>
+                <strong className="text-emerald-950 font-bold">Mivo E.I.R.L. (RUC: 20616379276)</strong>
               </div>
               <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-2xs">
                 <span className="text-slate-500 block text-[11px]">Ubicación Legal:</span>
@@ -186,7 +214,7 @@ export default function TermsPage() {
 
       {/* Footer */}
       <footer className="py-6 text-center text-xs text-slate-500 border-t border-[#bccac0]/20 bg-white">
-        © {new Date().getFullYear()} APANA • Operado por Mivo E.I.R.L. • Lima, Perú.
+        © {new Date().getFullYear()} APANA • Operado por Mivo E.I.R.L. (RUC: 20616379276) • Lima, Perú.
       </footer>
     </div>
   );

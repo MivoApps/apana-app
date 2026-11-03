@@ -159,6 +159,7 @@ export default function LibroReclamacionesPage() {
                   <span>Datos del Proveedor</span>
                 </div>
                 <p><strong>Razón Social:</strong> Mivo E.I.R.L.</p>
+                <p><strong>RUC:</strong> 20616379276</p>
                 <p><strong>Nombre Comercial:</strong> APANA</p>
                 <p><strong>Ubicación:</strong> Lima, Perú</p>
                 <p><strong>Correo:</strong> soporte@beapana.com</p>
@@ -252,7 +253,7 @@ export default function LibroReclamacionesPage() {
                 Libro de Reclamaciones Virtual
               </h1>
               <p className="text-xs sm:text-sm text-slate-500">
-                <strong>Mivo E.I.R.L.</strong> • Razón social operadora de la plataforma APANA • Lima, Perú.
+                <strong>Mivo E.I.R.L.</strong> (RUC: 20616379276) • Razón social operadora de la plataforma APANA • Lima, Perú.
               </p>
             </div>
 
@@ -554,7 +555,7 @@ export default function LibroReclamacionesPage() {
 
       {/* Footer */}
       <footer className="py-6 text-center text-xs text-slate-500 border-t border-[#bccac0]/20 bg-white">
-        © {new Date().getFullYear()} APANA • Operado por Mivo E.I.R.L. • Lima, Perú.
+        © {new Date().getFullYear()} APANA • Operado por Mivo E.I.R.L. (RUC: 20616379276) • Lima, Perú.
       </footer>
     </div>
   );

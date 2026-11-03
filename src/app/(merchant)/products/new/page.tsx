@@ -56,7 +56,22 @@ export default function CreateProductPage() {
   const isFromWizard = searchParams.get('from') === 'wizard';
 
   const handleBackClick = () => {
-    router.replace('/dashboard');
+    const fromParam = searchParams.get('from');
+    if (fromParam === 'dashboard' || fromParam === 'wizard') {
+      router.replace('/dashboard');
+    } else if (fromParam === 'products') {
+      router.replace('/products');
+    } else if (
+      typeof window !== 'undefined' &&
+      window.history.length > 1 &&
+      document.referrer &&
+      document.referrer.includes('/products') &&
+      !document.referrer.includes('/products/new')
+    ) {
+      router.back();
+    } else {
+      router.replace('/products');
+    }
   };
 
   const { user, loading: authLoading } = useAuth();
@@ -74,7 +89,7 @@ export default function CreateProductPage() {
   const [fsStore, setFsStore] = useState<any>(null);
   const [storePlan, setStorePlan] = useState<string>('gratis');
   const [storeCategories, setStoreCategories] = useState<string[]>([]);
-  const [productsCount, setProductsCount] = useState<number>(0);
+  const [productsCount, setProductsCount] = useState<number | null>(null);
   const [productCategory, setProductCategory] = useState('');
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -124,17 +139,24 @@ export default function CreateProductPage() {
         return;
       }
 
-      // 1. Intentar cargar de caché rápido de usuario
+      // 1. Intentar cargar de caché rápido de usuario (tienda Y productos)
       if (typeof window !== 'undefined') {
         try {
           const cached = sessionStorage.getItem(`apana_cache_store_${user.uid}`);
+          const cachedProds = sessionStorage.getItem(`apana_cache_prods_${user.uid}`);
           if (cached) {
             const parsed = JSON.parse(cached);
             if (parsed?.name && isMounted) {
               setFsStore(parsed);
               setStorePlan(parsed.plan || 'gratis');
               setStoreCategories(parsed.categories || []);
-              setCheckingLimit(false);
+              if (cachedProds) {
+                const parsedProds = JSON.parse(cachedProds);
+                if (Array.isArray(parsedProds)) {
+                  setProductsCount(parsedProds.length);
+                  setCheckingLimit(false);
+                }
+              }
             }
           }
         } catch (_) {}
@@ -151,7 +173,12 @@ export default function CreateProductPage() {
             sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(storeFromFS));
           }
           const prods = await getProductsByStoreIdFromFS(storeFromFS.id);
-          if (isMounted) setProductsCount(prods.length);
+          if (isMounted) {
+            setProductsCount(prods.length);
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem(`apana_cache_prods_${user.uid}`, JSON.stringify(prods));
+            }
+          }
         }
       } catch (e) {
         console.warn('Aviso verificando límites:', e);
@@ -173,7 +200,7 @@ export default function CreateProductPage() {
 
   const maxImagesLimit = storePlan === 'gratis' ? 1 : storePlan === 'emprendedor' ? 4 : 8;
   const productLimit = storePlan === 'gratis' ? 25 : storePlan === 'emprendedor' ? 150 : 999999;
-  const isLimitReached = productsCount >= productLimit;
+  const isLimitReached = productsCount !== null && productsCount >= productLimit;
 
   const handleImageAppend = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

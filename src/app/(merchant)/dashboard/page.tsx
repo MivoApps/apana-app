@@ -22,7 +22,8 @@ import {
   ShieldAlert,
   Mail,
   CheckCircle2,
-  BookOpen
+  BookOpen,
+  Scale
 } from 'lucide-react';
 import { sendEmailVerification } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -35,8 +36,11 @@ import { StorePreviewModal } from '@/components/ui/StorePreviewModal';
 import { WhatsAppVerifyModal } from '@/components/merchant/WhatsAppVerifyModal';
 import { DashboardProgressChecklist } from '@/components/merchant/DashboardProgressChecklist';
 import { PlanTrialModal } from '@/components/merchant/PlanTrialModal';
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { Store, Product } from '@/types/store';
 import { isSuperAdminEmail } from '@/lib/auth-helpers';
+import { MerchantSidebar } from '@/components/merchant/MerchantSidebar';
+import { WhatsNewModal } from '@/components/merchant/WhatsNewModal';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -56,6 +60,20 @@ export default function DashboardPage() {
   const [isTogglingStatus, setIsTogglingStatus] = React.useState(false);
   const [isResendingEmail, setIsResendingEmail] = React.useState(false);
   const [emailSentToast, setEmailSentToast] = React.useState(false);
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = React.useState(false);
+
+  // Apertura automática única del modal de novedades para tiendas existentes
+  React.useEffect(() => {
+    if (!isLoading && fsStore?.id && typeof window !== 'undefined') {
+      const hasSeen = localStorage.getItem(`apana_whats_new_seen_${fsStore.id}_v1_legal`);
+      if (!hasSeen) {
+        const timer = setTimeout(() => {
+          setIsWhatsNewOpen(true);
+        }, 800);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isLoading, fsStore?.id]);
 
   const handleResendEmail = async () => {
     if (!user) return;
@@ -303,6 +321,7 @@ export default function DashboardPage() {
 
   const handleToggleStoreStatus = async () => {
     if (!user || !fsStore || isTogglingStatus) return;
+
     setIsTogglingStatus(true);
     const newStatus = isStoreActive ? 'pausada' : 'activa';
     try {
@@ -330,59 +349,95 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col font-sans relative pb-28">
-      {/* App Bar Superior */}
-      <header className="fixed top-0 w-full z-40 bg-[#f8f9ff]/80 backdrop-blur-xl border-b border-[#bccac0]/20">
-        <div className="h-14 flex items-center justify-between px-4 max-w-[640px] mx-auto">
-          <h1 className="font-bold text-lg text-[#0b1c30]">Inicio</h1>
-          <div className="flex items-center gap-1">
-            {/* Solo visible para el Propietario SuperAdmin */}
-            {isSuperAdminEmail(user?.email) && (
-              <Link
-                href="/admin"
-                title="Panel SuperAdmin (Propietario)"
-                className="p-2 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-1"
-              >
-                <ShieldCheck size={20} className="text-[#059669]" />
+    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex font-sans relative pb-24 md:pb-12">
+      {/* Sidebar Fija para Desktop */}
+      <MerchantSidebar
+        currentPath="dashboard"
+        store={activeStore}
+        userEmail={user?.email}
+        onLogout={handleLogout}
+      />
+
+      <div className="flex-1 flex flex-col min-w-0 md:pl-64">
+        {/* App Bar Superior (Visible en Móvil) */}
+        <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-[#f8f9ff]/80 backdrop-blur-xl border-b border-[#bccac0]/20">
+          <div className="h-14 flex items-center justify-between px-4">
+            <h1 className="font-bold text-lg text-[#0b1c30]">Inicio</h1>
+            <div className="flex items-center gap-1">
+              {/* Solo visible para el Propietario SuperAdmin */}
+              {isSuperAdminEmail(user?.email) && (
+                <Link
+                  href="/admin"
+                  title="Panel SuperAdmin (Propietario)"
+                  className="p-2 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-1"
+                >
+                  <ShieldCheck size={20} className="text-[#059669]" />
+                </Link>
+              )}
+              <Link href="/settings" className="p-2 text-[#6d7a72] hover:text-[#0b1c30]">
+                <Settings size={20} />
               </Link>
-            )}
-            <Link href="/settings" className="p-2 text-[#6d7a72] hover:text-[#0b1c30]">
-              <Settings size={20} />
+              {user && (
+                <button
+                  onClick={handleLogout}
+                  title="Cerrar sesión"
+                  className="p-2 text-red-500 hover:text-red-700 transition-colors"
+                >
+                  <LogOut size={18} />
+                </button>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Top Header Desktop */}
+        <div className="hidden md:flex items-center justify-between px-6 md:px-8 pt-7 pb-4">
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-black text-[#0b1c30] tracking-tight">Panel de Control</h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Gestiona el catálogo, pedidos de WhatsApp y métricas de tu tienda
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setIsPreviewOpen(true)}
+              className="h-9 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-[#0b1c30] text-xs font-bold transition-all shadow-2xs flex items-center gap-2 cursor-pointer"
+            >
+              <ExternalLink size={14} className="text-slate-500" />
+              <span>Vista Previa</span>
+            </button>
+            <Link
+              href="/products/new?from=dashboard"
+              className="h-9 px-4 rounded-xl bg-[#059669] hover:bg-[#00855d] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus size={15} />
+              <span>Nuevo Producto</span>
             </Link>
-            {user && (
-              <button
-                onClick={handleLogout}
-                title="Cerrar sesión"
-                className="p-2 text-red-500 hover:text-red-700 transition-colors"
-              >
-                <LogOut size={18} />
-              </button>
-            )}
           </div>
         </div>
-      </header>
 
-      {/* Barra de Impersonación SuperAdmin */}
-      {isImpersonating && (
-        <div className="bg-amber-500 text-amber-950 px-4 py-2 text-xs font-bold flex items-center justify-between sticky top-0 z-50 shadow-md">
-          <div className="flex items-center gap-2">
-            <span>🛡️ <strong>Modo SuperAdmin:</strong> Viendo la tienda <u>{fsStore?.name}</u></span>
+        {/* Barra de Impersonación SuperAdmin */}
+        {isImpersonating && (
+          <div className="bg-amber-500 text-amber-950 px-4 py-2 text-xs font-bold flex items-center justify-between sticky top-0 z-50 shadow-md">
+            <div className="flex items-center gap-2">
+              <span>🛡️ <strong>Modo SuperAdmin:</strong> Viendo la tienda <u>{fsStore?.name}</u></span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                sessionStorage.removeItem('apana_impersonated_store');
+                router.replace('/admin');
+              }}
+              className="bg-amber-950 text-amber-100 hover:bg-black px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer"
+            >
+              Salir y Volver al Admin →
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              sessionStorage.removeItem('apana_impersonated_store');
-              router.replace('/admin');
-            }}
-            className="bg-amber-950 text-amber-100 hover:bg-black px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer"
-          >
-            Salir y Volver al Admin →
-          </button>
-        </div>
-      )}
+        )}
 
-      {/* Main Container */}
-      <main className={`${isImpersonating ? 'pt-8' : 'pt-16'} px-4 max-w-[640px] w-full mx-auto flex flex-col gap-5`}>
+        {/* Main Container */}
+        <main className={`${isImpersonating ? 'pt-8' : 'pt-16 md:pt-2'} px-4 sm:px-6 md:px-8 w-full flex flex-col gap-6`}>
         {/* Banner de Anuncio Global del Sistema (Si está activo) */}
         {globalAnnouncement && globalAnnouncement.active && (
           <div className={`p-4 rounded-2xl border shadow-xs flex items-center gap-3 text-xs animate-in fade-in ${globalAnnouncement.type === 'warning'
@@ -481,6 +536,45 @@ export default function DashboardPage() {
           isResendingEmail={isResendingEmail}
         />
 
+        {/* Banner de Alerta Puntual Post-Onboarding si WhatsApp no está verificado */}
+        {activeStore?.isOnboardingCelebrated && (!activeStore?.whatsappPhone || !activeStore?.isWhatsappVerified) && (
+          <div className="bg-amber-50 border border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-950 shadow-2xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0 text-amber-800">
+                <WhatsAppIcon size={20} />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-amber-900">
+                  {activeStore?.whatsappPhone ? 'Línea de WhatsApp pendiente de validación' : 'Número de WhatsApp de pedidos no asignado'}
+                </h4>
+                <p className="text-[11px] text-amber-800/90 mt-0.5">
+                  {activeStore?.whatsappPhone
+                    ? `Verifica tu línea (${activeStore.whatsappPhone}) para que tus clientes puedan enviarte pedidos.`
+                    : 'Asigna un número de WhatsApp oficial en Ajustes para recibir pedidos en tu tienda.'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+              {activeStore?.whatsappPhone ? (
+                <button
+                  type="button"
+                  onClick={() => setIsVerifyModalOpen(true)}
+                  className="px-4 py-2 bg-[#059669] hover:bg-[#00855d] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors"
+                >
+                  Verificar línea ahora →
+                </button>
+              ) : (
+                <Link
+                  href="/settings?tab=general"
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors"
+                >
+                  Asignar número →
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Toast Flotante de Correo Enviado */}
         {emailSentToast && (
           <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3">
@@ -489,8 +583,12 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Card Principal de la Tienda */}
-        <div className="bg-white p-5 rounded-2xl border border-[#bccac0]/40 shadow-xs flex flex-col gap-4">
+        {/* Grilla Principal del Dashboard (Responsiva en Desktop) */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+          {/* Columna Principal Izquierda */}
+          <div className="md:col-span-7 xl:col-span-8 flex flex-col gap-5">
+            {/* Card Principal de la Tienda */}
+            <div className="bg-white p-5 rounded-2xl border border-[#bccac0]/40 shadow-xs flex flex-col gap-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div
@@ -810,47 +908,93 @@ export default function DashboardPage() {
             </div>
           )}
         </section>
+          </div>
 
-        {/* Accesos Rápidos de Gestión */}
-        <div className="flex flex-col gap-3">
-          <h3 className="font-bold text-base text-[#0b1c30]">Acciones Frecuentes</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            <Link href="/products/new" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-[#059669] transition-all flex flex-col gap-1.5 shadow-2xs group">
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#059669] flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Plus size={18} />
-              </div>
-              <span className="text-xs font-bold text-[#0b1c30] leading-tight">Nuevo Producto</span>
-              <span className="text-[10px] text-[#6d7a72] leading-tight">Agregar a tienda</span>
-            </Link>
+          {/* Columna Lateral Derecha (Responsiva en Desktop) */}
+          <div className="md:col-span-5 xl:col-span-4 flex flex-col gap-5 md:sticky md:top-20">
+            {/* Accesos Rápidos de Gestión */}
+            <div className="flex flex-col gap-3">
+              <h3 className="font-bold text-base text-[#0b1c30]">Acciones Frecuentes</h3>
+              <div className="grid grid-cols-2 gap-2.5">
+                <Link href="/products/new?from=dashboard" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-[#059669] transition-all flex flex-col gap-1.5 shadow-2xs group">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#059669] flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Plus size={18} />
+                  </div>
+                  <span className="text-xs font-bold text-[#0b1c30] leading-tight">Nuevo Producto</span>
+                  <span className="text-[10px] text-[#6d7a72] leading-tight">Agregar a tienda</span>
+                </Link>
 
-            <Link href="/settings" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-[#059669] transition-all flex flex-col gap-1.5 shadow-2xs group">
-              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Settings size={18} />
-              </div>
-              <span className="text-xs font-bold text-[#0b1c30] leading-tight">Personalizar</span>
-              <span className="text-[10px] text-[#6d7a72] leading-tight">Estilo y colores</span>
-            </Link>
+                <Link href="/settings" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-[#059669] transition-all flex flex-col gap-1.5 shadow-2xs group">
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Settings size={18} />
+                  </div>
+                  <span className="text-xs font-bold text-[#0b1c30] leading-tight">Personalizar</span>
+                  <span className="text-[10px] text-[#6d7a72] leading-tight">Estilo y colores</span>
+                </Link>
 
-            <Link href="/claims" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-emerald-500 transition-all flex flex-col gap-1.5 shadow-2xs group">
-              <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <BookOpen size={18} />
-              </div>
-              <span className="text-xs font-bold text-[#0b1c30] leading-tight">Reclamaciones</span>
-              <span className="text-[10px] text-[#6d7a72] leading-tight">Libro oficial INDECOPI</span>
-            </Link>
+                <Link href="/claims" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-emerald-500 transition-all flex flex-col gap-1.5 shadow-2xs group">
+                  <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <BookOpen size={18} />
+                  </div>
+                  <span className="text-xs font-bold text-[#0b1c30] leading-tight">Reclamaciones</span>
+                  <span className="text-[10px] text-[#6d7a72] leading-tight">Libro oficial INDECOPI</span>
+                </Link>
 
-            <Link href="/plans" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-amber-500 transition-all flex flex-col gap-1.5 shadow-2xs group">
-              <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Crown size={18} />
+                <Link href="/plans" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-amber-500 transition-all flex flex-col gap-1.5 shadow-2xs group">
+                  <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Crown size={18} />
+                  </div>
+                  <span className="text-xs font-bold text-[#0b1c30] leading-tight">Planes</span>
+                  <span className="text-[10px] text-amber-800 font-medium leading-tight">
+                    {fsStore?.plan === 'emprendedor' ? 'Plan Activo' : 'Ver Beneficios'}
+                  </span>
+                </Link>
               </div>
-              <span className="text-xs font-bold text-[#0b1c30] leading-tight">Planes</span>
-              <span className="text-[10px] text-amber-800 font-medium leading-tight">
-                {fsStore?.plan === 'emprendedor' ? 'Plan Activo' : 'Ver Beneficios'}
-              </span>
-            </Link>
+            </div>
+
+            {/* Card de Cumplimiento Legal e INDECOPI */}
+            <div className="bg-white p-5 rounded-2xl border border-[#bccac0]/40 shadow-xs flex flex-col gap-3">
+              <div className="flex items-center gap-2.5 pb-2 border-b border-gray-100">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <Scale size={18} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-bold text-xs text-[#0b1c30]">Cumplimiento Legal INDECOPI</span>
+                  <span className="text-[10px] text-slate-500">Libro virtual & transparencia</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 pt-0.5">
+                <Link
+                  href={`/s/${storeSlug}/libro-de-reclamaciones`}
+                  target="_blank"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50/70 border border-slate-200/80 text-xs font-semibold text-slate-700 hover:text-indigo-900 transition-colors"
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <BookOpen size={14} className="text-indigo-600 shrink-0" />
+                    <span className="truncate">Ver mi Libro de Reclamaciones</span>
+                  </span>
+                  <ExternalLink size={12} className="text-slate-400 shrink-0 ml-1" />
+                </Link>
+
+                <Link
+                  href="/claims"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-emerald-50/70 border border-slate-200/80 text-xs font-semibold text-slate-700 hover:text-emerald-900 transition-colors"
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <ShieldCheck size={14} className="text-[#059669] shrink-0" />
+                    <span className="truncate">Bandeja de Reclamos Recibidos</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
+                    Bandeja
+                  </span>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </main>
+      </div>
 
       {/* Modal de Validación de WhatsApp */}
       {fsStore && (
@@ -871,8 +1015,8 @@ export default function DashboardPage() {
 
       {/* Bottom Nav Fija (Inicio, Productos, Ajustes) - Oculta durante la verificación de WhatsApp */}
       {!isVerifyModalOpen && (
-        <nav className="fixed bottom-0 w-full z-40 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)] animate-in fade-in duration-200">
-          <div className="h-16 flex items-center justify-around max-w-[640px] mx-auto">
+        <nav className="md:hidden fixed bottom-0 w-full z-40 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)] animate-in fade-in duration-200">
+          <div className="h-16 flex items-center justify-around max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <Link
               href="/dashboard"
               className="flex flex-col items-center gap-1 text-[#059669] font-semibold"
@@ -945,6 +1089,17 @@ export default function DashboardPage() {
             }
             setIsTrialModalOpen(false);
           }}
+        />
+      )}
+
+      {/* Modal de Novedades Importantes para Comercios Existentes */}
+      {fsStore && (
+        <WhatsNewModal
+          isOpen={isWhatsNewOpen}
+          onClose={() => setIsWhatsNewOpen(false)}
+          storeId={fsStore.id}
+          storeName={fsStore.name}
+          isLegalConfigured={Boolean(fsStore.legalTaxId && fsStore.legalBusinessName)}
         />
       )}
     </div>

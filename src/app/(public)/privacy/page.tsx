@@ -52,7 +52,7 @@ export default function PrivacyPage() {
               1. Identidad y Domicilio del Responsable del Tratamiento
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              El titular y responsable del tratamiento de los bancos de datos personales recopilados a través del sitio web y plataforma <strong>APANA</strong> es <strong>MIVO (Mivo E.I.R.L.)</strong>, con domicilio legal en la ciudad de Lima, Perú, y correo electrónico oficial de contacto: <a href="mailto:soporte@beapana.com" className="text-[#059669] font-bold hover:underline">soporte@beapana.com</a>.
+              El titular y responsable del tratamiento de los bancos de datos personales recopilados a través del sitio web y plataforma <strong>APANA</strong> es <strong>MIVO (Mivo E.I.R.L. con RUC: 20616379276)</strong>, con domicilio legal en la ciudad de Lima, Perú, y correo electrónico oficial de contacto: <a href="mailto:soporte@beapana.com" className="text-[#059669] font-bold hover:underline">soporte@beapana.com</a>.
             </p>
           </section>
 
@@ -167,7 +167,7 @@ export default function PrivacyPage() {
 
       {/* Footer */}
       <footer className="py-6 text-center text-xs text-slate-500 border-t border-[#bccac0]/20 bg-white">
-        © {new Date().getFullYear()} APANA • Operado por Mivo E.I.R.L. • Lima, Perú.
+        © {new Date().getFullYear()} APANA • Operado por Mivo E.I.R.L. (RUC: 20616379276) • Lima, Perú.
       </footer>
     </div>
   );

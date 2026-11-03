@@ -27,6 +27,7 @@ import { getStoreByUserIdFromFS } from '@/lib/firebase/firestore';
 import { Store } from '@/types/store';
 import { PlanTrialModal } from '@/components/merchant/PlanTrialModal';
 import { isSuperAdminEmail } from '@/lib/auth-helpers';
+import { MerchantSidebar } from '@/components/merchant/MerchantSidebar';
 
 declare global {
   interface Window {
@@ -39,7 +40,14 @@ export default function PlansPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromPath = searchParams.get('from');
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    sessionStorage.clear();
+    localStorage.clear();
+    await logout();
+    window.location.href = '/login';
+  };
   const [store, setStore] = useState<Store | null>(null);
   const [currentPlan, setCurrentPlan] = useState<string>('gratis');
   const [checkoutTargetPlan, setCheckoutTargetPlan] = useState<'emprendedor' | 'negocio'>('emprendedor');
@@ -295,29 +303,57 @@ export default function PlansPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col font-sans relative pb-16">
-      {/* Header Fijo */}
-      <header className="fixed top-0 w-full z-40 bg-[#f8f9ff]/80 backdrop-blur-xl border-b border-[#bccac0]/20">
-        <div className="h-16 px-4 max-w-[640px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleBack}
-              className="w-10 h-10 flex items-center justify-center text-[#0b1c30] hover:bg-gray-100 transition-colors rounded-full cursor-pointer"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <h1 className="font-bold text-lg text-[#0b1c30]">Planes y Suscripción</h1>
-          </div>
-          <Link href="/settings" title="Ir a Ajustes" className="transition-transform active:scale-95">
-            <div className="w-8 h-8 rounded-full bg-[#059669] text-white flex items-center justify-center shadow-2xs hover:opacity-90 cursor-pointer">
-              <User size={18} />
-            </div>
-          </Link>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex font-sans relative pb-20">
+      {/* Sidebar Fija para Desktop */}
+      <MerchantSidebar
+        currentPath="plans"
+        store={store}
+        userEmail={user?.email}
+        onLogout={handleLogout}
+      />
 
-      {/* Main Container */}
-      <main className="pt-20 px-4 max-w-[640px] w-full mx-auto flex flex-col gap-6">
+      <div className="flex-1 flex flex-col min-w-0 md:pl-64">
+        {/* Header Fijo Móvil */}
+        <header className="md:hidden fixed top-0 w-full z-40 bg-[#f8f9ff]/80 backdrop-blur-xl border-b border-[#bccac0]/20">
+          <div className="h-16 px-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleBack}
+                className="w-10 h-10 flex items-center justify-center text-[#0b1c30] hover:bg-gray-100 transition-colors rounded-full cursor-pointer"
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <h1 className="font-bold text-lg text-[#0b1c30]">Planes y Suscripción</h1>
+            </div>
+            <Link href="/settings" title="Ir a Ajustes" className="transition-transform active:scale-95">
+              <div className="w-8 h-8 rounded-full bg-[#059669] text-white flex items-center justify-center shadow-2xs hover:opacity-90 cursor-pointer">
+                <User size={18} />
+              </div>
+            </Link>
+          </div>
+        </header>
+
+        {/* Top Header Desktop */}
+        <div className="hidden md:flex items-center justify-between px-6 md:px-8 pt-7 pb-4">
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-black text-[#0b1c30] tracking-tight">Planes y Beneficios</h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Elige el plan ideal para expandir las ventas y alcance de tu tienda
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleBack}
+            className="h-9 px-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <ArrowLeft size={14} />
+            <span>Volver</span>
+          </button>
+        </div>
+
+        {/* Main Container */}
+        <main className="pt-20 md:pt-2 px-4 sm:px-6 md:px-8 max-w-6xl w-full mx-auto flex flex-col gap-6">
         {/* Header Section */}
         <div className="flex flex-col items-center text-center gap-2 mt-2">
           <div className="w-12 h-12 rounded-full bg-emerald-100 text-[#059669] flex items-center justify-center mb-1">
@@ -477,8 +513,8 @@ export default function PlansPage() {
           </div>
         </div>
 
-        {/* 3 Plans Container */}
-        <div className="flex flex-col gap-5">
+        {/* 3 Plans Container (Desktop 3-Columns Grid) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
 
           {/* 1. Plan Gratis */}
           <div className={`flex flex-col gap-4 bg-white shadow-xs border rounded-2xl p-5 transition-all ${currentPlan === 'gratis' ? 'border-[#059669] ring-2 ring-[#059669]/10' : 'border-[#bccac0]/40'
@@ -848,6 +884,7 @@ export default function PlansPage() {
         </div>
 
       </main>
+      </div>
 
       {/* Modal de Cancelación de Suscripción */}
       {isCancelModalOpen && (

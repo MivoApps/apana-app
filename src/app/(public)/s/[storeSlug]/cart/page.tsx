@@ -21,6 +21,7 @@ import { useAppStore } from '@/lib/app-store';
 import { Store } from '@/types/store';
 import { formatCurrency, generateWhatsAppLink } from '@/lib/whatsapp';
 import { Button } from '@/components/ui/Button';
+import { StorePoliciesModal } from '@/components/ui/StorePoliciesModal';
 
 interface Props {
   params: Promise<{
@@ -37,6 +38,7 @@ export default function PublicCartPage({ params }: Props) {
   const [notes, setNotes] = useState('');
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isLoadingStore, setIsLoadingStore] = useState(true);
+  const [isPoliciesOpen, setIsPoliciesOpen] = useState(false);
 
   const resolvedParams = React.use(params);
   const [store, setStore] = useState<Store | null>(null);
@@ -151,8 +153,77 @@ export default function PublicCartPage({ params }: Props) {
   const isModern = store?.themeStyle === 'moderna';
   const brandColor = store?.primaryColor || '#059669';
 
+  const renderCheckoutButton = () => {
+    if (isLoadingStore && !store) {
+      return <div className="w-full h-12 bg-slate-200 animate-pulse rounded-xl" />;
+    }
+
+    if (!store?.whatsappPhone || !store?.isWhatsappVerified) {
+      return (
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            disabled
+            className="w-full h-12 bg-slate-200 text-slate-500 font-bold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 cursor-not-allowed shadow-none select-none"
+          >
+            <span>⏳ WhatsApp no configurado</span>
+          </button>
+          <p className="text-[11px] text-amber-950 bg-amber-50 border border-amber-200/80 rounded-xl p-2.5 text-center leading-tight">
+            Esta tienda se está terminando de configurar. Vuelve a visitarnos pronto para enviar tu pedido por WhatsApp.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col gap-2 w-full">
+        <button
+          onClick={handleSendWhatsAppOrder}
+          disabled={isRedirecting}
+          style={{ backgroundColor: brandColor }}
+          className={`w-full h-12 text-white font-bold text-base shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            isRedirecting ? 'opacity-85 cursor-wait' : ''
+          } ${
+            isElegant
+              ? 'rounded-2xl font-playfair tracking-wide'
+              : isModern
+              ? 'rounded-2xl uppercase font-space-grotesk'
+              : 'rounded-xl font-plus-jakarta'
+          }`}
+        >
+          {isRedirecting ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Abriendo WhatsApp...</span>
+            </>
+          ) : (
+            <>
+              <WhatsAppIcon size={20} />
+              <span>Completar por WhatsApp</span>
+            </>
+          )}
+        </button>
+        <p className="text-center text-[11px] text-[#6d7a72] leading-tight">
+          Al enviar el pedido aceptas las{' '}
+          {store ? (
+            <button
+              type="button"
+              onClick={() => setIsPoliciesOpen(true)}
+              className="text-[#006c49] font-bold underline hover:text-[#0b1c30] cursor-pointer"
+            >
+              Políticas de la Tienda
+            </button>
+          ) : (
+            <span>Políticas de la Tienda</span>
+          )}
+          {' '}• Redirección a WhatsApp.
+        </p>
+      </div>
+    );
+  };
+
   return (
-    <div className={`min-h-screen flex flex-col font-sans relative pb-36 transition-colors ${isElegant
+    <div className={`min-h-screen flex flex-col font-sans relative pb-36 lg:pb-16 transition-colors ${isElegant
       ? 'bg-[#FAF8F5] text-stone-900'
       : isModern
         ? 'bg-slate-50 text-[#0b1c30]'
@@ -165,24 +236,42 @@ export default function PublicCartPage({ params }: Props) {
           ? 'bg-white/90 border-slate-200/80 shadow-2xs'
           : 'bg-white/90 border-neutral-100'
         }`}>
-        <div className="h-16 px-4 max-w-[640px] mx-auto flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors cursor-pointer ${isElegant ? 'text-stone-800 hover:bg-stone-200/50' : 'text-[#0b1c30] hover:bg-gray-100'
-              }`}
+        <div className="h-16 px-4 sm:px-6 md:px-8 max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={() => router.back()}
+              className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors cursor-pointer ${isElegant ? 'text-stone-800 hover:bg-stone-200/50' : 'text-[#0b1c30] hover:bg-gray-100'
+                }`}
+              title="Volver"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div className="flex items-center gap-2">
+              <h1 className={`font-bold text-lg truncate ${isElegant ? 'font-playfair text-stone-900' : isModern ? 'font-space-grotesk text-[#0b1c30]' : 'font-plus-jakarta text-neutral-900'
+                }`}>
+                Tu Carrito
+              </h1>
+              {items.length > 0 && (
+                <span className="text-xs font-extrabold bg-emerald-100 text-[#059669] px-2 py-0.5 rounded-full">
+                  {totalCount} {totalCount === 1 ? 'producto' : 'productos'}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <Link
+            href={`/s/${resolvedParams.storeSlug}`}
+            className="text-xs font-bold text-[#059669] hover:underline hidden sm:inline-flex items-center gap-1"
           >
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className={`font-bold text-lg truncate ${isElegant ? 'font-playfair text-stone-900' : isModern ? 'font-space-grotesk text-[#0b1c30]' : 'font-plus-jakarta text-neutral-900'
-            }`}>
-            Tu Carrito
-          </h1>
+            <span>Seguir comprando</span>
+            <span>→</span>
+          </Link>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="pt-16 pb-safe max-w-[640px] w-full mx-auto">
-        <div className="px-4 py-6 flex flex-col gap-6">
+      <main className="pt-16 pb-safe max-w-6xl w-full mx-auto px-4 sm:px-6 md:px-8">
+        <div className="py-6 flex flex-col gap-6">
           {/* Header de Carrito */}
           <div className="flex flex-col items-center justify-center text-center py-4">
             <div
@@ -191,17 +280,17 @@ export default function PublicCartPage({ params }: Props) {
             >
               <ShoppingBag size={30} />
             </div>
-            <h2 className={`text-2xl font-bold ${isElegant ? 'font-playfair text-stone-900' : isModern ? 'font-space-grotesk text-[#0b1c30]' : 'font-plus-jakarta text-neutral-900'
+            <h2 className={`text-2xl sm:text-3xl font-bold ${isElegant ? 'font-playfair text-stone-900' : isModern ? 'font-space-grotesk text-[#0b1c30]' : 'font-plus-jakarta text-neutral-900'
               }`}>
-              Tu carrito
+              Tu carrito de compras
             </h2>
             <p className={`text-sm ${isElegant ? 'text-stone-500 font-sans' : 'text-neutral-500'}`}>
-              Estás a un paso de tenerlos.
+              Revisa tus productos y completa tu pedido directamente por WhatsApp.
             </p>
           </div>
 
           {items.length === 0 ? (
-            <div className={`rounded-2xl p-8 border text-center flex flex-col items-center gap-3 shadow-xs ${isElegant ? 'bg-white border-[#E7E2D9]' : isModern ? 'bg-white border-slate-200' : 'bg-neutral-50 border-neutral-200'
+            <div className={`max-w-md mx-auto w-full rounded-2xl p-8 border text-center flex flex-col items-center gap-3 shadow-xs ${isElegant ? 'bg-white border-[#E7E2D9]' : isModern ? 'bg-white border-slate-200' : 'bg-neutral-50 border-neutral-200'
               }`}>
               <span className="text-4xl">🛍️</span>
               <h3 className={`font-bold text-lg ${isElegant ? 'font-playfair text-stone-900' : 'text-[#0b1c30]'}`}>
@@ -215,152 +304,146 @@ export default function PublicCartPage({ params }: Props) {
               </Link>
             </div>
           ) : (
-            <>
-              {/* Lista de Ítems del Carrito */}
-              <div className="flex flex-col gap-3">
-                {items.map((item) => {
-                  const { id: cartItemId, product, quantity, selectedOptions, calculatedPrice } = item;
-                  const itemUnitPrice = calculatedPrice ?? product.price;
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* Columna Izquierda: Ítems y Datos de Entrega */}
+              <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
+                {/* Lista de Ítems del Carrito */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between pb-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Productos seleccionados ({totalCount})
+                    </span>
+                  </div>
 
-                  return (
-                    <div
-                      key={cartItemId}
-                      className={`bg-white rounded-2xl p-4 flex items-center gap-4 border shadow-xs relative overflow-hidden ${isElegant ? 'border-[#E7E2D9]' : isModern ? 'border-slate-200' : 'border-neutral-100'
-                        }`}
-                    >
-                      <div className="w-20 h-20 rounded-xl bg-gray-50 shrink-0 overflow-hidden">
-                        <img
-                          src={product.imageUrl}
-                          alt={product.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex flex-col flex-1 min-w-0">
-                        <h3 className={`font-semibold text-sm truncate ${isElegant ? 'font-playfair text-stone-900' : isModern ? 'font-space-grotesk text-[#0b1c30]' : 'text-neutral-900'
-                          }`}>
-                          {product.title}
-                        </h3>
+                  {items.map((item) => {
+                    const { id: cartItemId, product, quantity, selectedOptions, calculatedPrice } = item;
+                    const itemUnitPrice = calculatedPrice ?? product.price;
 
-                        {/* Opciones Seleccionadas */}
-                        {selectedOptions && selectedOptions.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {selectedOptions.map((opt, i) => (
-                              <span
-                                key={i}
-                                className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md border ${isElegant
-                                  ? 'bg-amber-50 text-amber-900 border-amber-200/70'
-                                  : isModern
-                                    ? 'bg-blue-50 text-blue-900 border-blue-200/70'
-                                    : 'bg-neutral-100 text-neutral-700 border-neutral-200/70'
-                                  }`}
+                    return (
+                      <div
+                        key={cartItemId}
+                        className={`bg-white rounded-2xl p-4 flex items-center gap-4 border shadow-xs relative overflow-hidden ${isElegant ? 'border-[#E7E2D9]' : isModern ? 'border-slate-200' : 'border-neutral-100'
+                          }`}
+                      >
+                        <div className="w-20 h-20 rounded-xl bg-gray-50 shrink-0 overflow-hidden">
+                          <img
+                            src={product.imageUrl}
+                            alt={product.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex flex-col flex-1 min-w-0">
+                          <h3 className={`font-semibold text-sm truncate ${isElegant ? 'font-playfair text-stone-900' : isModern ? 'font-space-grotesk text-[#0b1c30]' : 'text-neutral-900'
+                            }`}>
+                            {product.title}
+                          </h3>
+
+                          {/* Opciones Seleccionadas */}
+                          {selectedOptions && selectedOptions.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {selectedOptions.map((opt, i) => (
+                                <span
+                                  key={i}
+                                  className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md border ${isElegant
+                                    ? 'bg-amber-50 text-amber-900 border-amber-200/70'
+                                    : isModern
+                                      ? 'bg-blue-50 text-blue-900 border-blue-200/70'
+                                      : 'bg-neutral-100 text-neutral-700 border-neutral-200/70'
+                                    }`}
+                                >
+                                  {opt.groupTitle}: {opt.valueName}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          <span
+                            className={`text-sm font-bold mt-1 ${isElegant ? 'font-playfair italic text-stone-900' : ''}`}
+                            style={!isElegant ? { color: brandColor } : undefined}
+                          >
+                            {formatCurrency(itemUnitPrice)}
+                          </span>
+
+                          {/* Controles de Cantidad */}
+                          <div className="flex items-center justify-between mt-3">
+                            <div className="flex items-center gap-2 bg-gray-100 rounded-full px-2 py-1">
+                              <button
+                                onClick={() => updateQuantity(cartItemId, quantity - 1)}
+                                className="w-6 h-6 flex items-center justify-center rounded-full text-[#3d4a42] hover:bg-gray-200 transition-colors cursor-pointer"
                               >
-                                {opt.groupTitle}: {opt.valueName}
+                                <Minus size={14} />
+                              </button>
+                              <span className="text-xs font-bold text-[#0b1c30] w-4 text-center">
+                                {quantity}
                               </span>
-                            ))}
+                              <button
+                                onClick={() => updateQuantity(cartItemId, quantity + 1)}
+                                className="w-6 h-6 flex items-center justify-center rounded-full text-[#3d4a42] hover:bg-gray-200 transition-colors cursor-pointer"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+
+                            <button
+                              onClick={() => removeItem(cartItemId)}
+                              className="text-[#ba1a1a] hover:bg-red-50 p-1.5 rounded-lg transition-colors cursor-pointer"
+                              title="Quitar"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Tarjeta Informativa de Recojo (Solo si la tienda es solo_recojo) */}
+                {isPickup && (
+                  <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 flex flex-col gap-3 shadow-2xs">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-100 text-[#006c49] flex items-center justify-center shrink-0 mt-0.5">
+                        <StoreIcon size={19} />
+                      </div>
+                      <div className="flex flex-col text-xs text-[#0b1c30]">
+                        <span className="font-extrabold text-[11px] text-[#006c49] uppercase tracking-wider">
+                          Modalidad: Solo Recojo en Tienda
+                        </span>
+                        <div className="flex items-center gap-1.5 text-slate-800 font-semibold text-sm mt-0.5">
+                          <MapPin size={14} className="text-[#059669] shrink-0" />
+                          <span>{store?.pickupAddress || store?.city || 'Local comercial de la tienda'}</span>
+                        </div>
+                        {store?.schedule && (
+                          <div className="flex items-center gap-1.5 text-slate-600 text-xs mt-1">
+                            <Clock size={13} className="text-slate-400 shrink-0" />
+                            <span>Horario: {store.schedule}</span>
                           </div>
                         )}
-
-                        <span
-                          className={`text-sm font-bold mt-1 ${isElegant ? 'font-playfair italic text-stone-900' : ''}`}
-                          style={!isElegant ? { color: brandColor } : undefined}
-                        >
-                          {formatCurrency(itemUnitPrice)}
-                        </span>
-
-                        {/* Controles de Cantidad */}
-                        <div className="flex items-center justify-between mt-3">
-                          <div className="flex items-center gap-2 bg-gray-100 rounded-full px-2 py-1">
-                            <button
-                              onClick={() => updateQuantity(cartItemId, quantity - 1)}
-                              className="w-6 h-6 flex items-center justify-center rounded-full text-[#3d4a42] hover:bg-gray-200 transition-colors cursor-pointer"
-                            >
-                              <Minus size={14} />
-                            </button>
-                            <span className="text-xs font-bold text-[#0b1c30] w-4 text-center">
-                              {quantity}
-                            </span>
-                            <button
-                              onClick={() => updateQuantity(cartItemId, quantity + 1)}
-                              className="w-6 h-6 flex items-center justify-center rounded-full text-[#3d4a42] hover:bg-gray-200 transition-colors cursor-pointer"
-                            >
-                              <Plus size={14} />
-                            </button>
-                          </div>
-
-                          <button
-                            onClick={() => removeItem(cartItemId)}
-                            className="text-[#ba1a1a] hover:bg-red-50 p-1.5 rounded-lg transition-colors cursor-pointer"
-                            title="Quitar"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* Tarjeta Informativa de Recojo (Solo si la tienda es solo_recojo) */}
-              {isPickup && (
-                <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 flex flex-col gap-3 shadow-2xs">
-                  <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-100 text-[#006c49] flex items-center justify-center shrink-0 mt-0.5">
-                      <StoreIcon size={19} />
-                    </div>
-                    <div className="flex flex-col text-xs text-[#0b1c30]">
-                      <span className="font-extrabold text-[11px] text-[#006c49] uppercase tracking-wider">
-                        Modalidad: Solo Recojo en Tienda
-                      </span>
-                      <div className="flex items-center gap-1.5 text-slate-800 font-semibold text-sm mt-0.5">
-                        <MapPin size={14} className="text-[#059669] shrink-0" />
-                        <span>{store?.pickupAddress || store?.city || 'Local comercial de la tienda'}</span>
-                      </div>
-                      {store?.schedule && (
-                        <div className="flex items-center gap-1.5 text-slate-600 text-xs mt-1">
-                          <Clock size={13} className="text-slate-400 shrink-0" />
-                          <span>Horario: {store.schedule}</span>
-                        </div>
-                      )}
+                    <div className="bg-white/90 rounded-xl p-2.5 border border-emerald-100 text-[11px] text-slate-600 leading-snug">
+                      💬 <strong>Coordinación por WhatsApp:</strong> Al enviar tu pedido, el comercio te confirmará por chat cuándo puedes pasar a retirarlo.
                     </div>
                   </div>
-                  <div className="bg-white/90 rounded-xl p-2.5 border border-emerald-100 text-[11px] text-slate-600 leading-snug">
-                    💬 <strong>Coordinación por WhatsApp:</strong> Al enviar tu pedido, el comercio te confirmará por chat cuándo puedes pasar a retirarlo.
-                  </div>
-                </div>
-              )}
+                )}
 
-              {/* Tarjeta de Datos de Entrega y Pago del Cliente */}
-              <div className={`bg-white rounded-2xl p-5 border shadow-xs flex flex-col gap-4 ${isElegant ? 'border-[#E7E2D9]' : isModern ? 'border-slate-200' : 'border-neutral-100'
-                }`}>
-                <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
-                  <h3 className={`text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 ${isElegant ? 'font-playfair text-stone-900 font-bold' : ''
-                    }`}>
-                    <span>{isPickup ? '🏬 Datos para tu Retiro y Pago' : '📍 Datos para tu Entrega y Pago'}</span>
-                  </h3>
-                  <span className="text-[10px] text-slate-400 font-medium">Opcional</span>
-                </div>
-
-                {isPickup ? (
-                  /* Formulario Simplificado para Recojo en Tienda (Sin pedir dirección de envío) */
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-semibold text-slate-600">
-                      Tu Nombre (para rotular e identificar tu pedido)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ej: María Gómez"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
-                    />
+                {/* Tarjeta de Datos de Entrega y Pago del Cliente */}
+                <div className={`bg-white rounded-2xl p-5 sm:p-6 border shadow-xs flex flex-col gap-4 ${isElegant ? 'border-[#E7E2D9]' : isModern ? 'border-slate-200' : 'border-neutral-100'
+                  }`}>
+                  <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+                    <h3 className={`text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 ${isElegant ? 'font-playfair text-stone-900 font-bold' : ''
+                      }`}>
+                      <span>{isPickup ? '🏬 Datos para tu Retiro y Pago' : '📍 Datos para tu Entrega y Pago'}</span>
+                    </h3>
+                    <span className="text-[10px] text-slate-400 font-medium">Opcional</span>
                   </div>
-                ) : (
-                  /* Formulario Estándar para Delivery */
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Nombre */}
+
+                  {isPickup ? (
+                    /* Formulario Simplificado para Recojo en Tienda */
                     <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-semibold text-slate-600">Tu Nombre</label>
+                      <label className="text-[11px] font-semibold text-slate-600">
+                        Tu Nombre (para rotular e identificar tu pedido)
+                      </label>
                       <input
                         type="text"
                         placeholder="Ej: María Gómez"
@@ -369,190 +452,188 @@ export default function PublicCartPage({ params }: Props) {
                         className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
                       />
                     </div>
+                  ) : (
+                    /* Formulario Estándar para Delivery */
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-semibold text-slate-600">Tu Nombre</label>
+                        <input
+                          type="text"
+                          placeholder="Ej: María Gómez"
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                          className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
+                        />
+                      </div>
 
-                    {/* Dirección / Distrito */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-semibold text-slate-600">Distrito / Dirección</label>
-                      <input
-                        type="text"
-                        placeholder="Ej: Miraflores, Lima"
-                        value={customerAddress}
-                        onChange={(e) => setCustomerAddress(e.target.value)}
-                        className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
-                      />
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-semibold text-slate-600">Distrito / Dirección</label>
+                        <input
+                          type="text"
+                          placeholder="Ej: Miraflores, Lima"
+                          value={customerAddress}
+                          onChange={(e) => setCustomerAddress(e.target.value)}
+                          className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Selector de Método de Pago */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-semibold text-slate-600">¿Cómo prefieres pagar?</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('yape')}
+                        className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${paymentMethod === 'yape'
+                          ? 'bg-[#742284]/10 border-[#742284] text-[#742284] shadow-2xs'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                      >
+                        <span>🟣</span>
+                        <span>Yape / Plin</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('transferencia')}
+                        className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${paymentMethod === 'transferencia'
+                          ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-2xs'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                      >
+                        <span>💳</span>
+                        <span>Transferencia</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('efectivo')}
+                        className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${paymentMethod === 'efectivo'
+                          ? 'bg-emerald-50 border-[#059669] text-[#059669] shadow-2xs'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                      >
+                        <span>💵</span>
+                        <span>{isPickup ? 'Al retirar' : 'Efectivo'}</span>
+                      </button>
                     </div>
                   </div>
-                )}
 
-                {/* Selector de Método de Pago */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-semibold text-slate-600">¿Cómo prefieres pagar?</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('yape')}
-                      className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${paymentMethod === 'yape'
-                        ? 'bg-[#742284]/10 border-[#742284] text-[#742284] shadow-2xs'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                        }`}
-                    >
-                      <span>🟣</span>
-                      <span>Yape / Plin</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('transferencia')}
-                      className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${paymentMethod === 'transferencia'
-                        ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-2xs'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                        }`}
-                    >
-                      <span>💳</span>
-                      <span>Transferencia</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('efectivo')}
-                      className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${paymentMethod === 'efectivo'
-                        ? 'bg-emerald-50 border-[#059669] text-[#059669] shadow-2xs'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                        }`}
-                    >
-                      <span>💵</span>
-                      <span>{isPickup ? 'Efectivo al retirar' : 'Efectivo'}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Notas adicionales */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-semibold text-slate-600">Notas o indicación especial</label>
-                  <input
-                    type="text"
-                    placeholder={isPickup ? "Deseas comentarnos algo? (ej. Pasará otra persona a recogerlo)" : "Deseas comentarnos algo?"}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
-                  />
-                </div>
-              </div>
-
-              {/* Resumen de Total */}
-              <div className={`bg-white rounded-2xl p-5 border shadow-xs flex flex-col gap-3 ${isElegant ? 'border-[#E7E2D9]' : isModern ? 'border-slate-200' : 'border-neutral-100'
-                }`}>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-[#6d7a72]">Subtotal</span>
-                  <span className="font-semibold text-[#0b1c30]">{formatCurrency(totalPrice)}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm pb-3 border-b border-gray-100">
-                  <span className="text-[#6d7a72]">{isPickup ? 'Modalidad de entrega' : 'Envío estimado'}</span>
-                  <span className={`font-semibold ${isPickup || store?.shippingType === 'gratis' ? 'text-[#059669]' : 'text-slate-600 text-xs'}`}>
-                    {isPickup
-                      ? 'Recojo en tienda (Gratis)'
-                      : store?.shippingType === 'gratis'
-                      ? 'Gratis'
-                      : 'A coordinar por WhatsApp'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center pt-1">
-                  <span className={`font-bold text-base ${isElegant ? 'font-playfair text-stone-900' : 'text-[#0b1c30]'}`}>
-                    Total ({totalCount} productos)
-                  </span>
-                  <span
-                    className={`font-bold text-xl ${isElegant ? 'font-playfair italic text-stone-900' : ''}`}
-                    style={!isElegant ? { color: brandColor } : undefined}
-                  >
-                    {formatCurrency(totalPrice)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Disclaimer de Transparencia y Compra Segura */}
-              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex items-start gap-3 text-left">
-                <div className="w-7 h-7 rounded-xl bg-emerald-100 text-[#006c49] flex items-center justify-center shrink-0 mt-0.5">
-                  <ShieldCheck size={16} />
-                </div>
-                <div className="space-y-1 text-[11px] text-slate-600 leading-relaxed">
-                  <p className="font-bold text-[#0b1c30]">
-                    Transparencia y Compra Segura
-                  </p>
-                  <p>
-                    Esta tienda es operada de forma independiente por <strong>{store?.name || 'el comercio'}</strong> con la tecnología de <span className="font-semibold text-[#006c49]">APANA</span>. El pago y la entrega se coordinan directamente entre el vendedor y tú. Verifica los datos de contacto antes de transferir.
-                  </p>
-                  <div className="pt-0.5 flex items-center gap-2 text-[10px] text-slate-500">
-                    <Link href="/terms" target="_blank" className="text-[#006c49] font-semibold hover:underline">
-                      Términos
-                    </Link>
-                    <span>•</span>
-                    <Link href="/privacy" target="_blank" className="text-[#006c49] font-semibold hover:underline">
-                      Privacidad
-                    </Link>
+                  {/* Notas adicionales */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-semibold text-slate-600">Notas o indicación especial</label>
+                    <input
+                      type="text"
+                      placeholder={isPickup ? "Deseas comentarnos algo? (ej. Pasará otra persona a recogerlo)" : "Deseas comentarnos algo?"}
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="h-10 w-full bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs text-[#0b1c30] placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#059669] transition-all"
+                    />
                   </div>
                 </div>
               </div>
-            </>
+
+              {/* Columna Derecha: Resumen de Compra y Checkout Sticky en Desktop */}
+              <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-4 lg:sticky lg:top-24">
+                {/* Resumen de Total */}
+                <div className={`bg-white rounded-2xl p-5 sm:p-6 border shadow-xs flex flex-col gap-3.5 ${isElegant ? 'border-[#E7E2D9]' : isModern ? 'border-slate-200' : 'border-neutral-100'
+                  }`}>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 pb-2 border-b border-gray-100">
+                    Resumen del Pedido
+                  </h3>
+
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-[#6d7a72]">Subtotal</span>
+                    <span className="font-semibold text-[#0b1c30]">{formatCurrency(totalPrice)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm pb-3 border-b border-gray-100">
+                    <span className="text-[#6d7a72]">{isPickup ? 'Modalidad de entrega' : 'Envío estimado'}</span>
+                    <span className={`font-semibold ${isPickup || store?.shippingType === 'gratis' ? 'text-[#059669]' : 'text-slate-600 text-xs'}`}>
+                      {isPickup
+                        ? 'Recojo en tienda (Gratis)'
+                        : store?.shippingType === 'gratis'
+                        ? 'Gratis'
+                        : 'A coordinar por WhatsApp'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-1">
+                    <span className={`font-bold text-base ${isElegant ? 'font-playfair text-stone-900' : 'text-[#0b1c30]'}`}>
+                      Total ({totalCount} productos)
+                    </span>
+                    <span
+                      className={`font-bold text-xl ${isElegant ? 'font-playfair italic text-stone-900' : ''}`}
+                      style={!isElegant ? { color: brandColor } : undefined}
+                    >
+                      {formatCurrency(totalPrice)}
+                    </span>
+                  </div>
+
+                  {/* Botón de Checkout en Desktop (Integrado en el Resumen) */}
+                  <div className="hidden lg:block pt-3 border-t border-slate-100">
+                    {renderCheckoutButton()}
+                  </div>
+                </div>
+
+                {/* Disclaimer de Transparencia y Compra Segura */}
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex items-start gap-3 text-left">
+                  <div className="w-7 h-7 rounded-xl bg-emerald-100 text-[#006c49] flex items-center justify-center shrink-0 mt-0.5">
+                    <ShieldCheck size={16} />
+                  </div>
+                  <div className="space-y-1 text-[11px] text-slate-600 leading-relaxed">
+                    <p className="font-bold text-[#0b1c30]">
+                      Transparencia y Compra Segura
+                    </p>
+                    <p>
+                      Esta tienda es operada de forma independiente por <strong>{store?.name || 'el comercio'}</strong> con la tecnología de <span className="font-semibold text-[#006c49]">APANA</span>. El pago y la entrega se coordinan directamente entre el vendedor y tú. Verifica los datos de contacto antes de transferir.
+                    </p>
+                    <div className="pt-1 flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                      {store && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setIsPoliciesOpen(true)}
+                            className="text-[#006c49] font-bold hover:underline cursor-pointer"
+                          >
+                            Ver Políticas de {store.name}
+                          </button>
+                          <span>•</span>
+                        </>
+                      )}
+                      <Link href="/terms" target="_blank" className="text-slate-500 hover:text-slate-700 hover:underline">
+                        Términos APANA
+                      </Link>
+                      <span>•</span>
+                      <Link href="/privacy" target="_blank" className="text-slate-500 hover:text-slate-700 hover:underline">
+                        Privacidad
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </main>
 
-      {/* Fixed Bottom Action Bar (Completar por WhatsApp) */}
+      {/* Fixed Bottom Action Bar (Solo para Móvil < lg) */}
       {items.length > 0 && (
         <div
-          className={`fixed bottom-0 left-0 right-0 max-w-[640px] mx-auto backdrop-blur-md p-4 pb-safe border-t shadow-[0_-4px_16px_rgba(0,0,0,0.05)] z-40 ${
+          className={`lg:hidden fixed bottom-0 left-0 right-0 w-full backdrop-blur-md p-4 pb-safe border-t shadow-[0_-4px_16px_rgba(0,0,0,0.05)] z-40 ${
             isElegant ? 'bg-[#FAF8F5]/95 border-[#E7E2D9]' : 'bg-white/95 border-[#bccac0]/30'
           }`}
         >
-          {isLoadingStore && !store ? (
-            <div className="w-full h-12 bg-slate-200 animate-pulse rounded-xl" />
-          ) : (!store?.whatsappPhone || !store?.isWhatsappVerified) ? (
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                disabled
-                className="w-full h-12 bg-slate-200 text-slate-500 font-bold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 cursor-not-allowed shadow-none select-none"
-              >
-                <span>⏳ Pedidos no disponibles temporalmente</span>
-              </button>
-              <p className="text-[11px] text-amber-950 bg-amber-50 border border-amber-200/80 rounded-xl p-2.5 text-center leading-tight">
-                Esta tienda aún está configurando su línea de atención. Vuelve a visitarnos pronto para enviar tu pedido por WhatsApp.
-              </p>
-            </div>
-          ) : (
-            <>
-              <button
-                onClick={handleSendWhatsAppOrder}
-                disabled={isRedirecting}
-                style={{ backgroundColor: brandColor }}
-                className={`w-full h-12 text-white font-bold text-base shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                  isRedirecting ? 'opacity-85 cursor-wait' : ''
-                } ${
-                  isElegant
-                    ? 'rounded-2xl font-playfair tracking-wide'
-                    : isModern
-                    ? 'rounded-2xl uppercase font-space-grotesk'
-                    : 'rounded-xl font-plus-jakarta'
-                }`}
-              >
-                {isRedirecting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Abriendo WhatsApp...</span>
-                  </>
-                ) : (
-                  <>
-                    <WhatsAppIcon size={20} />
-                    <span>Completar por WhatsApp</span>
-                  </>
-                )}
-              </button>
-              <p className="text-center text-xs text-[#6d7a72] mt-2">
-                Serás redirigido a WhatsApp de forma segura.
-              </p>
-            </>
-          )}
+          {renderCheckoutButton()}
         </div>
+      )}
+      {/* Modal de Políticas de la Tienda */}
+      {store && (
+        <StorePoliciesModal
+          isOpen={isPoliciesOpen}
+          onClose={() => setIsPoliciesOpen(false)}
+          store={store}
+        />
       )}
     </div>
   );

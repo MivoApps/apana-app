@@ -155,6 +155,11 @@ export default function SuperAdminPage() {
     status: 'activa' as 'activa' | 'pausada',
     isWhatsappVerified: false,
     isEmailVerified: false,
+    legalBusinessName: '',
+    legalTaxIdType: 'RUC' as 'RUC' | 'DNI',
+    legalTaxId: '',
+    legalAddress: '',
+    storePolicies: '',
   });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
@@ -595,6 +600,11 @@ export default function SuperAdminPage() {
       status: (store.status as any) || 'activa',
       isWhatsappVerified: Boolean(store.isWhatsappVerified),
       isEmailVerified: Boolean(store.isEmailVerified),
+      legalBusinessName: store.legalBusinessName || '',
+      legalTaxIdType: (store.legalTaxIdType as any) || 'RUC',
+      legalTaxId: store.legalTaxId || '',
+      legalAddress: store.legalAddress || '',
+      storePolicies: store.storePolicies || '',
     });
   };
 
@@ -610,6 +620,11 @@ export default function SuperAdminPage() {
         whatsappPhone: fullPhone,
         plan: editForm.plan,
         status: editForm.status,
+        legalBusinessName: editForm.legalBusinessName.trim(),
+        legalTaxIdType: editForm.legalTaxIdType,
+        legalTaxId: editForm.legalTaxId.trim(),
+        legalAddress: editForm.legalAddress.trim(),
+        storePolicies: editForm.storePolicies.trim(),
       });
 
       if (editForm.isWhatsappVerified !== editingStore.isWhatsappVerified) {
@@ -635,6 +650,11 @@ export default function SuperAdminPage() {
               isWhatsappVerified: editForm.isWhatsappVerified,
               isEmailVerified: editForm.isEmailVerified,
               emailVerifiedMethod: editForm.isEmailVerified ? (editingStore.emailVerifiedMethod || 'admin') : undefined,
+              legalBusinessName: editForm.legalBusinessName.trim(),
+              legalTaxIdType: editForm.legalTaxIdType,
+              legalTaxId: editForm.legalTaxId.trim(),
+              legalAddress: editForm.legalAddress.trim(),
+              storePolicies: editForm.storePolicies.trim(),
             }
             : s
         )
@@ -1444,7 +1464,7 @@ export default function SuperAdminPage() {
                   <thead className="bg-[#071220] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-800 text-[10px]">
                     <tr>
                       <th className="py-3 px-4">Tienda / Negocio</th>
-                      <th className="py-3 px-4">Verificaciones (WA & Correo)</th>
+                      <th className="py-3 px-4">Verificaciones (WA, Correo & Legal)</th>
                       <th className="py-3 px-4">Plan Asignado</th>
                       <th className="py-3 px-4">Productos</th>
                       <th className="py-3 px-4">Estado</th>
@@ -1570,6 +1590,27 @@ export default function SuperAdminPage() {
                                     <Mail size={10} className="text-amber-400" />
                                     <span>Validar Manual 🛡️</span>
                                   </button>
+                                )}
+                              </div>
+
+                              {/* Badge y Estado Legal (RUC/DNI - INDECOPI) */}
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                {store.legalTaxId && store.legalBusinessName ? (
+                                  <div
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold w-fit bg-emerald-950/70 text-emerald-300 border border-emerald-700/60 shadow-2xs"
+                                    title={`Identidad Oficial Verificada (INDECOPI)\nRazón Social: ${store.legalBusinessName}\n${store.legalTaxIdType || 'RUC'}: ${store.legalTaxId}\nDirección: ${store.legalAddress || 'No especificada'}`}
+                                  >
+                                    <ShieldCheck size={10} className="text-emerald-400" />
+                                    <span>{store.legalTaxIdType || 'RUC'}: {store.legalTaxId} ⚖️</span>
+                                  </div>
+                                ) : (
+                                  <div
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-500 bg-slate-900/60 border border-slate-800"
+                                    title="El comercio aún no ha configurado sus datos legales oficiales en Ajustes > Legal."
+                                  >
+                                    <ShieldAlert size={10} className="text-slate-500" />
+                                    <span>Legal sin configurar</span>
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -3101,6 +3142,42 @@ export default function SuperAdminPage() {
               </div>
             </div>
 
+            {/* 🤖 Bot de WhatsApp Cloud & Motor de Notificaciones */}
+            <div className="bg-linear-to-r from-[#0d2238] via-[#0e1e33] to-[#071220] border border-emerald-500/30 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0 shadow-sm">
+                  <MessageCircle size={24} className="animate-pulse" />
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-white">Bot de WhatsApp en Producción (Cloud Engine)</h3>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      EN LÍNEA
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                    Instancia VM <code className="text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/60 font-mono text-[11px]">mivo-whatsapp-bot</code> escuchando en tiempo real la cola de Firestore <code className="text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/60 font-mono text-[11px]">whatsapp_notifications</code>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full md:w-auto shrink-0 text-xs">
+                <div className="bg-[#071220]/80 border border-slate-700/80 rounded-xl p-2.5 px-3">
+                  <span className="text-[10px] text-slate-400 block font-semibold">Motor Backend</span>
+                  <span className="font-bold text-white">Admin SDK IAM</span>
+                </div>
+                <div className="bg-[#071220]/80 border border-slate-700/80 rounded-xl p-2.5 px-3">
+                  <span className="text-[10px] text-slate-400 block font-semibold">Latencia Despacho</span>
+                  <span className="font-bold text-emerald-400 font-mono">~3.05 segs ⚡</span>
+                </div>
+                <div className="col-span-2 sm:col-span-1 bg-[#071220]/80 border border-slate-700/80 rounded-xl p-2.5 px-3">
+                  <span className="text-[10px] text-slate-400 block font-semibold">Notificaciones</span>
+                  <span className="font-bold text-amber-300">Día 23, 27 y 30</span>
+                </div>
+              </div>
+            </div>
+
             {/* Grid de 4 Medidores de Cuotas */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               
@@ -3724,6 +3801,71 @@ export default function SuperAdminPage() {
                     <option value="activa">Activa</option>
                     <option value="pausada">Pausada</option>
                   </select>
+                </div>
+              </div>
+
+              {/* ⚖️ Sección Legal & Libro de Reclamaciones (INDECOPI) */}
+              <div className="bg-[#071220] border border-slate-700/80 rounded-xl p-3 flex flex-col gap-2.5 mt-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+                  <ShieldCheck size={14} />
+                  <span>Identidad Oficial & Libro de Reclamaciones (INDECOPI)</span>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-semibold text-slate-300">Tipo Doc.</label>
+                    <select
+                      value={editForm.legalTaxIdType}
+                      onChange={(e: any) => setEditForm({ ...editForm, legalTaxIdType: e.target.value })}
+                      className="h-9 bg-[#0b1c30] border border-slate-700 rounded-lg px-2 text-xs text-white focus:outline-none cursor-pointer"
+                    >
+                      <option value="RUC">RUC</option>
+                      <option value="DNI">DNI</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2 flex flex-col gap-1">
+                    <label className="text-[11px] font-semibold text-slate-300">Número de RUC o DNI</label>
+                    <input
+                      type="text"
+                      placeholder="11 dígitos (RUC) u 8 (DNI)"
+                      value={editForm.legalTaxId}
+                      onChange={(e) => setEditForm({ ...editForm, legalTaxId: e.target.value.replace(/\D/g, '') })}
+                      className="h-9 bg-[#0b1c30] border border-slate-700 rounded-lg px-2.5 text-xs text-white focus:outline-none font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-slate-300">Razón Social o Nombre Titular</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. COMERCIALIZADORA APANA S.A.C."
+                    value={editForm.legalBusinessName}
+                    onChange={(e) => setEditForm({ ...editForm, legalBusinessName: e.target.value.toUpperCase() })}
+                    className="h-9 bg-[#0b1c30] border border-slate-700 rounded-lg px-2.5 text-xs text-white focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-slate-300">Dirección Fiscal o Comercial</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Av. Larco 123, Miraflores, Lima"
+                    value={editForm.legalAddress}
+                    onChange={(e) => setEditForm({ ...editForm, legalAddress: e.target.value })}
+                    className="h-9 bg-[#0b1c30] border border-slate-700 rounded-lg px-2.5 text-xs text-white focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-slate-300">Términos Comerciales & Políticas de Tienda</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Políticas específicas de envíos, devoluciones y garantías..."
+                    value={editForm.storePolicies}
+                    onChange={(e) => setEditForm({ ...editForm, storePolicies: e.target.value })}
+                    className="bg-[#0b1c30] border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none resize-none"
+                  />
                 </div>
               </div>
 

@@ -234,6 +234,9 @@ export default function OnboardingWizardPage() {
     }
 
     const finalSlug = createdFsStore?.slug || slugify(businessName) || 'mi-tienda';
+    if (typeof window !== 'undefined' && createdFsStore?.id) {
+      localStorage.setItem(`apana_whats_new_seen_${createdFsStore.id}_v1_legal`, 'true');
+    }
     setCreatedSlug(finalSlug);
     setIsSubmitting(false);
     updateStep(5);
@@ -320,7 +323,7 @@ export default function OnboardingWizardPage() {
       </header>
 
       {/* Área Principal de Pasos */}
-      <main className="w-full max-w-sm mx-auto flex-1 flex flex-col justify-center my-4 relative z-10">
+      <main className={`w-full mx-auto flex-1 flex flex-col justify-center my-4 relative z-10 transition-all duration-300 ${step === 4 ? 'max-w-3xl' : 'max-w-sm'}`}>
         <div className="w-full bg-[#f8f9ff] rounded-2xl p-4 flex flex-col gap-6">
 
           {/* PASO 1: Bienvenido */}

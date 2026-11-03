@@ -1,5 +1,5 @@
-import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getAdminFirestore } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export interface WhatsAppNotificationPayload {
   storeId: string;
@@ -68,8 +68,10 @@ export async function sendWhatsAppNotification(
   }
 
   try {
+    const adminDb = getAdminFirestore();
+
     // 1. Registrar notificación en la cola de Firestore
-    const docRef = await addDoc(collection(db, 'whatsapp_notifications'), {
+    const docRef = await adminDb.collection('whatsapp_notifications').add({
       storeId: payload.storeId,
       storeName: payload.storeName,
       phone: cleanPhone,
@@ -77,7 +79,7 @@ export async function sendWhatsAppNotification(
       type: payload.type,
       status: 'pending', // 'pending' | 'sent' | 'failed'
       metadata: payload.metadata || {},
-      createdAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     });
 
     const notificationId = docRef.id;
@@ -109,21 +111,21 @@ export async function sendWhatsAppNotification(
         if (response.ok) {
           const resData = await response.json();
           // Actualizar estado a 'sent' en Firestore
-          await updateDoc(doc(db, 'whatsapp_notifications', notificationId), {
+          await adminDb.collection('whatsapp_notifications').doc(notificationId).update({
             status: 'sent',
-            sentAt: serverTimestamp(),
+            sentAt: FieldValue.serverTimestamp(),
             botResponse: resData,
-            updatedAt: serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
           });
 
           return { success: true, notificationId, sentViaBot: true };
         } else {
           const errData = await response.json().catch(() => ({}));
           console.warn(`[WhatsApp Notification] Bot HTTP respondió status ${response.status}:`, errData);
-          await updateDoc(doc(db, 'whatsapp_notifications', notificationId), {
+          await adminDb.collection('whatsapp_notifications').doc(notificationId).update({
             status: 'pending', // Queda en pending para reintento por listener
             lastError: errData?.error || `HTTP ${response.status}`,
-            updatedAt: serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
           });
         }
       } catch (fetchErr: any) {

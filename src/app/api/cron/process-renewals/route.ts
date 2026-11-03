@@ -1,7 +1,26 @@
 import { NextResponse } from 'next/server';
-import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getAdminFirestore } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { sendWhatsAppNotification, buildTrialDay23ReminderText } from '@/lib/whatsapp-notifications';
+
+// Wrappers para canalizar todas las operaciones de Firestore a través de Firebase Admin SDK
+const getDb = () => getAdminFirestore();
+const collection = (_ignoredDb: any, colName: string) => getDb().collection(colName);
+const doc = (_ignoredDb: any, colName: string, id: string) => getDb().collection(colName).doc(id);
+const getDocs = async (ref: any) => await ref.get();
+const getDoc = async (ref: any) => {
+  const snap = await ref.get();
+  return {
+    ...snap,
+    exists: () => snap.exists,
+    data: () => snap.data(),
+    id: snap.id,
+  };
+};
+const updateDoc = async (ref: any, data: any) => await ref.set(data, { merge: true });
+const addDoc = async (colRef: any, data: any) => await colRef.add(data);
+const serverTimestamp = () => FieldValue.serverTimestamp();
+const db = null;
 
 export const dynamic = 'force-dynamic';
 
@@ -90,7 +109,7 @@ async function handleProcessRenewals(request: Request) {
     const storesSnapshot = await getDocs(collection(db, 'stores'));
     const candidateStores: any[] = [];
 
-    storesSnapshot.forEach((docSnap) => {
+    storesSnapshot.forEach((docSnap: any) => {
       const data = docSnap.data();
       const id = docSnap.id;
       const plan = data.plan || 'gratis';
@@ -102,7 +121,8 @@ async function handleProcessRenewals(request: Request) {
     });
 
     for (const store of candidateStores) {
-      const storeRef = doc(db, 'stores', store.id);
+      try {
+        const storeRef = doc(db, 'stores', store.id);
       const isTrial = store.subscriptionStatus === 'trial' || (Boolean(store.hasUsedTrial) && store.trialEndDate && now <= store.trialEndDate);
       const effectiveCutoff = store.trialEndDate || store.nextBillingDate || 0;
 
@@ -422,7 +442,19 @@ async function handleProcessRenewals(request: Request) {
             subscriptionStatus: 'past_due',
             error: chargeErrorMsg,
           });
+          }
         }
+      } catch (storeLoopErr: any) {
+        console.error(`Error procesando tienda ${store.id}:`, storeLoopErr);
+        results.push({
+          storeId: store.id,
+          storeName: store.name || 'Tienda',
+          action: 'skipped_not_due',
+          previousPlan: store.plan || 'gratis',
+          newPlan: store.plan || 'gratis',
+          subscriptionStatus: store.subscriptionStatus || 'trial',
+          error: `Fallo en tienda: ${storeLoopErr.message}`,
+        });
       }
     }
 
@@ -457,7 +489,7 @@ async function handleDevSimulation(params: {
   // 1. Obtener lista de tiendas existentes en Firestore para contexto o fallback
   const storesSnap = await getDocs(collection(db, 'stores'));
   const availableStores: any[] = [];
-  storesSnap.forEach((d) => {
+  storesSnap.forEach((d: any) => {
     const dt = d.data();
     availableStores.push({
       id: d.id,

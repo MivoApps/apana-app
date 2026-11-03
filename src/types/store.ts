@@ -77,6 +77,9 @@ export interface Store {
   legalTaxId?: string; // Número de RUC o DNI
   legalAddress?: string; // Dirección Comercial o Fiscal
   
+  // Políticas y Términos Comerciales Específicos de la Tienda (Personalizado o generado por rubro)
+  storePolicies?: string;
+  
   createdAt?: any;
   updatedAt?: any;
 }

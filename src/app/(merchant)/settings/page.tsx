@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -21,11 +21,16 @@ import {
   LogOut,
   ShieldCheck,
   AlertCircle,
+  AlertTriangle,
   Mail,
   Scale,
   Building2,
   FileText,
-  Info
+  BookOpen,
+  Info,
+  Sparkles,
+  RotateCcw,
+  Search
 } from 'lucide-react';
 import { sendEmailVerification } from 'firebase/auth';
 import { Button } from '@/components/ui/Button';
@@ -34,6 +39,9 @@ import { Store, StoreStyle } from '@/types/store';
 import { LiveStorePreview } from '@/components/merchant/LiveStorePreview';
 import { TermsModal } from '@/components/ui/TermsModal';
 import { WhatsAppVerifyModal } from '@/components/merchant/WhatsAppVerifyModal';
+import { MerchantSidebar } from '@/components/merchant/MerchantSidebar';
+import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
+import { getPolicyTemplateByCategory, STORE_POLICY_TEMPLATES } from '@/lib/constants/store-policies-templates';
 
 // Paleta de colores oficiales
 const STITCH_COLORS = [
@@ -75,6 +83,23 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fsStore, setFsStore] = useState<Store | null>(null);
 
+  // Visibilidad del botón de guardar inferior para docking automático
+  const bottomSaveRef = useRef<HTMLDivElement>(null);
+  const [isBottomSaveVisible, setIsBottomSaveVisible] = useState(false);
+
+  useEffect(() => {
+    const el = bottomSaveRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsBottomSaveVisible(entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isLoading]);
+
   // Form State
   const [storeName, setStoreName] = useState('');
   const [storeDescription, setStoreDescription] = useState('');
@@ -90,11 +115,232 @@ export default function SettingsPage() {
   const [instagram, setInstagram] = useState('');
   const [tiktok, setTiktok] = useState('');
 
-  // Datos Fiscales / Legales para Libro de Reclamaciones (Opcional con fallback inteligente)
+  // Datos Fiscales / Legales para Libro de Reclamaciones
   const [legalBusinessName, setLegalBusinessName] = useState('');
   const [legalTaxIdType, setLegalTaxIdType] = useState<'RUC' | 'DNI'>('RUC');
   const [legalTaxId, setLegalTaxId] = useState('');
   const [legalAddress, setLegalAddress] = useState('');
+
+  // Estados de auto-completado y validación de DNI / RUC oficial
+  const [isLegalLookupLoading, setIsLegalLookupLoading] = useState(false);
+  const [legalLookupError, setLegalLookupError] = useState<string | null>(null);
+  const [legalLookupSuccess, setLegalLookupSuccess] = useState<string | null>(null);
+
+  // Modal de Confirmación y Guardado Inmediato de Identidad Legal
+  const [legalConfirmModalData, setLegalConfirmModalData] = useState<{
+    type: 'DNI' | 'RUC';
+    number: string;
+    businessName: string;
+    source: string;
+    address: string;
+  } | null>(null);
+  const [isSavingLegalModal, setIsSavingLegalModal] = useState(false);
+
+  // ¿Los datos legales ya están registrados y verificados en Firestore?
+  const isLegalIdentityLocked = Boolean(
+    fsStore?.legalTaxId &&
+    fsStore.legalTaxId.trim().length > 0 &&
+    fsStore?.legalBusinessName &&
+    fsStore.legalBusinessName.trim().length > 0
+  );
+
+  const lookupLegalDocument = async (type: 'DNI' | 'RUC', number: string) => {
+    if (isLegalIdentityLocked) return;
+    const cleanNum = number.replace(/\D/g, '');
+    const isTargetLength = (type === 'DNI' && cleanNum.length === 8) || (type === 'RUC' && cleanNum.length === 11);
+    if (!isTargetLength) return;
+
+    setIsLegalLookupLoading(true);
+    setLegalLookupError(null);
+    setLegalLookupSuccess(null);
+
+    try {
+      const res = await fetch(`/api/legal/lookup?type=${type}&number=${cleanNum}`);
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setLegalLookupError(data.error || `No se pudo validar el ${type}. Verifica el número ingresado.`);
+      } else {
+        if (data.businessName) {
+          let resolvedAddress = data.address && data.address.trim().length > 0 ? data.address : '';
+          if (!resolvedAddress && type === 'DNI') {
+            if (pickupAddress && pickupAddress.trim().length > 0) {
+              resolvedAddress = pickupAddress;
+            } else if (fsStore?.pickupAddress) {
+              resolvedAddress = fsStore.pickupAddress;
+            } else if (city && city.trim().length > 0) {
+              resolvedAddress = `${city}, Perú`;
+            } else if (fsStore?.city) {
+              resolvedAddress = `${fsStore.city}, Perú`;
+            } else if (legalAddress && legalAddress.trim().length > 0) {
+              resolvedAddress = legalAddress;
+            }
+          }
+          // Abrir modal de confirmación y guardado
+          setLegalConfirmModalData({
+            type,
+            number: cleanNum,
+            businessName: data.businessName,
+            source: data.source || (type === 'DNI' ? 'RENIEC' : 'SUNAT'),
+            address: resolvedAddress,
+          });
+        } else if (data.validFormat) {
+          setLegalLookupSuccess(`Formato de ${type} válido. Por favor ingresa tu nombre o razón social.`);
+        }
+      }
+    } catch {
+      setLegalLookupError('No se pudo conectar con el servicio de validación.');
+    } finally {
+      setIsLegalLookupLoading(false);
+    }
+  };
+
+  const handleConfirmAndSaveLegalData = async () => {
+    if (!legalConfirmModalData || !user) return;
+    setIsSavingLegalModal(true);
+    try {
+      const newTaxType = legalConfirmModalData.type;
+      const newTaxId = legalConfirmModalData.number;
+      const newBusinessName = legalConfirmModalData.businessName;
+      const newAddress = legalConfirmModalData.address;
+
+      // Actualizar estados locales
+      setLegalTaxIdType(newTaxType);
+      setLegalTaxId(newTaxId);
+      setLegalBusinessName(newBusinessName);
+      if (newAddress) {
+        setLegalAddress(newAddress);
+      }
+      setLegalLookupSuccess(`Verificado ante ${legalConfirmModalData.source}: ${newBusinessName}`);
+
+      // Guardar inmediatamente en Firestore para asegurar que no se pierdan los datos
+      const fullPhone = whatsappPhone ? (whatsappPhone.startsWith('51') ? whatsappPhone : `51${whatsappPhone}`) : (fsStore?.whatsappPhone || '');
+      const updatedStore = await createOrUpdateStoreInFS(user.uid, {
+        id: fsStore?.id,
+        name: storeName,
+        slug: fsStore?.slug,
+        whatsappPhone: fullPhone,
+        themeStyle: selectedStyle,
+        primaryColor: selectedColorHex,
+        description: storeDescription,
+        categories: categories,
+        logoUrl: logoUrl,
+        city: city,
+        schedule: schedule,
+        shippingType: shippingType,
+        pickupAddress: pickupAddress.trim(),
+        plan: fsStore?.plan,
+        isWhatsappVerified: fsStore?.isWhatsappVerified,
+        legalBusinessName: newBusinessName.trim(),
+        legalTaxIdType: newTaxType,
+        legalTaxId: newTaxId.trim(),
+        legalAddress: newAddress.trim() || legalAddress.trim(),
+        storePolicies: storePolicies.trim(),
+        socialLinks: {
+          instagram: instagram,
+          tiktok: tiktok,
+        },
+      });
+
+      setFsStore(updatedStore);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(updatedStore));
+        sessionStorage.removeItem(`apana_public_store_${updatedStore.slug}`);
+      }
+
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+      setLegalConfirmModalData(null);
+    } catch (err) {
+      console.error('Error al guardar datos legales verificados:', err);
+      alert('Ocurrió un error al guardar los datos. Intenta nuevamente.');
+    } finally {
+      setIsSavingLegalModal(false);
+    }
+  };
+
+  const handleReviewLegalData = () => {
+    if (!legalConfirmModalData) return;
+    setLegalTaxIdType(legalConfirmModalData.type);
+    setLegalTaxId(legalConfirmModalData.number);
+    setLegalBusinessName(legalConfirmModalData.businessName);
+    if (legalConfirmModalData.address) {
+      setLegalAddress(legalConfirmModalData.address);
+    }
+    setLegalLookupSuccess(`Verificado ante ${legalConfirmModalData.source}: ${legalConfirmModalData.businessName}`);
+    setLegalConfirmModalData(null);
+  };
+
+  // Función exclusiva de desarrollo para restablecer datos legales en pruebas
+  const handleDevResetLegalData = async () => {
+    if (!user) return;
+    if (!confirm('🧪 [DEV MODE] ¿Deseas eliminar el DNI/RUC y Razón Social guardados para reiniciar las pruebas? (Esta opción no existe en producción).')) {
+      return;
+    }
+    try {
+      setLegalTaxId('');
+      setLegalBusinessName('');
+      setLegalAddress('');
+      setLegalLookupSuccess(null);
+      setLegalLookupError(null);
+
+      const fullPhone = whatsappPhone ? (whatsappPhone.startsWith('51') ? whatsappPhone : `51${whatsappPhone}`) : (fsStore?.whatsappPhone || '');
+      const updatedStore = await createOrUpdateStoreInFS(user.uid, {
+        id: fsStore?.id,
+        name: storeName,
+        slug: fsStore?.slug,
+        whatsappPhone: fullPhone,
+        themeStyle: selectedStyle,
+        primaryColor: selectedColorHex,
+        description: storeDescription,
+        categories: categories,
+        logoUrl: logoUrl,
+        city: city,
+        schedule: schedule,
+        shippingType: shippingType,
+        pickupAddress: pickupAddress.trim(),
+        plan: fsStore?.plan,
+        isWhatsappVerified: fsStore?.isWhatsappVerified,
+        legalBusinessName: '',
+        legalTaxIdType: 'DNI',
+        legalTaxId: '',
+        legalAddress: '',
+        storePolicies: storePolicies.trim(),
+        socialLinks: {
+          instagram: instagram,
+          tiktok: tiktok,
+        },
+      });
+
+      setFsStore(updatedStore);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(updatedStore));
+        sessionStorage.removeItem(`apana_public_store_${updatedStore.slug}`);
+      }
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+    } catch (err) {
+      console.error('Error al resetear datos legales dev:', err);
+      alert('Error al resetear datos en dev');
+    }
+  };
+
+  // Políticas y Términos Comerciales de la Tienda (Personalizado o generado por rubro)
+  const [storePolicies, setStorePolicies] = useState('');
+  const [selectedPolicyCategory, setSelectedPolicyCategory] = useState<string>('');
+
+  // Pestañas de Navegación de Ajustes (General, Envíos, Legal)
+  const [activeTab, setActiveTab] = useState<'general' | 'shipping' | 'legal'>('general');
+  const isDevMode = process.env.NODE_ENV !== 'production';
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam === 'legal' || tabParam === 'shipping' || tabParam === 'general') {
+        setActiveTab(tabParam);
+      }
+    }
+  }, []);
 
   const cleanInitialPhone = (phoneStr: string) => {
     const digitsOnly = phoneStr.replace(/\D/g, '');
@@ -109,6 +355,8 @@ export default function SettingsPage() {
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
+  const [pendingNavHref, setPendingNavHref] = useState<string | null>(null);
 
   // Estados para Modal Seguro de Cambio de WhatsApp
   const [showChangePhoneModal, setShowChangePhoneModal] = useState(false);
@@ -370,6 +618,7 @@ export default function SettingsPage() {
           setLegalTaxIdType(parsed.legalTaxIdType || 'RUC');
           setLegalTaxId(parsed.legalTaxId || '');
           setLegalAddress(parsed.legalAddress || '');
+          setStorePolicies(parsed.storePolicies || '');
           setWhatsappPhone(cleanInitialPhone(parsed.whatsappPhone || ''));
           setSelectedStyle(parsed.themeStyle || 'minimalista');
           setSelectedColorHex(parsed.primaryColor || '#059669');
@@ -406,6 +655,7 @@ export default function SettingsPage() {
         setLegalTaxIdType(storeFromFS.legalTaxIdType || 'RUC');
         setLegalTaxId(storeFromFS.legalTaxId || '');
         setLegalAddress(storeFromFS.legalAddress || '');
+        setStorePolicies(storeFromFS.storePolicies || '');
         setWhatsappPhone(cleanInitialPhone(storeFromFS.whatsappPhone || ''));
         setSelectedStyle(storeFromFS.themeStyle || 'minimalista');
         setSelectedColorHex(storeFromFS.primaryColor || '#059669');
@@ -437,10 +687,45 @@ export default function SettingsPage() {
       legalTaxIdType !== (currentStore.legalTaxIdType || 'RUC') ||
       legalTaxId !== (currentStore.legalTaxId || '') ||
       legalAddress !== (currentStore.legalAddress || '') ||
+      storePolicies !== (currentStore.storePolicies || '') ||
       whatsappPhone !== cleanInitialPhone(currentStore.whatsappPhone || '') ||
       selectedStyle !== (currentStore.themeStyle || 'minimalista') ||
       selectedColorHex !== (currentStore.primaryColor || '#059669') ||
       JSON.stringify(categories) !== JSON.stringify(currentStore.categories || [])
+    )
+  );
+
+  // Indicadores de cambios pendientes por pestaña
+  const generalHasChanges = Boolean(
+    currentStore && (
+      storeName !== (currentStore.name || '') ||
+      storeDescription !== (currentStore.description || '') ||
+      logoUrl !== (currentStore.logoUrl || null) ||
+      whatsappPhone !== cleanInitialPhone(currentStore.whatsappPhone || '') ||
+      selectedStyle !== (currentStore.themeStyle || 'minimalista') ||
+      selectedColorHex !== (currentStore.primaryColor || '#059669') ||
+      JSON.stringify(categories) !== JSON.stringify(currentStore.categories || [])
+    )
+  );
+
+  const shippingHasChanges = Boolean(
+    currentStore && (
+      city !== (currentStore.city || '') ||
+      schedule !== (currentStore.schedule || '') ||
+      shippingType !== (currentStore.shippingType || 'coordinar') ||
+      pickupAddress !== (currentStore.pickupAddress || '') ||
+      instagram !== (currentStore.socialLinks?.instagram || '') ||
+      tiktok !== (currentStore.socialLinks?.tiktok || '')
+    )
+  );
+
+  const legalHasChanges = Boolean(
+    currentStore && (
+      legalBusinessName !== (currentStore.legalBusinessName || '') ||
+      legalTaxIdType !== (currentStore.legalTaxIdType || 'RUC') ||
+      legalTaxId !== (currentStore.legalTaxId || '') ||
+      legalAddress !== (currentStore.legalAddress || '') ||
+      storePolicies !== (currentStore.storePolicies || '')
     )
   );
 
@@ -512,6 +797,7 @@ export default function SettingsPage() {
           legalTaxIdType: legalTaxIdType,
           legalTaxId: legalTaxId.trim(),
           legalAddress: legalAddress.trim(),
+          storePolicies: storePolicies.trim(),
           socialLinks: {
             instagram: instagram,
             tiktok: tiktok,
@@ -532,11 +818,42 @@ export default function SettingsPage() {
     setTimeout(() => setSavedSuccess(false), 2500);
   };
 
-  const handleBack = () => {
-    if (typeof window !== 'undefined' && document.referrer && document.referrer.includes(window.location.host)) {
+  // Alerta nativa del navegador ante recarga o cierre si hay cambios sin guardar
+  React.useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasChanges]);
+
+  const executeExit = (targetHref?: string) => {
+    if (targetHref) {
+      router.push(targetHref);
+    } else if (typeof window !== 'undefined' && document.referrer && document.referrer.includes(window.location.host)) {
       router.back();
     } else {
       router.push('/dashboard');
+    }
+  };
+
+  const handleBack = () => {
+    if (hasChanges) {
+      setPendingNavHref(null);
+      setShowExitConfirmModal(true);
+    } else {
+      executeExit();
+    }
+  };
+
+  const handleNavClick = (e: React.MouseEvent, href: string) => {
+    if (hasChanges) {
+      e.preventDefault();
+      setPendingNavHref(href);
+      setShowExitConfirmModal(true);
     }
   };
 
@@ -550,45 +867,139 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col font-sans relative pb-28">
-      {/* Header Fijo */}
-      <header className="fixed top-0 w-full z-40 bg-[#f8f9ff]/80 backdrop-blur-xl border-b border-[#bccac0]/20">
-        <div className="h-14 flex items-center justify-between px-4 max-w-[640px] mx-auto">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleBack}
-              className="p-1.5 rounded-full hover:bg-gray-100 text-[#0b1c30] transition-colors"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <h1 className="font-bold text-lg text-[#0b1c30]">Ajustes de la Tienda</h1>
+    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex font-sans relative pb-24 md:pb-12">
+      {/* Sidebar Fija para Desktop */}
+      <MerchantSidebar
+        currentPath="settings"
+        store={fsStore}
+        userEmail={user?.email}
+        onLogout={handleLogout}
+        onNavigate={handleNavClick}
+      />
+
+      <div className="flex-1 flex flex-col min-w-0 md:pl-64">
+        {/* Header Móvil */}
+        <header className="md:hidden fixed top-0 w-full z-40 bg-[#f8f9ff]/80 backdrop-blur-xl border-b border-[#bccac0]/20">
+          <div className="h-14 flex items-center justify-between px-4 sm:px-6">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleBack}
+                className="p-1.5 rounded-full hover:bg-gray-100 text-[#0b1c30] transition-colors"
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <h1 className="font-bold text-lg text-[#0b1c30]">Ajustes de la Tienda</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                fsStore?.plan === 'negocio'
+                  ? 'bg-amber-100 text-amber-900 border border-amber-300 font-extrabold'
+                  : fsStore?.plan === 'emprendedor'
+                    ? 'bg-emerald-100 text-[#059669] border border-emerald-200'
+                    : 'bg-slate-100 text-slate-700'
+              }`}>
+                {fsStore?.plan === 'negocio' ? 'Plan Negocio Pro' : fsStore?.plan === 'emprendedor' ? 'Plan Emprendedor' : 'Plan Gratis'}
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                title="Cerrar Sesión"
+                className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
-              fsStore?.plan === 'negocio'
-                ? 'bg-amber-100 text-amber-900 border border-amber-300 font-extrabold'
-                : fsStore?.plan === 'emprendedor'
-                  ? 'bg-emerald-100 text-[#059669] border border-emerald-200'
-                  : 'bg-slate-100 text-slate-700'
-            }`}>
-              {fsStore?.plan === 'negocio' ? 'Plan Negocio Pro' : fsStore?.plan === 'emprendedor' ? 'Plan Emprendedor' : 'Plan Gratis'}
-            </span>
+        </header>
+
+        {/* Top Header Desktop */}
+        <div className="hidden md:flex items-center justify-between px-6 md:px-8 pt-7 pb-4">
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-black text-[#0b1c30] tracking-tight">Ajustes de la Tienda</h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Personaliza la marca, canales de envío y políticas comerciales de tu negocio
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={handleLogout}
-              title="Cerrar Sesión"
-              className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+              onClick={handleBack}
+              className="h-9 px-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
             >
-              <LogOut size={18} />
+              <ArrowLeft size={14} />
+              <span>Volver</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSubmitting || !hasChanges}
+              className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
+                hasChanges && !isSubmitting
+                  ? 'bg-[#059669] hover:bg-[#00855d] text-white'
+                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              }`}
+            >
+              <Save size={15} />
+              <span>{isSubmitting ? 'Guardando...' : hasChanges ? 'Guardar Cambios' : 'Ajustes al día'}</span>
             </button>
           </div>
         </div>
-      </header>
 
-      {/* Main Container */}
-      <main className="pt-16 px-4 max-w-[640px] w-full mx-auto flex flex-col gap-6">
+        {/* Main Container */}
+        <main className="pt-16 md:pt-2 px-4 sm:px-6 md:px-8 w-full flex flex-col gap-6">
         <form onSubmit={handleSave} className="flex flex-col gap-6">
 
+          {/* Selector de Pestañas de Ajustes */}
+          <div className="sticky top-14 md:top-0 z-30 bg-[#f8f9ff]/95 backdrop-blur-md py-2.5 -mx-4 px-4 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 border-b border-slate-200/60 transition-all">
+            <div className="bg-slate-100 p-1 rounded-2xl border border-slate-200/80 flex items-center gap-1 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setActiveTab('general')}
+                className={`flex items-center justify-center gap-2 py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex-1 ${
+                  activeTab === 'general'
+                    ? 'bg-white text-[#0b1c30] shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <StoreIcon size={16} className={activeTab === 'general' ? 'text-[#059669]' : 'text-slate-400'} />
+                <span>General</span>
+                {generalHasChanges && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('shipping')}
+                className={`flex items-center justify-center gap-2 py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex-1 ${
+                  activeTab === 'shipping'
+                    ? 'bg-white text-[#0b1c30] shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Truck size={16} className={activeTab === 'shipping' ? 'text-[#059669]' : 'text-slate-400'} />
+                <span>Envíos</span>
+                {shippingHasChanges && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('legal')}
+                className={`flex items-center justify-center gap-2 py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex-1 ${
+                  activeTab === 'legal'
+                    ? 'bg-white text-[#0b1c30] shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Scale size={16} className={activeTab === 'legal' ? 'text-[#059669]' : 'text-slate-400'} />
+                <span>Legal</span>
+                {legalHasChanges && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+              </button>
+            </div>
+          </div>
+
+          {/* ================= PESTAÑA: GENERAL (PARTE 1) ================= */}
+          {activeTab === 'general' && (
+            <>
           {/* Card 1: Información Básica e Identidad */}
           <section className="bg-white rounded-2xl p-5 border border-[#bccac0]/40 shadow-xs flex flex-col gap-4">
             <div className="flex items-center gap-2.5 pb-2 border-b border-gray-100">
@@ -833,7 +1244,12 @@ export default function SettingsPage() {
               </div>
             )}
           </section>
+          </>
+          )}
 
+          {/* ================= PESTAÑA: ENVÍOS & HORARIOS ================= */}
+          {activeTab === 'shipping' && (
+            <>
           {/* Card 2: Información Comercial, Redes y Envíos (Opcional) */}
           <section className="bg-white rounded-2xl p-5 border border-[#bccac0]/40 shadow-xs flex flex-col gap-4">
             <div className="flex items-center gap-2.5 pb-2 border-b border-gray-100">
@@ -1012,99 +1428,486 @@ export default function SettingsPage() {
               </div>
             </div>
           </section>
+          </>
+          )}
 
-          {/* Card: Datos Legales para Libro de Reclamaciones (Opcional con fallback automático) */}
+          {/* ================= PESTAÑA: LEGAL & INDECOPI ================= */}
+          {activeTab === 'legal' && (
+            <>
+          {/* Card: Datos Legales para Libro de Reclamaciones */}
           <section className="bg-white rounded-2xl p-5 border border-[#bccac0]/40 shadow-xs flex flex-col gap-4">
             <div className="flex items-center gap-2.5 pb-2 border-b border-gray-100">
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#006c49] flex items-center justify-center">
                 <Scale size={18} />
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <h2 className="font-bold text-base text-[#0b1c30]">Libro de Reclamaciones Oficial</h2>
-                  <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">
-                    Opcional
-                  </span>
+                  {isLegalIdentityLocked ? (
+                    <span className="text-[10px] font-bold bg-emerald-100 text-[#006c49] px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                      <Lock size={10} />
+                      <span>Identidad Verificada</span>
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                      Sello de Confianza Oficial
+                    </span>
+                  )}
                 </div>
                 <p className="text-[11px] text-[#6d7a72]">
-                  Datos fiscales formales para la hoja virtual de tu tienda ante INDECOPI
+                  Acredita la identidad de tu negocio ante SUNAT/RENIEC para activar tu sello oficial y Libro de Reclamaciones
                 </p>
               </div>
             </div>
 
-            <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100/80 text-[11px] text-indigo-950 leading-relaxed flex items-start gap-2">
-              <Building2 size={16} className="text-indigo-600 shrink-0 mt-0.5" />
-              <span>
-                <strong>Nota:</strong> Tu tienda ya cuenta con Libro de Reclamaciones activo usando tu nombre comercial. Si tienes RUC o Razón Social, agrégalos aquí para que tu tienda figure como <strong>Comercio Formal Verificado</strong>.
-              </span>
-            </div>
+            {isLegalIdentityLocked ? (
+              /* ESTADO BLOQUEADO: Identidad ya confirmada y protegida */
+              <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#006c49]">
+                    <ShieldCheck size={16} />
+                    <span>Identidad Fiscal Registrada y Protegida</span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200/70 text-emerald-900">
+                    Bloqueo de Seguridad Activo
+                  </span>
+                </div>
 
-            <div className="flex flex-col gap-3.5">
-              {/* Razón Social o Nombre del Titular */}
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="legalBusinessName" className="text-xs font-semibold text-[#0b1c30]">
-                  Razón Social o Nombre del Titular Legal
-                </label>
-                <input
-                  id="legalBusinessName"
-                  type="text"
-                  placeholder="ej. Inversiones San José S.A.C. o Juan Pérez Gómez"
-                  value={legalBusinessName}
-                  onChange={(e) => setLegalBusinessName(e.target.value)}
-                  className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
-                />
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white/80 p-3 rounded-xl border border-emerald-100">
+                  <div>
+                    <span className="text-[11px] text-slate-500 block">Tipo y Documento:</span>
+                    <span className="font-mono font-bold text-slate-800 text-sm">
+                      {legalTaxIdType}: {legalTaxId}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-500 block">Razón Social o Titular Legal:</span>
+                    <span className="font-bold text-slate-800 text-sm line-clamp-1">
+                      {legalBusinessName}
+                    </span>
+                  </div>
+                </div>
 
-              {/* Documento Fiscal (RUC o DNI) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="legalTaxIdType" className="text-xs font-semibold text-[#0b1c30]">
-                    Tipo de Doc.
-                  </label>
-                  <select
-                    id="legalTaxIdType"
-                    value={legalTaxIdType}
-                    onChange={(e) => setLegalTaxIdType(e.target.value as 'RUC' | 'DNI')}
-                    className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs cursor-pointer font-medium"
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-[11px] text-slate-600">
+                  <p className="leading-tight">
+                    Por normativas tributarias y de INDECOPI, estos datos no pueden cambiarse sin validación de identidad.
+                  </p>
+                  <a
+                    href={`https://api.whatsapp.com/send?phone=51937700049&text=${encodeURIComponent(
+                      `¡Hola equipo APANA! Necesito solicitar una actualización o transferencia de titularidad/RUC para mi tienda: ${fsStore?.name} (${fsStore?.slug})`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 font-bold text-[#006c49] hover:underline shrink-0 bg-white px-2.5 py-1 rounded-lg border border-emerald-200 shadow-2xs cursor-pointer"
                   >
-                    <option value="RUC">RUC (11 dígitos)</option>
-                    <option value="DNI">DNI (8 dígitos)</option>
-                  </select>
+                    <WhatsAppIcon size={13} />
+                    <span>Solicitar cambio a Soporte</span>
+                  </a>
                 </div>
 
-                <div className="sm:col-span-2 flex flex-col gap-1.5">
-                  <label htmlFor="legalTaxId" className="text-xs font-semibold text-[#0b1c30]">
-                    {legalTaxIdType === 'RUC' ? 'Número de RUC' : 'Número de DNI'}
-                  </label>
-                  <input
-                    id="legalTaxId"
-                    type="text"
-                    maxLength={legalTaxIdType === 'RUC' ? 11 : 8}
-                    placeholder={legalTaxIdType === 'RUC' ? 'ej. 20601234567 o 10458923412' : 'ej. 45892341'}
-                    value={legalTaxId}
-                    onChange={(e) => setLegalTaxId(e.target.value.replace(/\D/g, ''))}
-                    className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs font-mono"
-                  />
-                </div>
+                {/* Herramienta DEV: Restablecer / Eliminar DNI/RUC para pruebas (Solo visible en dev, oculta en PROD) */}
+                {isDevMode && (
+                  <div className="mt-2 pt-2.5 border-t border-emerald-200/80 flex flex-wrap items-center justify-between gap-2 text-[11px] bg-amber-50/90 p-2.5 rounded-xl border border-amber-200 text-amber-950">
+                    <span className="font-semibold flex items-center gap-1">
+                      <span>🧪</span>
+                      <span>Modo Pruebas (Solo visible en DEV):</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleDevResetLegalData}
+                      className="h-7 px-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] rounded-lg transition-colors flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95"
+                    >
+                      <Trash2 size={12} />
+                      <span>Eliminar DNI / RUC guardado</span>
+                    </button>
+                  </div>
+                )}
               </div>
+            ) : (
+              /* ESTADO PENDIENTE DE REGISTRO: Formulario con Auto-consulta en vivo */
+              <>
+                <div className="p-3.5 bg-amber-50/80 rounded-xl border border-amber-200/80 text-[11px] text-amber-950 leading-relaxed flex items-start gap-2.5">
+                  <Building2 size={16} className="text-amber-700 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-bold text-amber-900">
+                      Requisito obligatorio para abrir tu tienda y recibir pedidos
+                    </p>
+                    <p>
+                      En el Perú (Ley N° 29571 / INDECOPI), todo negocio digital debe identificar a su titular. Si aún no tienes RUC, ingresa tu <strong>DNI personal (8 dígitos)</strong>. Al tipear tu documento, validaremos tus datos oficiales automáticamente. Una vez guardados, quedarán registrados y protegidos contra suplantaciones.
+                    </p>
+                  </div>
+                </div>
 
-              {/* Dirección Fiscal / Comercial */}
-              <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-3.5">
+                  {/* Documento Fiscal (RUC o DNI) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="legalTaxIdType" className="text-xs font-semibold text-[#0b1c30]">
+                        Tipo de Doc. *
+                      </label>
+                      <select
+                        id="legalTaxIdType"
+                        value={legalTaxIdType}
+                        onChange={(e) => {
+                          const newType = e.target.value as 'RUC' | 'DNI';
+                          setLegalTaxIdType(newType);
+                          setLegalLookupError(null);
+                          setLegalLookupSuccess(null);
+                        }}
+                        className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs cursor-pointer font-medium"
+                      >
+                        <option value="DNI">DNI (8 dígitos - Persona Natural)</option>
+                        <option value="RUC">RUC (11 dígitos - Empresa o Negocio)</option>
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-2 flex flex-col gap-1.5">
+                      <label htmlFor="legalIdentityDoc" className="text-xs font-semibold text-[#0b1c30]">
+                        {legalTaxIdType === 'RUC' ? 'RUC del Negocio (11 dígitos) *' : 'DNI del Titular (8 dígitos) *'}
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          id="legalIdentityDoc"
+                          name="legalIdentityDoc"
+                          autoComplete="one-time-code"
+                          inputMode="numeric"
+                          data-lpignore="true"
+                          data-form-type="other"
+                          type="text"
+                          maxLength={legalTaxIdType === 'RUC' ? 11 : 8}
+                          placeholder={legalTaxIdType === 'RUC' ? '20601234567' : '73061090'}
+                          value={legalTaxId}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            setLegalTaxId(val);
+                            setLegalLookupError(null);
+                            setLegalLookupSuccess(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              lookupLegalDocument(legalTaxIdType, legalTaxId);
+                            }
+                          }}
+                          className="h-11 flex-1 bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs font-mono font-bold tracking-wider"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => lookupLegalDocument(legalTaxIdType, legalTaxId)}
+                          disabled={
+                            isLegalLookupLoading ||
+                            (legalTaxIdType === 'DNI' && legalTaxId.length !== 8) ||
+                            (legalTaxIdType === 'RUC' && legalTaxId.length !== 11)
+                          }
+                          className={`h-11 px-5 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                            (legalTaxIdType === 'DNI' && legalTaxId.length === 8) ||
+                            (legalTaxIdType === 'RUC' && legalTaxId.length === 11)
+                              ? 'bg-[#059669] hover:bg-[#00855d] text-white active:scale-95'
+                              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                          }`}
+                        >
+                          {isLegalLookupLoading ? (
+                            <>
+                              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span>Validando...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Search size={14} />
+                              <span>Validar</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Feedback de validación */}
+                  {legalLookupSuccess && (
+                    <div className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-3.5 py-2 rounded-xl border border-emerald-200/80 animate-in fade-in flex items-center gap-2">
+                      <Check size={16} className="text-emerald-600 shrink-0" />
+                      <span>{legalLookupSuccess}</span>
+                    </div>
+                  )}
+
+                  {legalLookupError && (
+                    <div className="text-[11px] font-semibold text-rose-800 bg-rose-50 px-3.5 py-2 rounded-xl border border-rose-200/80 animate-in fade-in flex items-center gap-2">
+                      <AlertCircle size={16} className="text-rose-600 shrink-0" />
+                      <span>{legalLookupError}</span>
+                    </div>
+                  )}
+
+                  {/* Razón Social o Nombre del Titular */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="legalBusinessName" className="text-xs font-semibold text-[#0b1c30]">
+                        Razón Social o Nombre del Titular Legal *
+                      </label>
+                      {legalBusinessName && legalLookupSuccess && (
+                        <span className="text-[10px] font-bold text-[#006c49] flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                          <Lock size={10} />
+                          <span>Nombre Oficial Protegido</span>
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input
+                        id="legalBusinessName"
+                        name="merchantLegalBusinessName"
+                        autoComplete="off"
+                        data-lpignore="true"
+                        type="text"
+                        readOnly={Boolean(legalBusinessName && legalLookupSuccess)}
+                        placeholder={
+                          isLegalLookupLoading
+                            ? 'Consultando padrón oficial...'
+                            : 'Presiona "Validar" arriba para auto-completar'
+                        }
+                        value={legalBusinessName}
+                        onChange={(e) => setLegalBusinessName(e.target.value.toUpperCase())}
+                        className={`h-11 w-full rounded-xl px-4 text-sm font-semibold uppercase transition-all shadow-xs ${
+                          legalBusinessName && legalLookupSuccess
+                            ? 'bg-slate-100/80 border border-slate-300/80 text-slate-800 cursor-not-allowed select-none'
+                            : 'bg-white border border-[#bccac0]/50 text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10'
+                        }`}
+                      />
+                      {legalBusinessName && legalLookupSuccess && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600">
+                          <Check size={16} />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-500">
+                      {legalBusinessName && legalLookupSuccess
+                        ? 'Nombre oficial validado ante RENIEC / SUNAT. Bloqueado contra modificaciones para evitar suplantaciones.'
+                        : 'Se auto-completa oficialmente al presionar el botón "Validar" con tu DNI o RUC.'}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Dirección Fiscal / Comercial (Siempre 100% editable libremente) */}
+            <div className="flex flex-col gap-1.5 pt-2 border-t border-gray-100">
+              <div className="flex items-center justify-between">
                 <label htmlFor="legalAddress" className="text-xs font-semibold text-[#0b1c30]">
-                  Dirección Comercial o Fiscal
+                  Dirección Comercial o del Taller / Almacén
                 </label>
-                <input
-                  id="legalAddress"
-                  type="text"
-                  placeholder="ej. Av. Larco 450, Miraflores, Lima"
-                  value={legalAddress}
-                  onChange={(e) => setLegalAddress(e.target.value)}
-                  className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs"
-                />
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  ✏️ Editable en cualquier momento
+                </span>
               </div>
+              <input
+                id="legalAddress"
+                name="merchantLegalAddress"
+                autoComplete="off"
+                data-lpignore="true"
+                type="text"
+                placeholder="ej. Av. Larco 450, Miraflores, Lima"
+                value={legalAddress}
+                onChange={(e) => setLegalAddress(e.target.value)}
+                className="h-11 w-full bg-white border border-[#bccac0]/50 rounded-xl px-4 text-sm text-[#0b1c30] placeholder:text-[#6d7a72]/50 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all shadow-xs font-medium"
+              />
+              <p className="text-[10px] text-slate-500">
+                {legalTaxIdType === 'RUC'
+                  ? 'Se auto-completa con la dirección fiscal registrada en SUNAT. Puedes editarla si tu local o taller de despacho está en otra ubicación.'
+                  : 'Por la Ley de Protección de Datos Personales (RENIEC), el DNI no expone domicilios privados. Escribe aquí la dirección de tu local, almacén o taller de despacho.'}
+              </p>
             </div>
           </section>
 
+          {/* Card: Políticas y Términos Comerciales de la Tienda */}
+          <section className="bg-white rounded-2xl p-5 border border-[#bccac0]/40 shadow-xs flex flex-col gap-4">
+            <div className="flex items-center gap-2.5 pb-2 border-b border-gray-100">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#006c49] flex items-center justify-center">
+                <FileText size={18} />
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-base text-[#0b1c30]">Políticas y Condiciones Comerciales</h2>
+                  <span className="text-[10px] font-bold bg-emerald-100 text-[#006c49] px-2 py-0.5 rounded-full">
+                    Recomendado INDECOPI
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#6d7a72]">
+                  Condiciones de cambios, devoluciones, garantías y entregas según el rubro de tu negocio
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70 text-[11px] text-slate-700 leading-relaxed flex items-start gap-2">
+              <Scale size={16} className="text-[#059669] shrink-0 mt-0.5" />
+              <span>
+                <strong>Cumplimiento de la Ley N° 29571:</strong> En el Perú, las condiciones de compra, garantías y devolución deben estar informadas de forma clara y previa al consumidor. Cada rubro tiene reglas distintas (ej. comida preparada no admite devolución tras entrega, ropa admite cambio por talla).
+              </span>
+            </div>
+
+            {/* Asistente de Plantilla Oficial por Rubro */}
+            <div className="bg-emerald-50/50 border border-emerald-200/80 rounded-xl p-3.5 flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#006c49] flex items-center gap-1.5">
+                      <Sparkles size={14} className="text-[#059669]" />
+                      <span>Rubro Oficial de tu Tienda:</span>
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-[#006c49] text-xs font-extrabold border border-emerald-200/80">
+                      {getPolicyTemplateByCategory(fsStore?.category).categoryLabel}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-emerald-950">
+                    {storePolicies.trim().length === 0 ? (
+                      <>Tu tienda actualmente aplica de forma automática la política legal oficial de <strong>{getPolicyTemplateByCategory(fsStore?.category).categoryLabel}</strong>.</>
+                    ) : (
+                      <>Tienes políticas comerciales personalizadas guardadas. Puedes volver a cargar la plantilla oficial cuando gustes.</>
+                    )}
+                  </p>
+                </div>
+
+                {/* Botón oficial de carga (Fijo al rubro de la tienda) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const template = getPolicyTemplateByCategory(fsStore?.category);
+                    if (storePolicies.trim().length > 0) {
+                      const confirmReplace = window.confirm(`¿Deseas reemplazar tus políticas actuales con la plantilla oficial recomendada para ${template.categoryLabel}?`);
+                      if (!confirmReplace) return;
+                    }
+                    setStorePolicies(template.content);
+                  }}
+                  className="h-9 px-3.5 bg-[#006c49] text-white hover:bg-[#00855d] text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0"
+                >
+                  <Sparkles size={13} />
+                  <span>Cargar Plantilla Oficial</span>
+                </button>
+              </div>
+
+              {/* Herramienta de Prueba Dev (Solo visible en desarrollo, oculta en PROD) */}
+              {isDevMode && (
+                <div className="mt-1 pt-2.5 border-t border-emerald-200/60 flex flex-wrap items-center justify-between gap-2 text-[11px] bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/80 text-amber-950">
+                  <span className="font-semibold flex items-center gap-1">
+                    <span>🧪</span>
+                    <span>Modo Pruebas (Solo visible en Dev):</span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedPolicyCategory || fsStore?.category || 'otro'}
+                      onChange={(e) => setSelectedPolicyCategory(e.target.value)}
+                      className="h-8 bg-white border border-amber-300 rounded-lg px-2 text-[11px] font-medium text-[#0b1c30] focus:outline-none cursor-pointer"
+                    >
+                      <option value="comida">Comida y Alimentos</option>
+                      <option value="ropa">Ropa y Calzado</option>
+                      <option value="accesorios">Accesorios y Joyería</option>
+                      <option value="cosmeticos">Cosméticos y Cuidado</option>
+                      <option value="tecnologia">Tecnología y Gadgets</option>
+                      <option value="artesanias">Artesanías / Personalizados</option>
+                      <option value="mascotas">Mascotas</option>
+                      <option value="hogar">Hogar y Decoración</option>
+                      <option value="otro">Comercio General</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const catToUse = selectedPolicyCategory || fsStore?.category || 'otro';
+                        const template = getPolicyTemplateByCategory(catToUse);
+                        setStorePolicies(template.content);
+                      }}
+                      className="h-8 px-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg transition-colors cursor-pointer"
+                    >
+                      Probar este rubro
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Editor de Políticas */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="storePolicies" className="text-xs font-semibold text-[#0b1c30]">
+                  Texto Oficial de Políticas y Condiciones
+                </label>
+                {storePolicies.trim().length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm('¿Deseas vaciar el texto personalizado? Tu tienda volverá a usar la plantilla estándar automática de tu rubro.')) {
+                        setStorePolicies('');
+                      }
+                    }}
+                    className="text-[11px] text-slate-400 hover:text-rose-600 transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <RotateCcw size={11} />
+                    <span>Restablecer a plantilla automática</span>
+                  </button>
+                )}
+              </div>
+              <textarea
+                id="storePolicies"
+                rows={10}
+                placeholder={getPolicyTemplateByCategory(fsStore?.category).content}
+                value={storePolicies}
+                onChange={(e) => setStorePolicies(e.target.value)}
+                className="w-full bg-white border border-[#bccac0]/50 rounded-xl p-3.5 text-xs text-[#0b1c30] placeholder:text-[#6d7a72]/40 focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/10 transition-all font-sans leading-relaxed shadow-xs"
+              />
+              <p className="text-[11px] text-[#6d7a72]">
+                {storePolicies.trim().length === 0 ? (
+                  <span className="text-emerald-700 font-medium">
+                    ✓ Sin texto manual: Mostrando automáticamente la plantilla oficial de {getPolicyTemplateByCategory(fsStore?.category).categoryLabel}.
+                  </span>
+                ) : (
+                  <span>
+                    Texto personalizado activo ({storePolicies.length} caracteres). Recuerda pulsar <strong>Guardar Cambios</strong> para publicar.
+                  </span>
+                )}
+              </p>
+            </div>
+          </section>
+
+          {/* Card: Accesos Rápidos y Cumplimiento INDECOPI */}
+          <section className="bg-linear-to-br from-indigo-50/60 to-slate-50 rounded-2xl p-5 border border-indigo-100 shadow-xs flex flex-col gap-3.5">
+            <div className="flex items-center gap-2">
+              <BookOpen size={16} className="text-indigo-700" />
+              <h3 className="text-xs font-bold text-[#0b1c30]">Accesos Rápidos y Cumplimiento de tu Tienda</h3>
+            </div>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              Revisa cómo ven tus clientes el Libro de Reclamaciones o atiende reclamaciones pendientes registradas.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-xs font-semibold">
+              {currentStore?.slug && (
+                <Link
+                  href={`/s/${currentStore.slug}/libro-de-reclamaciones`}
+                  target="_blank"
+                  className="p-3 bg-white hover:bg-emerald-50/50 rounded-xl border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-900 flex items-center justify-between transition-all shadow-2xs cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <BookOpen size={14} className="text-emerald-700" />
+                    <span>Ver mi Libro de Reclamaciones</span>
+                  </span>
+                  <ExternalLink size={12} className="text-slate-400" />
+                </Link>
+              )}
+
+              <Link
+                href="/claims"
+                className="p-3 bg-white hover:bg-indigo-50/50 rounded-xl border border-slate-200 hover:border-indigo-300 text-slate-700 hover:text-indigo-900 flex items-center justify-between transition-all shadow-2xs cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <Scale size={14} className="text-indigo-700" />
+                  <span>Bandeja de Reclamaciones</span>
+                </span>
+                <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
+                  Plazo 15 días
+                </span>
+              </Link>
+            </div>
+          </section>
+          </>
+          )}
+
+          {/* ================= PESTAÑA: GENERAL (PARTE 2) ================= */}
+          {activeTab === 'general' && (
+            <>
           {/* Card 3: Personalización Visual */}
           <section className="bg-white rounded-2xl p-5 border border-[#bccac0]/40 shadow-xs flex flex-col gap-4">
             <div className="flex items-center gap-2.5 pb-2 border-b border-gray-100">
@@ -1352,6 +2155,8 @@ export default function SettingsPage() {
               <span>Cerrar Sesión</span>
             </button>
           </section>
+          </>
+          )}
 
           {/* Toast Flotante de Correo Enviado */}
           {emailSentToast && (
@@ -1362,7 +2167,7 @@ export default function SettingsPage() {
           )}
 
           {/* Botón Guardar Cambios */}
-          <div className="pt-1">
+          <div ref={bottomSaveRef} className="pt-1">
             <Button
               type="submit"
               variant="primary"
@@ -1379,13 +2184,38 @@ export default function SettingsPage() {
           </div>
 
         </form>
+
+        {/* Floating Save Bar cuando hay cambios pendientes y el botón inferior no está a la vista */}
+        {hasChanges && !isBottomSaveVisible && (
+          <div className="fixed bottom-20 md:bottom-8 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-lg bg-[#0b1c30]/95 text-white backdrop-blur-md p-3 px-4 sm:px-5 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-4 duration-200">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+              <span className="text-xs sm:text-sm font-semibold text-slate-200 truncate">
+                Tienes cambios sin guardar
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isSubmitting}
+                className="px-4 py-2 rounded-xl bg-[#059669] hover:bg-[#00855d] text-white text-xs sm:text-sm font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <Save size={15} />
+                <span>{isSubmitting ? 'Guardando...' : 'Guardar Cambios'}</span>
+              </button>
+            </div>
+          </div>
+        )}
       </main>
+      </div>
 
       {/* Bottom Nav Fija */}
-      <nav className="fixed bottom-0 w-full z-50 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)]">
-        <div className="h-16 flex items-center justify-around max-w-[640px] mx-auto">
+      <nav className="md:hidden fixed bottom-0 w-full z-50 bg-[#f8f9ff]/90 backdrop-blur-xl border-t border-[#bccac0]/30 shadow-[0_-1px_8px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)]">
+        <div className="h-16 flex items-center justify-around max-w-5xl mx-auto px-4 sm:px-6">
           <Link
             href="/dashboard"
+            onClick={(e) => handleNavClick(e, '/dashboard')}
             className="flex flex-col items-center gap-1 text-[#6d7a72] hover:text-[#0b1c30]"
           >
             <Home size={20} />
@@ -1393,6 +2223,7 @@ export default function SettingsPage() {
           </Link>
           <Link
             href="/products"
+            onClick={(e) => handleNavClick(e, '/products')}
             className="flex flex-col items-center gap-1 text-[#6d7a72] hover:text-[#0b1c30]"
           >
             <Package size={20} />
@@ -1691,6 +2522,150 @@ export default function SettingsPage() {
 
       {/* Modal de Términos y Condiciones */}
       <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
+
+      {/* Modal de Confirmación y Guardado de Datos Oficiales RENIEC / SUNAT */}
+      {legalConfirmModalData && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 flex flex-col gap-5 relative animate-in zoom-in-95 duration-200">
+            {/* Header del Modal */}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-[#059669] flex items-center justify-center shrink-0 shadow-inner">
+                <ShieldCheck size={26} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="inline-block text-[10px] font-black tracking-wider uppercase text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  {legalConfirmModalData.source} • Padrón Oficial
+                </span>
+                <h3 className="font-extrabold text-base text-[#0b1c30] mt-0.5">
+                  Identidad Oficial Verificada
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={handleReviewLegalData}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Ficha Resumen de los Datos Verificados */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5 text-xs">
+              <div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  {legalConfirmModalData.type === 'RUC' ? 'Número de RUC' : 'Número de DNI'}
+                </span>
+                <span className="font-mono font-bold text-slate-900 text-sm">
+                  {legalConfirmModalData.number}
+                </span>
+              </div>
+
+              <div className="border-t border-slate-200/80 pt-2">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  {legalConfirmModalData.type === 'RUC' ? 'Razón Social Oficial' : 'Titular Legal Registrado'}
+                </span>
+                <span className="font-bold text-[#0b1c30] text-sm uppercase">
+                  {legalConfirmModalData.businessName}
+                </span>
+              </div>
+
+              {legalConfirmModalData.address && (
+                <div className="border-t border-slate-200/80 pt-2">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Dirección Comercial / Despacho
+                  </span>
+                  <span className="text-slate-700 font-medium">
+                    {legalConfirmModalData.address}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Mensaje de Explicación y Protección */}
+            <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3 text-[11px] text-emerald-900 leading-relaxed">
+              <p>
+                Al confirmar, estos datos oficiales se guardarán en tu tienda para habilitar tu <strong>Libro de Reclamaciones Oficial</strong> y activar tu tienda para pedidos. El nombre oficial quedará protegido contra modificaciones.
+              </p>
+            </div>
+
+            {/* Acciones */}
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                type="button"
+                disabled={isSavingLegalModal}
+                onClick={handleConfirmAndSaveLegalData}
+                className="w-full h-11 rounded-xl bg-[#059669] hover:bg-[#00855d] text-white font-bold text-xs transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+              >
+                {isSavingLegalModal ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Guardando datos oficiales...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={16} />
+                    <span>Confirmar y Guardar Datos</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                disabled={isSavingLegalModal}
+                onClick={handleReviewLegalData}
+                className="w-full h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Revisar antes de guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación: Salir con Cambios Sin Guardar */}
+      {showExitConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 flex flex-col items-center text-center gap-4 relative">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-600 flex items-center justify-center shadow-xs">
+              <AlertTriangle size={28} />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <h3 className="font-bold text-lg text-[#0b1c30]">
+                ¿Salir sin guardar los cambios?
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Tienes modificaciones pendientes en los ajustes de tu tienda. Si sales ahora, todos los cambios que no hayas guardado se perderán.
+              </p>
+            </div>
+
+            <div className="flex flex-col w-full gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExitConfirmModal(false);
+                  setPendingNavHref(null);
+                }}
+                className="w-full h-11 rounded-xl bg-[#059669] hover:bg-[#00855d] text-white font-bold text-xs transition-colors shadow-xs cursor-pointer"
+              >
+                Seguir editando
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const target = pendingNavHref;
+                  setShowExitConfirmModal(false);
+                  setPendingNavHref(null);
+                  executeExit(target || undefined);
+                }}
+                className="w-full h-11 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-700 hover:text-red-700 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Descartar cambios y salir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

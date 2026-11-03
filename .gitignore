@@ -25,6 +25,8 @@
 *.pem
 *.key
 serviceAccountKey.json
+service-account*.json
+*service-account*.json
 
 # debug
 npm-debug.log*
