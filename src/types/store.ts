@@ -1,6 +1,8 @@
 export type StoreStatus = 'activa' | 'pausada' | 'pendiente' | 'eliminada';
 export type StoreStyle = 'minimalista' | 'moderna' | 'elegante';
 export type StorePlan = 'gratis' | 'emprendedor' | 'negocio';
+export type CatalogLayout = 'grid' | 'list';
+export type HeaderStyle = 'minimal' | 'banner' | 'card';
 
 export interface Store {
   id: string;
@@ -15,6 +17,9 @@ export interface Store {
   status: StoreStatus; // Estado de la tienda: 'activa' | 'pausada' | 'pendiente' | 'eliminada'
   themeStyle?: StoreStyle; // Estilo visual: 'minimalista' | 'moderna' | 'elegante'
   primaryColor?: string; // Color principal Hex ej. "#059669"
+  catalogLayout?: CatalogLayout; // Disposición de productos: 'grid' (Cuadrícula visual 2 col) | 'list' (Lista rápida / menú con botón +)
+  headerStyle?: HeaderStyle; // Estilo de cabecera: 'minimal' (Limpio centrado) | 'banner' (Foto de portada ancha) | 'card' (Tarjeta moderna)
+  announcementBar?: string; // Mensaje promocional o de bienvenida superior ej. "¡Envíos gratis por compras mayores a S/ 100!"
   currency?: string; // 'PEN' por defecto
   logoUrl?: string | null;
   bannerUrl?: string | null;

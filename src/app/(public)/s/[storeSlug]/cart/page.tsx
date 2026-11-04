@@ -18,6 +18,7 @@ import {
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { useCartStore } from '@/lib/cart-store';
 import { useAppStore } from '@/lib/app-store';
+import { getContrastTextColor } from '@/lib/design-system';
 import { Store } from '@/types/store';
 import { formatCurrency, generateWhatsAppLink } from '@/lib/whatsapp';
 import { Button } from '@/components/ui/Button';
@@ -180,8 +181,8 @@ export default function PublicCartPage({ params }: Props) {
         <button
           onClick={handleSendWhatsAppOrder}
           disabled={isRedirecting}
-          style={{ backgroundColor: brandColor }}
-          className={`w-full h-12 text-white font-bold text-base shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          style={{ backgroundColor: brandColor, color: getContrastTextColor(brandColor) }}
+          className={`w-full h-12 font-bold text-base shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer ${
             isRedirecting ? 'opacity-85 cursor-wait' : ''
           } ${
             isElegant

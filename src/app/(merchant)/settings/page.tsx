@@ -30,30 +30,31 @@ import {
   Info,
   Sparkles,
   RotateCcw,
-  Search
+  Search,
+  LayoutGrid,
+  List,
+  Megaphone,
+  Pipette,
+  Wand2,
+  Eye,
 } from 'lucide-react';
 import { sendEmailVerification } from 'firebase/auth';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/lib/app-store';
-import { Store, StoreStyle } from '@/types/store';
+import { Store, StoreStyle, CatalogLayout, HeaderStyle } from '@/types/store';
 import { LiveStorePreview } from '@/components/merchant/LiveStorePreview';
 import { TermsModal } from '@/components/ui/TermsModal';
 import { WhatsAppVerifyModal } from '@/components/merchant/WhatsAppVerifyModal';
 import { MerchantSidebar } from '@/components/merchant/MerchantSidebar';
 import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { getPolicyTemplateByCategory, STORE_POLICY_TEMPLATES } from '@/lib/constants/store-policies-templates';
-
-// Paleta de colores oficiales
-const STITCH_COLORS = [
-  { id: 'apana-green', hex: '#059669', name: 'Esmeralda' },
-  { id: 'blue', hex: '#2563EB', name: 'Azul Real' },
-  { id: 'amber', hex: '#D97706', name: 'Dorado' },
-  { id: 'wine', hex: '#831843', name: 'Vino' },
-  { id: 'black', hex: '#171717', name: 'Negro' },
-  { id: 'pink', hex: '#DB2777', name: 'Fucsia' },
-  { id: 'orange', hex: '#EA580C', name: 'Naranja' },
-  { id: 'purple', hex: '#9333EA', name: 'Púrpura' },
-];
+import {
+  STITCH_COLORS,
+  BUSINESS_PRESETS,
+  ANNOUNCEMENT_SUGGESTIONS,
+  getContrastTextColor,
+  isValidHexColor,
+} from '@/lib/design-system';
 
 import { useAuth } from '@/lib/firebase/auth-context';
 import { createOrUpdateStoreInFS, getStoreByUserIdFromFS } from '@/lib/firebase/firestore';
@@ -350,6 +351,11 @@ export default function SettingsPage() {
   const [whatsappPhone, setWhatsappPhone] = useState('');
   const [selectedStyle, setSelectedStyle] = useState<StoreStyle>('minimalista');
   const [selectedColorHex, setSelectedColorHex] = useState('#059669');
+  const [catalogLayout, setCatalogLayout] = useState<CatalogLayout>('grid');
+  const [headerStyle, setHeaderStyle] = useState<HeaderStyle>('minimal');
+  const [announcementBar, setAnnouncementBar] = useState('');
+  const [customColorInput, setCustomColorInput] = useState('#059669');
+  const [showCustomColorPicker, setShowCustomColorPicker] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategoryInput, setNewCategoryInput] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -622,6 +628,10 @@ export default function SettingsPage() {
           setWhatsappPhone(cleanInitialPhone(parsed.whatsappPhone || ''));
           setSelectedStyle(parsed.themeStyle || 'minimalista');
           setSelectedColorHex(parsed.primaryColor || '#059669');
+          setCustomColorInput(parsed.primaryColor || '#059669');
+          setCatalogLayout(parsed.catalogLayout || 'grid');
+          setHeaderStyle(parsed.headerStyle || 'minimal');
+          setAnnouncementBar(parsed.announcementBar || '');
           setCategories(parsed.categories || []);
           setIsLoading(false);
         } catch (e) { }
@@ -659,6 +669,10 @@ export default function SettingsPage() {
         setWhatsappPhone(cleanInitialPhone(storeFromFS.whatsappPhone || ''));
         setSelectedStyle(storeFromFS.themeStyle || 'minimalista');
         setSelectedColorHex(storeFromFS.primaryColor || '#059669');
+        setCustomColorInput(storeFromFS.primaryColor || '#059669');
+        setCatalogLayout(storeFromFS.catalogLayout || 'grid');
+        setHeaderStyle(storeFromFS.headerStyle || 'minimal');
+        setAnnouncementBar(storeFromFS.announcementBar || '');
         setCategories(storeFromFS.categories || []);
         sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(storeFromFS));
       }
@@ -691,6 +705,9 @@ export default function SettingsPage() {
       whatsappPhone !== cleanInitialPhone(currentStore.whatsappPhone || '') ||
       selectedStyle !== (currentStore.themeStyle || 'minimalista') ||
       selectedColorHex !== (currentStore.primaryColor || '#059669') ||
+      catalogLayout !== (currentStore.catalogLayout || 'grid') ||
+      headerStyle !== (currentStore.headerStyle || 'minimal') ||
+      announcementBar !== (currentStore.announcementBar || '') ||
       JSON.stringify(categories) !== JSON.stringify(currentStore.categories || [])
     )
   );
@@ -704,6 +721,9 @@ export default function SettingsPage() {
       whatsappPhone !== cleanInitialPhone(currentStore.whatsappPhone || '') ||
       selectedStyle !== (currentStore.themeStyle || 'minimalista') ||
       selectedColorHex !== (currentStore.primaryColor || '#059669') ||
+      catalogLayout !== (currentStore.catalogLayout || 'grid') ||
+      headerStyle !== (currentStore.headerStyle || 'minimal') ||
+      announcementBar !== (currentStore.announcementBar || '') ||
       JSON.stringify(categories) !== JSON.stringify(currentStore.categories || [])
     )
   );
@@ -784,6 +804,9 @@ export default function SettingsPage() {
           whatsappPhone: fullPhone,
           themeStyle: selectedStyle,
           primaryColor: selectedColorHex,
+          catalogLayout: catalogLayout,
+          headerStyle: headerStyle,
+          announcementBar: announcementBar.trim(),
           description: storeDescription,
           categories: categories,
           logoUrl: finalLogoUrl,
@@ -1908,45 +1931,297 @@ export default function SettingsPage() {
           {/* ================= PESTAÑA: GENERAL (PARTE 2) ================= */}
           {activeTab === 'general' && (
             <>
-          {/* Card 3: Personalización Visual */}
-          <section className="bg-white rounded-2xl p-5 border border-[#bccac0]/40 shadow-xs flex flex-col gap-4">
-            <div className="flex items-center gap-2.5 pb-2 border-b border-gray-100">
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center">
-                <Palette size={18} />
+          {/* Card 3: Personalización Visual y Design System */}
+          <section className="bg-white rounded-2xl p-5 sm:p-6 border border-[#bccac0]/40 shadow-xs flex flex-col gap-6">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 flex-wrap gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#059669] flex items-center justify-center shadow-2xs">
+                  <Palette size={20} />
+                </div>
+                <div>
+                  <h2 className="font-bold text-base text-[#0b1c30]">Personalización de tu Tienda</h2>
+                  <p className="text-xs text-slate-500">Diseña una tienda única y profesional sin tocar una sola línea de código.</p>
+                </div>
               </div>
-              <h2 className="font-bold text-base text-[#0b1c30]">Apariencia y Estilo</h2>
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 flex items-center gap-1">
+                <Sparkles size={12} className="text-[#059669]" />
+                <span>100% Guiado</span>
+              </span>
             </div>
 
-            {/* Estilo Visual */}
+            {/* A. Presets Rápidos por Rubro (1 Clic) */}
+            <div className="flex flex-col gap-2.5 bg-slate-50/80 p-3.5 sm:p-4 rounded-2xl border border-slate-200/70">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-[#0b1c30] flex items-center gap-1.5">
+                  <Wand2 size={14} className="text-[#059669]" />
+                  <span>Plantillas Rápidas por Rubro (1 Clic)</span>
+                </label>
+                <span className="text-[10px] text-slate-500 font-medium">Recomendado para empezar</span>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Elige tu tipo de negocio y configuraremos automáticamente los mejores colores, formato de catálogo y estilo:
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-1">
+                {BUSINESS_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedStyle(preset.themeStyle);
+                      setSelectedColorHex(preset.primaryColor);
+                      setCustomColorInput(preset.primaryColor);
+                      setCatalogLayout(preset.catalogLayout);
+                      setHeaderStyle(preset.headerStyle);
+                      if (!announcementBar.trim()) {
+                        setAnnouncementBar(preset.suggestedAnnouncement);
+                      }
+                    }}
+                    className="p-2.5 rounded-xl border border-slate-200 bg-white hover:border-emerald-500 hover:shadow-xs active:scale-95 transition-all flex flex-col items-center text-center gap-1 group cursor-pointer"
+                  >
+                    <span className="text-xl group-hover:scale-110 transition-transform">{preset.icon}</span>
+                    <span className="font-bold text-[11px] text-slate-800 leading-tight">{preset.name}</span>
+                    <span className="text-[9px] text-slate-400 line-clamp-1">{preset.rubro}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* B. Formato de Catálogo (Disposición de Productos) */}
             <div className="flex flex-col gap-2.5">
-              <label className="text-xs font-semibold text-[#0b1c30]">Estilo de Plantilla</label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {[
-                  { id: 'minimalista', name: '🍃 Minimalista', desc: 'Lookbook sin marcos, Moda y Ropa' },
-                  { id: 'moderna', name: '⚡ Moderna', desc: 'Lista horizontal, Comida y Delivery' },
-                  { id: 'elegante', name: '⚜️ Elegante', desc: 'Boutique marfil, Joyería y Gourmet' },
-                ].map((styleItem) => {
-                  const isSelected = selectedStyle === styleItem.id;
+              <label className="text-xs font-bold text-[#0b1c30] flex items-center gap-1.5">
+                <LayoutGrid size={15} className="text-[#059669]" />
+                <span>¿Cómo prefieres mostrar tus productos?</span>
+              </label>
+              <p className="text-[11px] text-slate-500">
+                Selecciona la vista ideal según la forma en que compran tus clientes:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {/* Opción 1: Cuadrícula Visual */}
+                <button
+                  type="button"
+                  onClick={() => setCatalogLayout('grid')}
+                  className={`p-4 rounded-2xl border text-left flex items-start gap-3.5 transition-all cursor-pointer ${
+                    catalogLayout === 'grid'
+                      ? 'bg-emerald-50/70 border-[#059669] ring-2 ring-[#059669]/80 shadow-xs'
+                      : 'bg-white border-slate-200 hover:bg-slate-50/80 hover:border-slate-300'
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                    catalogLayout === 'grid' ? 'bg-[#059669] text-white' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    <LayoutGrid size={20} />
+                  </div>
+                  <div className="flex-1 flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-[#0b1c30]">Cuadrícula Visual (2 Columnas)</span>
+                      {catalogLayout === 'grid' && (
+                        <span className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center text-[10px]">
+                          <Check size={12} strokeWidth={3} />
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-slate-500 leading-relaxed">
+                      Fotos grandes y destacadas. Ideal si vendes <strong>Ropa, Joyería, Calzado, Belleza o Decoración</strong> donde la imagen es lo más importante.
+                    </span>
+                  </div>
+                </button>
+
+                {/* Opción 2: Lista Rápida */}
+                <button
+                  type="button"
+                  onClick={() => setCatalogLayout('list')}
+                  className={`p-4 rounded-2xl border text-left flex items-start gap-3.5 transition-all cursor-pointer ${
+                    catalogLayout === 'list'
+                      ? 'bg-emerald-50/70 border-[#059669] ring-2 ring-[#059669]/80 shadow-xs'
+                      : 'bg-white border-slate-200 hover:bg-slate-50/80 hover:border-slate-300'
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                    catalogLayout === 'list' ? 'bg-[#059669] text-white' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    <List size={20} />
+                  </div>
+                  <div className="flex-1 flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-[#0b1c30]">Lista Rápida (Menú con Botón +)</span>
+                      {catalogLayout === 'list' && (
+                        <span className="w-5 h-5 rounded-full bg-[#059669] text-white flex items-center justify-center text-[10px]">
+                          <Check size={12} strokeWidth={3} />
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-slate-500 leading-relaxed">
+                      Filas compactas con botón directo <strong>"+"</strong>. Ideal para <strong>Bodegas, Abarrotes, Panaderías, Menús y Farmacias</strong> donde compran varios artículos rápido.
+                    </span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* C. Color Principal de tu Marca & Selector Libre (Color Picker) */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between flex-wrap gap-1">
+                <label className="text-xs font-bold text-[#0b1c30] flex items-center gap-1.5">
+                  <Palette size={15} className="text-[#059669]" />
+                  <span>Color Principal de tu Marca</span>
+                </label>
+                <span className="text-[11px] font-mono font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                  {selectedColorHex.toUpperCase()}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Elige uno de los colores profesionales recomendados o haz clic en <strong>Personalizado</strong> para buscar cualquier tono:
+              </p>
+
+              {/* Fila de Colores Curados + Botón Selector Personalizado */}
+              <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                {STITCH_COLORS.map((col) => {
+                  const isSelected = selectedColorHex.toLowerCase() === col.hex.toLowerCase();
                   return (
                     <button
-                      key={styleItem.id}
+                      key={col.id}
                       type="button"
-                      onClick={() => setSelectedStyle(styleItem.id as StoreStyle)}
-                      className={`p-3 rounded-xl border text-left flex flex-col gap-1 transition-all ${isSelected
-                          ? 'bg-emerald-50/80 border-[#059669] ring-2 ring-[#059669] shadow-xs'
-                          : 'bg-gray-50/70 text-[#0b1c30] border-gray-200 hover:bg-gray-100'
-                        }`}
+                      onClick={() => {
+                        setSelectedColorHex(col.hex);
+                        setCustomColorInput(col.hex);
+                      }}
+                      title={`${col.name} (${col.hex})`}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center text-white transition-all cursor-pointer ${
+                        isSelected ? 'scale-110 ring-3 ring-offset-2 ring-[#059669] shadow-md' : 'opacity-90 hover:opacity-100 hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: col.hex }}
+                    >
+                      {isSelected && <Check size={16} className="text-white stroke-[3]" />}
+                    </button>
+                  );
+                })}
+
+                {/* Botón Selector Libre de Color (+ Personalizado) */}
+                <button
+                  type="button"
+                  onClick={() => setShowCustomColorPicker(!showCustomColorPicker)}
+                  className={`px-3 py-1.5 rounded-full border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    showCustomColorPicker || !STITCH_COLORS.some((c) => c.hex.toLowerCase() === selectedColorHex.toLowerCase())
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-400 ring-2 ring-emerald-500/30'
+                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 hover:border-slate-400'
+                  }`}
+                  title="Abrir selector libre de color o ingresar código HEX"
+                >
+                  <Pipette size={14} className="text-[#059669]" />
+                  <span>Color Libre</span>
+                </button>
+              </div>
+
+              {/* Panel Desplegable de Color Personalizado & HEX */}
+              {(showCustomColorPicker || !STITCH_COLORS.some((c) => c.hex.toLowerCase() === selectedColorHex.toLowerCase())) && (
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fadeIn">
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    {/* Native Color Input */}
+                    <div className="relative w-11 h-11 rounded-xl overflow-hidden shadow-2xs border-2 border-white ring-2 ring-slate-200 shrink-0">
+                      <input
+                        type="color"
+                        value={isValidHexColor(selectedColorHex) ? selectedColorHex : '#059669'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedColorHex(val);
+                          setCustomColorInput(val);
+                        }}
+                        className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 cursor-pointer"
+                        title="Abrir rueda de color del sistema"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs font-bold text-slate-800">Selector de Tono & Gotero</span>
+                      <span className="text-[10px] text-slate-500">Haz clic en el cuadro para usar la paleta o gotero</span>
+                    </div>
+                  </div>
+
+                  {/* Input Directo de Código HEX */}
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="flex items-center bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 shadow-2xs focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                      <span className="text-xs font-bold text-slate-400 select-none mr-1">#</span>
+                      <input
+                        type="text"
+                        maxLength={7}
+                        value={customColorInput.replace('#', '')}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^0-9A-Fa-f]/g, '');
+                          setCustomColorInput(`#${raw}`);
+                          if (raw.length === 3 || raw.length === 6) {
+                            setSelectedColorHex(`#${raw}`);
+                          }
+                        }}
+                        placeholder="059669"
+                        className="text-xs font-mono font-bold text-slate-800 uppercase outline-none w-20"
+                      />
+                    </div>
+
+                    {/* Botón Muestra con Contraste Inteligente */}
+                    <div
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1 select-none transition-colors"
+                      style={{
+                        backgroundColor: selectedColorHex,
+                        color: getContrastTextColor(selectedColorHex),
+                      }}
+                    >
+                      <Eye size={12} />
+                      <span>Legible</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* D. Estilo de Cabecera (Header de la Tienda) */}
+            <div className="flex flex-col gap-2.5">
+              <label className="text-xs font-bold text-[#0b1c30]">Estilo de Cabecera / Portada</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {[
+                  {
+                    id: 'minimal',
+                    name: 'Minimalista Limpio',
+                    desc: 'Logo centrado y fondo despejado. Máximo protagonismo a tus productos.',
+                    icon: '⚪',
+                  },
+                  {
+                    id: 'banner',
+                    name: 'Portada / Banner',
+                    desc: 'Muestra la foto de portada de tu negocio en la parte superior.',
+                    icon: '🖼️',
+                  },
+                  {
+                    id: 'card',
+                    name: 'Tarjeta Moderna',
+                    desc: 'Tarjeta flotante con bordes redondeados y sombra elegante.',
+                    icon: '🃏',
+                  },
+                ].map((item) => {
+                  const isSelected = headerStyle === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setHeaderStyle(item.id as HeaderStyle)}
+                      className={`p-3.5 rounded-xl border text-left flex flex-col gap-1 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-50/70 border-[#059669] ring-2 ring-[#059669]/70 shadow-xs'
+                          : 'bg-white border-slate-200 hover:bg-slate-50'
+                      }`}
                     >
                       <div className="flex items-center justify-between w-full">
-                        <span className="font-bold text-xs text-[#0b1c30]">{styleItem.name}</span>
+                        <span className="font-bold text-xs text-[#0b1c30] flex items-center gap-1.5">
+                          <span>{item.icon}</span>
+                          <span>{item.name}</span>
+                        </span>
                         {isSelected && (
-                          <div className="w-4 h-4 rounded-full bg-[#059669] flex items-center justify-center">
-                            <Check size={10} className="text-white" />
+                          <div className="w-4 h-4 rounded-full bg-[#059669] flex items-center justify-center text-white">
+                            <Check size={10} strokeWidth={3} />
                           </div>
                         )}
                       </div>
-                      <span className="text-[10px] text-slate-500 font-medium leading-tight">
-                        {styleItem.desc}
+                      <span className="text-[10px] text-slate-500 font-medium leading-relaxed">
+                        {item.desc}
                       </span>
                     </button>
                   );
@@ -1954,35 +2229,62 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Selector de Color */}
+            {/* E. Barra de Anuncios Superior (Mensaje Promocional) */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-[#0b1c30]">Color Principal de tu Marca</label>
-              <div className="flex flex-wrap items-center gap-2.5 pt-1">
-                {STITCH_COLORS.map((col) => {
-                  const isSelected = selectedColorHex === col.hex;
-                  return (
-                    <button
-                      key={col.id}
-                      type="button"
-                      onClick={() => setSelectedColorHex(col.hex)}
-                      title={col.name}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center text-white transition-all ${isSelected ? 'scale-110 ring-2 ring-offset-2 ring-[#059669] shadow-md' : 'opacity-85 hover:opacity-100 hover:scale-105'
-                        }`}
-                      style={{ backgroundColor: col.hex }}
-                    >
-                      {isSelected && <Check size={16} className="text-white stroke-[3]" />}
-                    </button>
-                  );
-                })}
+              <label className="text-xs font-bold text-[#0b1c30] flex items-center gap-1.5">
+                <Megaphone size={14} className="text-[#059669]" />
+                <span>Cintillo de Anuncios Superior (Opcional)</span>
+              </label>
+              <p className="text-[11px] text-slate-500">
+                Aparecerá en la parte más alta de tu tienda con el color de tu marca. Ideal para avisos de envíos o promociones:
+              </p>
+              <div className="relative">
+                <input
+                  type="text"
+                  maxLength={120}
+                  value={announcementBar}
+                  onChange={(e) => setAnnouncementBar(e.target.value)}
+                  placeholder="Ej: ¡Envíos gratis en compras mayores a S/ 100! • Atendemos por WhatsApp"
+                  className="w-full text-xs bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                />
+                {announcementBar && (
+                  <button
+                    type="button"
+                    onClick={() => setAnnouncementBar('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    title="Borrar anuncio"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Frases Sugeridas en 1 Clic */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Sugerencias:</span>
+                {ANNOUNCEMENT_SUGGESTIONS.map((sug, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setAnnouncementBar(sug)}
+                    className="text-[10px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 border border-slate-200 text-slate-600 px-2 py-0.5 rounded-full transition-all cursor-pointer truncate max-w-[240px]"
+                    title={sug}
+                  >
+                    {sug}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Live Preview en Ajustes */}
-            <div className="w-full pt-3 border-t border-slate-100 flex flex-col items-center">
+            {/* F. Live Preview en Ajustes */}
+            <div className="w-full pt-4 border-t border-slate-100 flex flex-col items-center">
               <LiveStorePreview
                 storeName={storeName || 'Mi Tienda'}
                 themeStyle={selectedStyle}
                 primaryColor={selectedColorHex}
+                catalogLayout={catalogLayout}
+                headerStyle={headerStyle}
+                announcementBar={announcementBar}
                 categoryName={categories[0] || 'General'}
                 logoUrl={logoUrl}
               />

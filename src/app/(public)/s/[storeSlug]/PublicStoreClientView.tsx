@@ -18,6 +18,7 @@ import {
   Store as StoreIcon,
   ShieldCheck,
   X,
+  Plus,
 } from 'lucide-react';
 import { InstagramIcon } from '@/components/ui/InstagramIcon';
 import { useAppStore } from '@/lib/app-store';
@@ -29,6 +30,7 @@ import { TermsModal } from '@/components/ui/TermsModal';
 import { StorePoliciesModal } from '@/components/ui/StorePoliciesModal';
 import { ReportStoreModal } from '@/components/ui/ReportStoreModal';
 import { ProductOptionsModal } from '@/components/public/ProductOptionsModal';
+import { getContrastTextColor } from '@/lib/design-system';
 
 interface PublicStoreClientViewProps {
   initialStore: Store;
@@ -59,6 +61,7 @@ export default function PublicStoreClientView({
   const [copiedShare, setCopiedShare] = useState(false);
   const [selectedModalProduct, setSelectedModalProduct] = useState<Product | null>(null);
   const [isVerifiedModalOpen, setIsVerifiedModalOpen] = useState(false);
+  const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -191,9 +194,25 @@ export default function PublicStoreClientView({
         </div>
       </header>
 
+      {/* Announcement Bar Fijo (Cintillo Promocional Superior) */}
+      {store.announcementBar && store.announcementBar.trim() && (
+        <div
+          className="w-full fixed top-16 z-40 py-2 px-4 text-xs font-bold text-center flex items-center justify-center gap-2 shadow-xs transition-colors"
+          style={{
+            backgroundColor: store.primaryColor || '#059669',
+            color: getContrastTextColor(store.primaryColor),
+          }}
+        >
+          <span>📢</span>
+          <span className="truncate max-w-4xl">{store.announcementBar}</span>
+        </div>
+      )}
+
       {/* Main Container */}
       <main
-        className={`pt-16 pb-24 min-h-screen transition-colors ${
+        className={`${
+          store.announcementBar && store.announcementBar.trim() ? 'pt-24' : 'pt-16'
+        } pb-24 min-h-screen transition-colors ${
           store.themeStyle === 'elegante'
             ? 'bg-[#FAF8F5] text-stone-900'
             : store.themeStyle === 'moderna'
@@ -237,10 +256,24 @@ export default function PublicStoreClientView({
         )}
 
         <div className="flex flex-col w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8">
-          {/* Header Tienda Info Dinámico según Tema */}
+          {/* Cover Hero Panorámico si el estilo es Banner */}
+          {store.headerStyle === 'banner' && (
+            <div className="w-full max-w-4xl mx-auto h-36 sm:h-52 md:h-64 rounded-2xl sm:rounded-3xl overflow-hidden relative mb-[-44px] sm:mb-[-52px] shadow-sm z-0">
+              <img
+                src={store.bannerUrl || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80'}
+                alt={store.name}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-linear-to-t from-black/45 via-transparent to-black/10" />
+            </div>
+          )}
+
+          {/* Header Tienda Info Dinámico según Tema y headerStyle */}
           <div
-            className={`px-4 py-6 sm:py-8 flex flex-col items-center gap-2 text-center transition-all max-w-3xl mx-auto w-full ${
-              store.themeStyle === 'elegante'
+            className={`px-4 py-6 sm:py-8 flex flex-col items-center gap-2 text-center transition-all max-w-3xl mx-auto w-full relative z-10 ${
+              store.headerStyle === 'card'
+                ? 'bg-white text-[#0b1c30] border border-slate-200/80 shadow-md mb-4 py-7 sm:rounded-3xl'
+                : store.themeStyle === 'elegante'
                 ? 'bg-[#FAF8F5] text-stone-900 border-b sm:border border-[#E7E2D9] mb-4 sm:rounded-3xl'
                 : store.themeStyle === 'moderna'
                 ? 'bg-white text-[#0b1c30] border-b sm:border border-slate-200/80 shadow-2xs mb-4 py-7 sm:rounded-3xl'
@@ -500,116 +533,162 @@ export default function PublicStoreClientView({
             </div>
           )}
 
-          {/* Grid de Productos Responsivo según Tema */}
-          <div
-            className={`grid gap-3.5 sm:gap-4 lg:gap-6 mb-8 ${
-              store.themeStyle === 'moderna'
-                ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-                : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4'
-            }`}
-          >
-            {filteredProducts.length === 0 ? (
-              <div className="col-span-full py-12 text-center text-[#6d7a72] text-sm">
-                Esta tienda aún no tiene productos publicados.
-              </div>
-            ) : (
-              filteredProducts.map((product) => {
-                const isPaidStore = store.plan === 'emprendedor' || store.plan === 'negocio';
-                const isOutOfStock = product.inStock === false;
-                const hasDiscount = Boolean(isPaidStore && product.compareAtPrice && product.compareAtPrice > product.price);
-                const discountPercent = hasDiscount
-                  ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
-                  : 0;
+          {/* Grid o Lista de Productos Responsivo según catalogLayout y Tema */}
+          {(() => {
+            const isListLayout = store.catalogLayout === 'list' || (!store.catalogLayout && store.themeStyle === 'moderna');
+            return (
+              <div
+                className={`grid gap-3.5 sm:gap-4 lg:gap-6 mb-8 ${
+                  isListLayout
+                    ? 'grid-cols-1 md:grid-cols-2'
+                    : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4'
+                }`}
+              >
+                {filteredProducts.length === 0 ? (
+                  <div className="col-span-full py-12 text-center text-[#6d7a72] text-sm">
+                    Esta tienda aún no tiene productos publicados.
+                  </div>
+                ) : (
+                  filteredProducts.map((product) => {
+                    const isPaidStore = store.plan === 'emprendedor' || store.plan === 'negocio';
+                    const isOutOfStock = product.inStock === false;
+                    const hasDiscount = Boolean(isPaidStore && product.compareAtPrice && product.compareAtPrice > product.price);
+                    const discountPercent = hasDiscount
+                      ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
+                      : 0;
 
-                const badgeText = (isPaidStore && !isOutOfStock && product.badge)
-                  ? (product.badge === 'top'
-                    ? '🔥 Top Ventas'
-                    : product.badge === 'oferta'
-                    ? '🏷️ Oferta'
-                    : product.badge === 'nuevo'
-                    ? '✨ Nuevo'
-                    : null)
-                  : null;
+                    const badgeText = (isPaidStore && !isOutOfStock && product.badge)
+                      ? (product.badge === 'top'
+                        ? '🔥 Top Ventas'
+                        : product.badge === 'oferta'
+                        ? '🏷️ Oferta'
+                        : product.badge === 'nuevo'
+                        ? '✨ Nuevo'
+                        : null)
+                      : null;
 
-                // TEMA MODERNA
-                if (store.themeStyle === 'moderna') {
-                  return (
-                    <article
-                      key={product.id}
-                      className={`bg-white rounded-2xl border border-slate-200/80 overflow-hidden flex flex-row items-center p-2.5 group cursor-pointer shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 relative ${
-                        isOutOfStock ? 'opacity-70 bg-slate-50' : ''
-                      }`}
-                    >
-                      <Link href={`/s/${store.slug}/p/${product.id}`} className="flex w-full flex-row items-center gap-3.5">
-                        <div className="w-24 h-24 rounded-2xl shrink-0 overflow-hidden bg-slate-100 relative">
-                          <img
-                            src={getSafeProductImage(product.imageUrl)}
-                            alt={product.title}
-                            className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
-                              isOutOfStock ? 'grayscale contrast-75' : ''
-                            }`}
-                            onError={(e) => {
-                              e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
-                            }}
-                          />
-                          {badgeText && !isOutOfStock && (
-                            <span className="absolute top-1.5 left-1.5 bg-[#059669] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">
-                              {badgeText}
-                            </span>
-                          )}
-                          {hasDiscount && !isOutOfStock && (
-                            <span className="absolute bottom-1.5 right-1.5 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs">
-                              -{discountPercent}%
-                            </span>
-                          )}
-                          {isOutOfStock && (
-                            <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center">
-                              <span className="bg-white/95 text-[#0b1c30] text-[10px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider shadow-xs">
-                                Agotado
-                              </span>
+                    // FORMATO 1: LISTA RÁPIDA (Ideal para Bodegas, Abarrotes, Menús de comida, Farmacias)
+                    if (isListLayout) {
+                      const isJustAdded = recentlyAddedId === product.id;
+                      return (
+                        <article
+                          key={product.id}
+                          className={`bg-white rounded-2xl border border-slate-200/80 overflow-hidden flex flex-row items-center p-2.5 sm:p-3 group shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 relative ${
+                            isOutOfStock ? 'opacity-70 bg-slate-50' : ''
+                          }`}
+                        >
+                          <Link href={`/s/${store.slug}/p/${product.id}`} className="flex flex-1 flex-row items-center gap-3.5 min-w-0">
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl shrink-0 overflow-hidden bg-slate-100 relative">
+                              <img
+                                src={getSafeProductImage(product.imageUrl)}
+                                alt={product.title}
+                                className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+                                  isOutOfStock ? 'grayscale contrast-75' : ''
+                                }`}
+                                onError={(e) => {
+                                  e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
+                                }}
+                              />
+                              {badgeText && !isOutOfStock && (
+                                <span className="absolute top-1.5 left-1.5 bg-[#059669] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">
+                                  {badgeText}
+                                </span>
+                              )}
+                              {hasDiscount && !isOutOfStock && (
+                                <span className="absolute bottom-1.5 right-1.5 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs">
+                                  -{discountPercent}%
+                                </span>
+                              )}
+                              {isOutOfStock && (
+                                <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center">
+                                  <span className="bg-white/95 text-[#0b1c30] text-[10px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider shadow-xs">
+                                    Agotado
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <div className="flex-1 flex flex-col gap-1 text-left justify-center py-1">
-                          <div className="flex items-center gap-2">
-                            <h3
-                              className={`font-space-grotesk font-bold text-sm text-[#0b1c30] uppercase tracking-wider line-clamp-1 group-hover:text-emerald-700 transition-colors ${
-                                isOutOfStock ? 'text-slate-500' : ''
-                              }`}
-                            >
-                              {product.title}
-                            </h3>
-                            {isOutOfStock && (
-                              <span className="text-[9px] font-bold text-amber-700 bg-amber-100/80 px-1.5 py-0.5 rounded">
+                            <div className="flex-1 flex flex-col gap-1 text-left justify-center py-0.5 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h3
+                                  className={`font-space-grotesk font-bold text-sm text-[#0b1c30] tracking-wide line-clamp-1 group-hover:text-emerald-700 transition-colors ${
+                                    isOutOfStock ? 'text-slate-500' : ''
+                                  }`}
+                                >
+                                  {product.title}
+                                </h3>
+                                {isOutOfStock && (
+                                  <span className="text-[9px] font-bold text-amber-700 bg-amber-100/80 px-1.5 py-0.5 rounded shrink-0">
+                                    Agotado
+                                  </span>
+                                )}
+                              </div>
+                              {product.description && (
+                                <p className="text-xs text-slate-500 line-clamp-1 font-sans">
+                                  {product.description}
+                                </p>
+                              )}
+                              <div className="flex items-baseline gap-2 mt-0.5">
+                                <span
+                                  className={`font-space-grotesk font-extrabold text-base ${
+                                    isOutOfStock ? 'text-slate-400' : ''
+                                  }`}
+                                  style={!isOutOfStock ? { color: store.primaryColor || '#059669' } : undefined}
+                                >
+                                  {formatCurrency(product.price)}
+                                </span>
+                                {hasDiscount && (
+                                  <span className="text-xs text-slate-400 line-through font-medium">
+                                    {formatCurrency(product.compareAtPrice!)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </Link>
+
+                          {/* Botón de Agregar Rápido al Carrito */}
+                          <div className="shrink-0 pl-2">
+                            {isOutOfStock ? (
+                              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2.5 py-1.5 rounded-xl select-none">
                                 Agotado
                               </span>
+                            ) : product.options && product.options.length > 0 ? (
+                              <Link
+                                href={`/s/${store.slug}/p/${product.id}`}
+                                className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-all flex items-center gap-1 shadow-2xs"
+                                title="Seleccionar opciones"
+                              >
+                                <span>Elegir</span>
+                                <ArrowRight size={12} />
+                              </Link>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  addItem(product);
+                                  setRecentlyAddedId(product.id);
+                                  setTimeout(() => setRecentlyAddedId(null), 1200);
+                                }}
+                                className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 shadow-2xs cursor-pointer group"
+                                style={{
+                                  backgroundColor: store.primaryColor || '#059669',
+                                  color: getContrastTextColor(store.primaryColor),
+                                }}
+                                title="Agregar al carrito"
+                                aria-label={`Agregar ${product.title} al carrito`}
+                              >
+                                {isJustAdded ? (
+                                  <Check size={18} className="stroke-[3] animate-scaleUp" />
+                                ) : (
+                                  <Plus size={18} className="stroke-[3] group-hover:scale-110 transition-transform" />
+                                )}
+                              </button>
                             )}
                           </div>
-                          {product.description && (
-                            <p className="text-xs text-slate-500 line-clamp-1 font-sans">
-                              {product.description}
-                            </p>
-                          )}
-                          <div className="flex items-baseline gap-2 mt-0.5">
-                            <span
-                              className={`font-space-grotesk font-extrabold text-base ${
-                                isOutOfStock ? 'text-slate-400' : ''
-                              }`}
-                              style={!isOutOfStock ? { color: store.primaryColor || '#059669' } : undefined}
-                            >
-                              {formatCurrency(product.price)}
-                            </span>
-                            {hasDiscount && (
-                              <span className="text-xs text-slate-400 line-through font-medium">
-                                {formatCurrency(product.compareAtPrice!)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </Link>
-                    </article>
-                  );
-                }
+                        </article>
+                      );
+                    }
 
                 // TEMA ELEGANTE
                 if (store.themeStyle === 'elegante') {
@@ -741,6 +820,8 @@ export default function PublicStoreClientView({
               })
             )}
           </div>
+        );
+      })()}
 
           {/* Footer Tienda Pública */}
           <footer className="py-7 px-4 text-center bg-white border-t border-[#bccac0]/20 flex flex-col items-center gap-2.5">
