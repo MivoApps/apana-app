@@ -25,6 +25,7 @@ import {
   BookOpen,
   Scale,
   Palette,
+  ArrowRight,
 } from 'lucide-react';
 import { sendEmailVerification } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -583,6 +584,35 @@ export default function DashboardPage() {
             <span>Enlace de confirmación enviado. Revisa tu bandeja de entrada o spam.</span>
           </div>
         )}
+
+        {/* Banner de Invitación al Estudio de Diseño (No intrusivo, personalización a su propio ritmo) */}
+        <div className="bg-gradient-to-r from-purple-50/90 via-indigo-50/50 to-white border border-purple-200/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Palette size={20} />
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                  Nuevo: Estudio de Diseño para tu Tienda
+                </h4>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-800 border border-purple-200">
+                  ✨ Personalizable
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-600 mt-0.5 max-w-xl leading-relaxed">
+                Elige un estilo visual único, sube tu portada panorámica o ajusta tu paleta de colores cuando tú lo decidas. Tu tienda se mantiene con su diseño original hasta que guardes cambios.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/store/editor"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold transition-all shadow-xs shrink-0 self-stretch sm:self-auto justify-center cursor-pointer"
+          >
+            <span>Personalizar Tienda</span>
+            <ArrowRight size={13} />
+          </Link>
+        </div>
 
         {/* Grilla Principal del Dashboard (Responsiva en Desktop) */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">

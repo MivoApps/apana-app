@@ -220,6 +220,10 @@ export default function OnboardingWizardPage() {
           category,
           themeStyle: targetStyle,
           primaryColor: selectedColorHex,
+          heroStyle: 'clean',
+          bannerUrl: null,
+          showTrustBadges: true,
+          productHoverZoom: false,
           whatsappPhone: fullPhone,
           isWhatsappVerified: false,
           ownerEmail: user.email || '',
@@ -789,6 +793,10 @@ export default function OnboardingWizardPage() {
                     </>
                   )}
                 </Button>
+
+                <p className="text-[11px] text-slate-500 text-center leading-relaxed">
+                  💡 Podrás personalizar la portada, colores y estilo visual en cualquier momento desde tu panel de control.
+                </p>
               </div>
             </div>
           )}
