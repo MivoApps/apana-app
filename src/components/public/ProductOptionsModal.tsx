@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, ShoppingBag, Plus, Minus, Check } from 'lucide-react';
-import { Product, ProductOptionGroup, SelectedOption } from '@/types/store';
+import { Product, ProductOptionGroup, SelectedOption, StoreStyle } from '@/types/store';
 import { formatCurrency } from '@/lib/whatsapp';
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
   onClose: () => void;
   onAddToCart: (product: Product, selectedOptions: SelectedOption[]) => void;
   primaryColor?: string;
-  themeStyle?: 'minimalista' | 'moderna' | 'elegante';
+  themeStyle?: StoreStyle;
 }
 
 export const ProductOptionsModal: React.FC<Props> = ({
@@ -25,8 +25,8 @@ export const ProductOptionsModal: React.FC<Props> = ({
   const [selectedValues, setSelectedValues] = useState<{ [groupId: string]: string }>({});
   const [quantity, setQuantity] = useState(1);
 
-  const isElegant = themeStyle === 'elegante';
-  const isModern = themeStyle === 'moderna';
+  const isElegant = themeStyle === 'elegante' || themeStyle === 'luxe';
+  const isModern = themeStyle === 'moderna' || themeStyle === 'modern' || themeStyle === 'fresh';
 
   // Inicializar la primera opción de cada grupo por defecto cuando se abre el modal
   useEffect(() => {

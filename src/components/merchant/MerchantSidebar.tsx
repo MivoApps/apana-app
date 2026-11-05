@@ -13,12 +13,13 @@ import {
   ShieldCheck,
   Store as StoreIcon,
   Sparkles,
+  Palette,
 } from 'lucide-react';
 import { Store } from '@/types/store';
 import { isSuperAdminEmail } from '@/lib/auth-helpers';
 
 interface MerchantSidebarProps {
-  currentPath: 'dashboard' | 'products' | 'settings' | 'claims' | 'plans' | 'admin' | string;
+  currentPath: 'dashboard' | 'products' | 'settings' | 'claims' | 'plans' | 'admin' | 'editor' | string;
   store: Store | null;
   userEmail?: string | null;
   onLogout: () => void;
@@ -40,6 +41,7 @@ export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
   const navItems = [
     { id: 'dashboard', href: '/dashboard', label: 'Inicio', icon: Home },
     { id: 'products', href: '/products', label: 'Productos', icon: Package },
+    { id: 'editor', href: '/store/editor', label: 'Diseño de Tienda', icon: Palette, badge: 'Nuevo' },
     { id: 'settings', href: '/settings', label: 'Ajustes', icon: Settings },
     { id: 'claims', href: '/claims', label: 'Libro Reclamaciones', icon: Scale },
     { id: 'plans', href: '/plans', label: 'Planes & Beneficios', icon: Crown },
@@ -142,7 +144,16 @@ export const MerchantSidebar: React.FC<MerchantSidebarProps> = ({
                 }`}
               >
                 <Icon size={17} className={isActive ? 'text-white' : 'text-slate-400'} />
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {item.badge && (
+                  <span
+                    className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md tracking-tight ${
+                      isActive ? 'bg-white text-emerald-800' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    }`}
+                  >
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             );
           })}

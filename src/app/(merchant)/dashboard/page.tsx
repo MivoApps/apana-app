@@ -23,7 +23,8 @@ import {
   Mail,
   CheckCircle2,
   BookOpen,
-  Scale
+  Scale,
+  Palette,
 } from 'lucide-react';
 import { sendEmailVerification } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -924,12 +925,12 @@ export default function DashboardPage() {
                   <span className="text-[10px] text-[#6d7a72] leading-tight">Agregar a tienda</span>
                 </Link>
 
-                <Link href="/settings" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-[#059669] transition-all flex flex-col gap-1.5 shadow-2xs group">
-                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Settings size={18} />
+                <Link href="/store/editor" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-[#059669] transition-all flex flex-col gap-1.5 shadow-2xs group">
+                  <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Palette size={18} />
                   </div>
-                  <span className="text-xs font-bold text-[#0b1c30] leading-tight">Personalizar</span>
-                  <span className="text-[10px] text-[#6d7a72] leading-tight">Estilo y colores</span>
+                  <span className="text-xs font-bold text-[#0b1c30] leading-tight">Diseño de Tienda</span>
+                  <span className="text-[10px] text-[#6d7a72] leading-tight">Estilos y Portada</span>
                 </Link>
 
                 <Link href="/claims" className="bg-white p-3.5 rounded-2xl border border-[#bccac0]/40 hover:border-emerald-500 transition-all flex flex-col gap-1.5 shadow-2xs group">
