@@ -75,7 +75,11 @@ export default function PublicStoreClientView({
   const currentMood = VISUAL_MOODS.find((m) => m.id === normalizedStyle) || VISUAL_MOODS[1];
   const primaryColor = store.primaryColor || '#059669';
   const contrastColor = getContrastTextColor(primaryColor);
-  const heroStyle = store.heroStyle || (store.headerStyle === 'card' ? 'glass' : store.headerStyle === 'minimal' ? 'clean' : 'banner');
+  const hasCustomBanner = Boolean(store.bannerUrl && store.bannerUrl.trim() && !store.bannerUrl.startsWith('blob:'));
+  // Si la tienda no ha subido un banner propio, protegemos su identidad y mostramos cabecera 'clean' (sin inventar fotos de stock)
+  const heroStyle = hasCustomBanner
+    ? (store.heroStyle || (store.headerStyle === 'card' ? 'glass' : store.headerStyle === 'minimal' ? 'clean' : 'banner'))
+    : 'clean';
   const showTrustBadges = store.showTrustBadges !== false;
   const productHoverZoom = store.productHoverZoom !== false;
   const isListLayout = store.catalogLayout === 'list';
@@ -544,11 +548,19 @@ export default function PublicStoreClientView({
               <div className="bg-white/95 backdrop-blur-xs rounded-2xl border border-slate-200/80 p-3 shadow-2xs flex items-center justify-around gap-2 text-center flex-wrap">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
                   <div className="w-7 h-7 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center shrink-0">
-                    <Truck size={15} />
+                    {store.shippingType === 'solo_recojo' ? <StoreIcon size={15} /> : <Truck size={15} />}
                   </div>
                   <div className="flex flex-col text-left">
-                    <span className="text-[11px] leading-tight">Envíos Seguros</span>
-                    <span className="text-[9px] text-slate-400 font-normal">A todo el país</span>
+                    <span className="text-[11px] leading-tight">
+                      {store.shippingType === 'solo_recojo'
+                        ? 'Recojo en Local'
+                        : store.shippingType === 'gratis'
+                        ? 'Envío Gratis'
+                        : 'Envíos Seguros'}
+                    </span>
+                    <span className="text-[9px] text-slate-400 font-normal">
+                      {store.shippingType === 'solo_recojo' ? (store.city || 'Punto físico verificado') : 'A coordinar directo'}
+                    </span>
                   </div>
                 </div>
 
