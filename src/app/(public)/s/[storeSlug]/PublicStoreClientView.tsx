@@ -19,6 +19,9 @@ import {
   ShieldCheck,
   X,
   Plus,
+  Award,
+  MessageCircle,
+  Sparkles,
 } from 'lucide-react';
 import { InstagramIcon } from '@/components/ui/InstagramIcon';
 import { useAppStore } from '@/lib/app-store';
@@ -30,7 +33,12 @@ import { TermsModal } from '@/components/ui/TermsModal';
 import { StorePoliciesModal } from '@/components/ui/StorePoliciesModal';
 import { ReportStoreModal } from '@/components/ui/ReportStoreModal';
 import { ProductOptionsModal } from '@/components/public/ProductOptionsModal';
-import { getContrastTextColor } from '@/lib/design-system';
+import {
+  getContrastTextColor,
+  normalizeStoreStyle,
+  VISUAL_MOODS,
+  FONT_PAIRINGS,
+} from '@/lib/design-system';
 
 interface PublicStoreClientViewProps {
   initialStore: Store;
@@ -62,6 +70,16 @@ export default function PublicStoreClientView({
   const [selectedModalProduct, setSelectedModalProduct] = useState<Product | null>(null);
   const [isVerifiedModalOpen, setIsVerifiedModalOpen] = useState(false);
   const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
+
+  const normalizedStyle = normalizeStoreStyle(store.themeStyle);
+  const currentMood = VISUAL_MOODS.find((m) => m.id === normalizedStyle) || VISUAL_MOODS[1];
+  const primaryColor = store.primaryColor || '#059669';
+  const contrastColor = getContrastTextColor(primaryColor);
+  const heroStyle = store.heroStyle || (store.headerStyle === 'card' ? 'glass' : store.headerStyle === 'minimal' ? 'clean' : 'banner');
+  const showTrustBadges = store.showTrustBadges !== false;
+  const productHoverZoom = store.productHoverZoom !== false;
+  const isListLayout = store.catalogLayout === 'list';
+  const fontConfig = FONT_PAIRINGS.find((f) => f.id === store.fontPairing) || (normalizedStyle === 'luxe' ? FONT_PAIRINGS[0] : FONT_PAIRINGS[1]);
 
   useEffect(() => {
     setMounted(true);
@@ -105,6 +123,124 @@ export default function PublicStoreClientView({
     }
   };
 
+  // Elementos reutilizables de información comercial
+  const renderLogo = (sizeClass = 'w-20 h-20') =>
+    store.logoUrl ? (
+      <div className={`${sizeClass} rounded-2xl overflow-hidden bg-white p-1 shadow-md border border-slate-100 shrink-0 flex items-center justify-center`}>
+        <img src={store.logoUrl} alt={store.name} className="w-full h-full object-contain" />
+      </div>
+    ) : (
+      <div
+        style={{ backgroundColor: primaryColor }}
+        className={`${sizeClass} rounded-2xl text-white flex items-center justify-center font-black text-2xl shadow-md shrink-0`}
+      >
+        {store.name.substring(0, 2).toUpperCase()}
+      </div>
+    );
+
+  const commercialPills = (
+    <div className="flex flex-col items-center gap-2 mt-1">
+      <div className="flex flex-wrap items-center justify-center gap-1.5">
+        <span
+          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold border ${
+            normalizedStyle === 'luxe'
+              ? 'bg-white border-[#E7E2D9] text-stone-700 shadow-2xs'
+              : normalizedStyle === 'modern'
+              ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
+              : 'bg-neutral-100/70 border-neutral-200/60 text-neutral-600'
+          }`}
+        >
+          {store.shippingType === 'solo_recojo' ? (
+            <>
+              <StoreIcon size={13} className="text-[#059669]" />
+              <span>Solo recojo en tienda</span>
+            </>
+          ) : (
+            <>
+              <Truck size={13} className="text-[#059669]" />
+              <span>
+                {store.shippingType === 'gratis' ? 'Envío Gratis' : 'Envíos: A coordinar por WhatsApp'}
+              </span>
+            </>
+          )}
+        </span>
+
+        {store.shippingType === 'solo_recojo' && store.pickupAddress ? (
+          <span
+            title={`Punto de recojo: ${store.pickupAddress}`}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border border-slate-200 bg-white text-slate-700 max-w-[240px] truncate shadow-2xs"
+          >
+            <MapPin size={12} className="text-slate-500 shrink-0" />
+            <span className="truncate">{store.pickupAddress}</span>
+          </span>
+        ) : store.city ? (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border border-slate-200 bg-white text-slate-700 shadow-2xs">
+            <MapPin size={12} className="text-slate-500" />
+            <span>{store.city}</span>
+          </span>
+        ) : null}
+
+        {store.schedule && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border border-slate-200 bg-white text-slate-700 shadow-2xs">
+            <Clock size={12} className="text-slate-500" />
+            <span>{store.schedule}</span>
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
+        {store.socialLinks?.instagram && (
+          <a
+            href={
+              store.socialLinks.instagram.startsWith('http')
+                ? store.socialLinks.instagram
+                : `https://instagram.com/${store.socialLinks.instagram.replace('@', '')}`
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-pink-50 border border-pink-200 text-pink-700 hover:bg-pink-100 transition-colors shadow-2xs"
+          >
+            <InstagramIcon size={12} />
+            <span>Instagram</span>
+          </a>
+        )}
+        {store.socialLinks?.tiktok && (
+          <a
+            href={
+              store.socialLinks.tiktok.startsWith('http')
+                ? store.socialLinks.tiktok
+                : `https://tiktok.com/@${store.socialLinks.tiktok.replace('@', '')}`
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200 transition-colors shadow-2xs"
+          >
+            <span className="text-[10px]">🎵</span>
+            <span>TikTok</span>
+          </a>
+        )}
+        <button
+          type="button"
+          onClick={handleShareStore}
+          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 border border-emerald-200 text-[#006c49] hover:bg-emerald-100 transition-colors shadow-2xs cursor-pointer"
+          title="Compartir enlace de la tienda"
+        >
+          {copiedShare ? (
+            <>
+              <Check size={12} className="text-[#059669]" />
+              <span>¡Enlace copiado!</span>
+            </>
+          ) : (
+            <>
+              <Share2 size={12} />
+              <span>Compartir tienda</span>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
   const totalCartCount = mounted ? getTotalItems() : 0;
   const isPaidPlan = store?.plan === 'emprendedor' || store?.plan === 'negocio';
   const maxProductsAllowed = store?.plan === 'gratis' ? 25 : store?.plan === 'emprendedor' ? 150 : 99999;
@@ -135,7 +271,7 @@ export default function PublicStoreClientView({
               type="button"
               onClick={handleShareStore}
               className={`w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
-                store.themeStyle === 'elegante'
+                normalizedStyle === 'luxe'
                   ? 'text-stone-700 hover:bg-stone-200/50'
                   : 'text-[#3d4a42] hover:bg-gray-100'
               }`}
@@ -152,10 +288,10 @@ export default function PublicStoreClientView({
               href={`/s/${store.slug}/cart`}
               className={`group flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-sm active:scale-95 ${
                 totalCartCount > 0
-                  ? store.themeStyle === 'elegante'
+                  ? normalizedStyle === 'luxe'
                     ? 'bg-[#FAF8F5] border-[#d6c4b2] text-stone-900 hover:border-amber-700/60'
                     : 'bg-white border-emerald-300 text-[#0b1c30] hover:border-emerald-500'
-                  : store.themeStyle === 'elegante'
+                  : normalizedStyle === 'luxe'
                   ? 'bg-white/80 border-[#E7E2D9] text-stone-700 hover:bg-white hover:border-stone-400'
                   : 'bg-white/90 border-[#bccac0]/40 text-[#3d4a42] hover:bg-white hover:border-slate-400'
               }`}
@@ -165,7 +301,7 @@ export default function PublicStoreClientView({
                 size={18}
                 className={`transition-transform group-hover:scale-110 shrink-0 ${
                   totalCartCount > 0
-                    ? store.themeStyle === 'elegante'
+                    ? normalizedStyle === 'luxe'
                       ? 'text-amber-800'
                       : 'text-emerald-700'
                     : 'text-slate-600'
@@ -213,10 +349,12 @@ export default function PublicStoreClientView({
         className={`${
           store.announcementBar && store.announcementBar.trim() ? 'pt-24' : 'pt-16'
         } pb-24 min-h-screen transition-colors ${
-          store.themeStyle === 'elegante'
-            ? 'bg-[#FAF8F5] text-stone-900'
-            : store.themeStyle === 'moderna'
+          normalizedStyle === 'luxe'
+            ? 'bg-[#FAF9F6] text-stone-900'
+            : normalizedStyle === 'modern'
             ? 'bg-slate-50 text-[#0b1c30]'
+            : normalizedStyle === 'fresh'
+            ? 'bg-[#FFFDF9] text-stone-900'
             : 'bg-white text-[#0b1c30]'
         }`}
       >
@@ -256,223 +394,190 @@ export default function PublicStoreClientView({
         )}
 
         <div className="flex flex-col w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8">
-          {/* Cover Hero Panorámico si el estilo es Banner */}
-          {store.headerStyle === 'banner' && (
-            <div className="w-full max-w-4xl mx-auto h-36 sm:h-52 md:h-64 rounded-2xl sm:rounded-3xl overflow-hidden relative mb-[-44px] sm:mb-[-52px] shadow-sm z-0">
-              <img
-                src={store.bannerUrl || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80'}
-                alt={store.name}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-linear-to-t from-black/45 via-transparent to-black/10" />
+          {/* ======================================================== */}
+          {/* CABECERA & HERO DE TIENDA (GLASS / SPLIT / BANNER / CLEAN) */}
+          {/* ======================================================== */}
+          {heroStyle === 'glass' ? (
+            /* HERO 1: PORTADA INMERSIVA CON CRISTAL */
+            <div className="w-full max-w-4xl mx-auto mb-6 relative">
+              <div className="w-full h-44 sm:h-64 md:h-72 rounded-3xl overflow-hidden relative shadow-md">
+                <img
+                  src={store.bannerUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80'}
+                  alt={store.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+              </div>
+
+              {/* Floating Frosted Glass Card */}
+              <div className="relative z-10 -mt-14 sm:-mt-20 max-w-2xl mx-auto px-4 w-full">
+                <div className="bg-white/90 backdrop-blur-md rounded-3xl p-6 sm:p-7 border border-white/60 shadow-xl flex flex-col items-center text-center gap-2.5">
+                  {renderLogo('w-20 h-20')}
+                  <div className="flex flex-col items-center gap-1">
+                    <h1 className={`text-2xl sm:text-3xl font-black tracking-tight text-slate-900 ${fontConfig.headingsFont}`}>
+                      {store.name}
+                    </h1>
+                    {store.legalTaxId && store.legalBusinessName && (
+                      <button
+                        type="button"
+                        onClick={() => setIsVerifiedModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-[#006c49] border border-emerald-200 shadow-2xs hover:bg-emerald-100 transition-all cursor-pointer"
+                      >
+                        <ShieldCheck size={14} className="text-[#059669]" />
+                        <span>Identidad Oficial Verificada</span>
+                      </button>
+                    )}
+                  </div>
+                  {store.description && (
+                    <p className="text-xs sm:text-sm text-slate-600 max-w-md leading-relaxed">
+                      {store.description}
+                    </p>
+                  )}
+                  {commercialPills}
+                </div>
+              </div>
             </div>
-          )}
+          ) : heroStyle === 'split' ? (
+            /* HERO 2: EDITORIAL DIVIDIDO */
+            <div className="w-full max-w-4xl mx-auto mb-6 bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex-1 flex flex-col items-start text-left gap-2.5">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+                  Catálogo Oficial APANA
+                </span>
+                <div className="flex items-center gap-3">
+                  {renderLogo('w-14 h-14')}
+                  <h1 className={`text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 ${fontConfig.headingsFont}`}>
+                    {store.name}
+                  </h1>
+                </div>
+                {store.legalTaxId && store.legalBusinessName && (
+                  <button
+                    type="button"
+                    onClick={() => setIsVerifiedModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-[#006c49] border border-emerald-200 shadow-2xs hover:bg-emerald-100 transition-all cursor-pointer"
+                  >
+                    <ShieldCheck size={14} className="text-[#059669]" />
+                    <span>Identidad Oficial Verificada</span>
+                  </button>
+                )}
+                {store.description && (
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    {store.description}
+                  </p>
+                )}
+                {commercialPills}
+              </div>
 
-          {/* Header Tienda Info Dinámico según Tema y headerStyle */}
-          <div
-            className={`px-4 py-6 sm:py-8 flex flex-col items-center gap-2 text-center transition-all max-w-3xl mx-auto w-full relative z-10 ${
-              store.headerStyle === 'card'
-                ? 'bg-white text-[#0b1c30] border border-slate-200/80 shadow-md mb-4 py-7 sm:rounded-3xl'
-                : store.themeStyle === 'elegante'
-                ? 'bg-[#FAF8F5] text-stone-900 border-b sm:border border-[#E7E2D9] mb-4 sm:rounded-3xl'
-                : store.themeStyle === 'moderna'
-                ? 'bg-white text-[#0b1c30] border-b sm:border border-slate-200/80 shadow-2xs mb-4 py-7 sm:rounded-3xl'
-                : 'bg-white text-neutral-900 border-b sm:border border-neutral-100 py-6 mb-4 sm:rounded-3xl'
-            }`}
-          >
-            {store.logoUrl ? (
-              <div
-                className={`w-20 h-20 overflow-hidden shadow-sm transition-all bg-white flex items-center justify-center p-1 ${
-                  store.themeStyle === 'elegante'
-                    ? 'rounded-2xl border border-stone-200/60'
-                    : store.themeStyle === 'moderna'
-                    ? 'rounded-3xl shadow-md border border-slate-200/80'
-                    : 'rounded-full w-16 h-16 shadow-xs border border-slate-100'
-                }`}
-              >
-                <img src={store.logoUrl} alt={store.name} className="w-full h-full object-contain" />
+              <div className="w-full md:w-72 h-44 sm:h-52 rounded-2xl overflow-hidden shadow-md shrink-0 border border-slate-200 relative">
+                <img
+                  src={store.bannerUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=600&q=80'}
+                  alt={store.name}
+                  className="w-full h-full object-cover"
+                />
               </div>
-            ) : (
-              <div
-                style={{ backgroundColor: store.primaryColor || '#059669' }}
-                className={`w-20 h-20 text-white flex items-center justify-center font-bold text-2xl shadow-sm transition-all ${
-                  store.themeStyle === 'elegante'
-                    ? 'rounded-2xl border border-stone-200/60 font-playfair'
-                    : store.themeStyle === 'moderna'
-                    ? 'rounded-3xl shadow-md'
-                    : 'rounded-full w-16 h-16 shadow-xs'
-                }`}
-              >
-                {store.name.substring(0, 2).toUpperCase()}
+            </div>
+          ) : heroStyle === 'banner' ? (
+            /* HERO 3: PORTADA BANNER CLÁSICA */
+            <div className="w-full max-w-4xl mx-auto mb-6">
+              <div className="w-full h-36 sm:h-52 md:h-60 rounded-3xl overflow-hidden relative shadow-sm z-0">
+                <img
+                  src={store.bannerUrl || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80'}
+                  alt={store.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" />
               </div>
-            )}
-            <div className="flex flex-col items-center justify-center gap-1.5">
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                <h2
-                  className={`text-2xl sm:text-3xl font-bold tracking-tight ${
-                    store.themeStyle === 'elegante'
-                      ? 'text-stone-900 font-playfair'
-                      : store.themeStyle === 'moderna'
-                      ? 'text-[#0b1c30] font-space-grotesk font-extrabold'
-                      : 'text-neutral-900 font-plus-jakarta'
-                  }`}
-                >
+              <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md p-6 -mt-12 sm:-mt-16 relative z-10 max-w-2xl mx-auto flex flex-col items-center text-center gap-2">
+                {renderLogo('w-20 h-20')}
+                <h1 className={`text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 ${fontConfig.headingsFont}`}>
                   {store.name}
-                </h2>
+                </h1>
+                {store.legalTaxId && store.legalBusinessName && (
+                  <button
+                    type="button"
+                    onClick={() => setIsVerifiedModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-[#006c49] border border-emerald-200 shadow-2xs hover:bg-emerald-100 transition-all cursor-pointer"
+                  >
+                    <ShieldCheck size={14} className="text-[#059669]" />
+                    <span>Identidad Oficial Verificada</span>
+                  </button>
+                )}
+                {store.description && (
+                  <p className="text-xs sm:text-sm text-slate-600 max-w-md leading-relaxed">
+                    {store.description}
+                  </p>
+                )}
+                {commercialPills}
               </div>
-
-              {/* Badge de Identidad Oficial Verificada */}
+            </div>
+          ) : (
+            /* HERO 4: MINIMALISTA DIRECTO */
+            <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-2xs mb-6 max-w-2xl mx-auto flex flex-col items-center text-center gap-2">
+              {renderLogo('w-18 h-18')}
+              <h1 className={`text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 ${fontConfig.headingsFont}`}>
+                {store.name}
+              </h1>
               {store.legalTaxId && store.legalBusinessName && (
                 <button
                   type="button"
                   onClick={() => setIsVerifiedModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-[#006c49] border border-emerald-200/90 shadow-2xs hover:bg-emerald-100 hover:border-emerald-300 transition-all cursor-pointer group active:scale-95"
-                  title="Ver acreditación oficial de identidad en RENIEC / SUNAT"
+                  className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-[#006c49] border border-emerald-200 shadow-2xs hover:bg-emerald-100 transition-all cursor-pointer"
                 >
-                  <ShieldCheck size={14} className="text-[#059669] shrink-0 group-hover:scale-110 transition-transform" />
+                  <ShieldCheck size={14} className="text-[#059669]" />
                   <span>Identidad Oficial Verificada</span>
                 </button>
               )}
-            </div>
-            {store.description && (
-              <p
-                className={`text-xs max-w-sm mx-auto leading-relaxed ${
-                  store.themeStyle === 'elegante'
-                    ? 'text-stone-600 font-sans'
-                    : store.themeStyle === 'moderna'
-                    ? 'text-slate-600 font-sans font-medium'
-                    : 'text-neutral-500 font-plus-jakarta'
-                }`}
-              >
-                {store.description}
-              </p>
-            )}
-
-            {/* Píldoras de Información Comercial */}
-            <div className="flex flex-wrap items-center justify-center gap-1.5 mt-1">
-              <span
-                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold border ${
-                  store.themeStyle === 'elegante'
-                    ? 'bg-white border-[#E7E2D9] text-stone-700 shadow-2xs'
-                    : store.themeStyle === 'moderna'
-                    ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
-                    : 'bg-neutral-100/70 border-neutral-200/60 text-neutral-600'
-                }`}
-              >
-                {store.shippingType === 'solo_recojo' ? (
-                  <>
-                    <StoreIcon
-                      size={13}
-                      className={store.themeStyle === 'elegante' ? 'text-amber-700' : 'text-[#059669]'}
-                    />
-                    <span>Solo recojo en tienda</span>
-                  </>
-                ) : (
-                  <>
-                    <Truck
-                      size={13}
-                      className={store.themeStyle === 'elegante' ? 'text-amber-700' : 'text-[#059669]'}
-                    />
-                    <span>
-                      {store.shippingType === 'gratis'
-                        ? 'Envío Gratis'
-                        : 'Envíos: A coordinar por WhatsApp'}
-                    </span>
-                  </>
-                )}
-              </span>
-
-              {(store.shippingType === 'solo_recojo' && store.pickupAddress) ? (
-                <span
-                  title={`Punto de recojo: ${store.pickupAddress}`}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border max-w-[240px] truncate ${
-                    store.themeStyle === 'elegante'
-                      ? 'bg-white border-[#E7E2D9] text-stone-600 shadow-2xs'
-                      : 'bg-slate-100 border-slate-200/80 text-slate-700'
-                  }`}
-                >
-                  <MapPin size={12} className="text-slate-500 shrink-0" />
-                  <span className="truncate">{store.pickupAddress}</span>
-                </span>
-              ) : store.city ? (
-                <span
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
-                    store.themeStyle === 'elegante'
-                      ? 'bg-white border-[#E7E2D9] text-stone-600 shadow-2xs'
-                      : 'bg-slate-100 border-slate-200/80 text-slate-700'
-                  }`}
-                >
-                  <MapPin size={12} className="text-slate-500" />
-                  <span>{store.city}</span>
-                </span>
-              ) : null}
-
-              {store.schedule && (
-                <span
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
-                    store.themeStyle === 'elegante'
-                      ? 'bg-white border-[#E7E2D9] text-stone-600 shadow-2xs'
-                      : 'bg-slate-100 border-slate-200/80 text-slate-700'
-                  }`}
-                >
-                  <Clock size={12} className="text-slate-500" />
-                  <span>{store.schedule}</span>
-                </span>
+              {store.description && (
+                <p className="text-xs sm:text-sm text-slate-600 max-w-md leading-relaxed">
+                  {store.description}
+                </p>
               )}
+              {commercialPills}
             </div>
+          )}
 
-            {/* Enlaces de Redes Sociales y Compartir */}
-            <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
-              {store.socialLinks?.instagram && (
-                <a
-                  href={
-                    store.socialLinks.instagram.startsWith('http')
-                      ? store.socialLinks.instagram
-                      : `https://instagram.com/${store.socialLinks.instagram.replace('@', '')}`
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-pink-50 border border-pink-200 text-pink-700 hover:bg-pink-100 transition-colors shadow-2xs"
-                >
-                  <InstagramIcon size={12} />
-                  <span>Instagram</span>
-                </a>
-              )}
-              {store.socialLinks?.tiktok && (
-                <a
-                  href={
-                    store.socialLinks.tiktok.startsWith('http')
-                      ? store.socialLinks.tiktok
-                      : `https://tiktok.com/@${store.socialLinks.tiktok.replace('@', '')}`
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200 transition-colors shadow-2xs"
-                >
-                  <span className="text-[10px]">🎵</span>
-                  <span>TikTok</span>
-                </a>
-              )}
-              <button
-                type="button"
-                onClick={handleShareStore}
-                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 border border-emerald-200 text-[#006c49] hover:bg-emerald-100 transition-colors shadow-2xs cursor-pointer"
-                title="Compartir enlace de la tienda"
-              >
-                {copiedShare ? (
-                  <>
-                    <Check size={12} className="text-[#059669]" />
-                    <span>¡Enlace copiado!</span>
-                  </>
-                ) : (
-                  <>
-                    <Share2 size={12} />
-                    <span>Compartir tienda</span>
-                  </>
-                )}
-              </button>
+          {/* ======================================================== */}
+          {/* BARRA DE 3 PILARES DE CONFIANZA (TRUST BADGES) */}
+          {/* ======================================================== */}
+          {showTrustBadges && (
+            <div className="w-full max-w-2xl mx-auto mb-5 px-1">
+              <div className="bg-white/95 backdrop-blur-xs rounded-2xl border border-slate-200/80 p-3 shadow-2xs flex items-center justify-around gap-2 text-center flex-wrap">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center shrink-0">
+                    <Truck size={15} />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="text-[11px] leading-tight">Envíos Seguros</span>
+                    <span className="text-[9px] text-slate-400 font-normal">A todo el país</span>
+                  </div>
+                </div>
+
+                <div className="hidden sm:block w-px h-5 bg-slate-200" />
+
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center shrink-0">
+                    <MessageCircle size={15} />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="text-[11px] leading-tight">Atención Directa</span>
+                    <span className="text-[9px] text-slate-400 font-normal">Por WhatsApp</span>
+                  </div>
+                </div>
+
+                <div className="hidden sm:block w-px h-5 bg-slate-200" />
+
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center shrink-0">
+                    <Award size={15} />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="text-[11px] leading-tight">Garantía</span>
+                    <span className="text-[9px] text-slate-400 font-normal">Comercio Verificado</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Buscador de Productos */}
           <div className="mb-4 mt-2 w-full max-w-xl mx-auto relative">
@@ -535,18 +640,19 @@ export default function PublicStoreClientView({
 
           {/* Grid o Lista de Productos Responsivo según catalogLayout y Tema */}
           {(() => {
-            const isListLayout = store.catalogLayout === 'list' || (!store.catalogLayout && store.themeStyle === 'moderna');
+            const activeListLayout = store.catalogLayout === 'list' || (!store.catalogLayout && normalizedStyle === 'market');
             return (
               <div
                 className={`grid gap-3.5 sm:gap-4 lg:gap-6 mb-8 ${
-                  isListLayout
+                  activeListLayout
                     ? 'grid-cols-1 md:grid-cols-2'
                     : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4'
                 }`}
               >
                 {filteredProducts.length === 0 ? (
-                  <div className="col-span-full py-12 text-center text-[#6d7a72] text-sm">
-                    Esta tienda aún no tiene productos publicados.
+                  <div className="col-span-full py-16 text-center text-[#6d7a72] text-sm flex flex-col items-center gap-2">
+                    <span className="text-2xl">🛍️</span>
+                    <p className="font-medium">Esta tienda aún no tiene productos disponibles en esta categoría.</p>
                   </div>
                 ) : (
                   filteredProducts.map((product) => {
@@ -567,9 +673,12 @@ export default function PublicStoreClientView({
                         : null)
                       : null;
 
-                    // FORMATO 1: LISTA RÁPIDA (Ideal para Bodegas, Abarrotes, Menús de comida, Farmacias)
-                    if (isListLayout) {
-                      const isJustAdded = recentlyAddedId === product.id;
+                    const isJustAdded = recentlyAddedId === product.id;
+
+                    // ==========================================
+                    // FORMATO 1: LISTA RÁPIDA (Ideal para Bodegas, Minimarkets, Menús)
+                    // ==========================================
+                    if (activeListLayout) {
                       return (
                         <article
                           key={product.id}
@@ -582,15 +691,18 @@ export default function PublicStoreClientView({
                               <img
                                 src={getSafeProductImage(product.imageUrl)}
                                 alt={product.title}
-                                className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
-                                  isOutOfStock ? 'grayscale contrast-75' : ''
-                                }`}
+                                className={`w-full h-full object-cover transition-transform duration-500 ${
+                                  productHoverZoom ? 'group-hover:scale-105' : ''
+                                } ${isOutOfStock ? 'grayscale contrast-75' : ''}`}
                                 onError={(e) => {
                                   e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
                                 }}
                               />
                               {badgeText && !isOutOfStock && (
-                                <span className="absolute top-1.5 left-1.5 bg-[#059669] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">
+                                <span
+                                  className="absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs"
+                                  style={{ backgroundColor: primaryColor, color: contrastColor }}
+                                >
                                   {badgeText}
                                 </span>
                               )}
@@ -610,7 +722,7 @@ export default function PublicStoreClientView({
                             <div className="flex-1 flex flex-col gap-1 text-left justify-center py-0.5 min-w-0">
                               <div className="flex items-center gap-2">
                                 <h3
-                                  className={`font-space-grotesk font-bold text-sm text-[#0b1c30] tracking-wide line-clamp-1 group-hover:text-emerald-700 transition-colors ${
+                                  className={`${fontConfig.headingsFont} text-sm text-[#0b1c30] tracking-wide line-clamp-1 group-hover:opacity-80 transition-opacity ${
                                     isOutOfStock ? 'text-slate-500' : ''
                                   }`}
                                 >
@@ -629,10 +741,8 @@ export default function PublicStoreClientView({
                               )}
                               <div className="flex items-baseline gap-2 mt-0.5">
                                 <span
-                                  className={`font-space-grotesk font-extrabold text-base ${
-                                    isOutOfStock ? 'text-slate-400' : ''
-                                  }`}
-                                  style={!isOutOfStock ? { color: store.primaryColor || '#059669' } : undefined}
+                                  className="font-extrabold text-base"
+                                  style={!isOutOfStock ? { color: primaryColor } : { color: '#94a3b8' }}
                                 >
                                   {formatCurrency(product.price)}
                                 </span>
@@ -672,8 +782,8 @@ export default function PublicStoreClientView({
                                 }}
                                 className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 shadow-2xs cursor-pointer group"
                                 style={{
-                                  backgroundColor: store.primaryColor || '#059669',
-                                  color: getContrastTextColor(store.primaryColor),
+                                  backgroundColor: primaryColor,
+                                  color: contrastColor,
                                 }}
                                 title="Agregar al carrito"
                                 aria-label={`Agregar ${product.title} al carrito`}
@@ -690,138 +800,145 @@ export default function PublicStoreClientView({
                       );
                     }
 
-                // TEMA ELEGANTE
-                if (store.themeStyle === 'elegante') {
-                  return (
-                    <article
-                      key={product.id}
-                      className={`bg-white rounded-2xl border border-[#e8dfd5] overflow-hidden flex flex-col group cursor-pointer shadow-2xs hover:shadow-md hover:border-amber-400/50 transition-all duration-300 relative ${
-                        isOutOfStock ? 'opacity-70 bg-[#f4f1ea]' : ''
-                      }`}
-                    >
-                      <Link href={`/s/${store.slug}/p/${product.id}`} className="flex w-full flex-col">
-                        <div className="aspect-square relative overflow-hidden bg-[#FAF9F6]">
-                          <img
-                            src={getSafeProductImage(product.imageUrl)}
-                            alt={product.title}
-                            className={`w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 ${
-                              isOutOfStock ? 'grayscale contrast-75' : ''
-                            }`}
-                            onError={(e) => {
-                              e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
-                            }}
-                          />
-                          {badgeText && !isOutOfStock && (
-                            <span className="absolute top-2 left-2 bg-[#059669] text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-xs z-10">
-                              {badgeText}
-                            </span>
-                          )}
-                          {hasDiscount && !isOutOfStock && (
-                            <span className="absolute top-2 right-2 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-xs z-10">
-                              -{discountPercent}%
-                            </span>
-                          )}
-                          {isOutOfStock && (
-                            <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-10">
-                              <span className="bg-white/95 text-stone-900 font-playfair text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-md tracking-wider shadow-sm">
-                                Agotado
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-3.5 flex flex-col gap-1 text-center">
-                          <h3
-                            className={`font-playfair font-bold text-sm text-[#1a1a1a] line-clamp-1 group-hover:text-amber-900 transition-colors ${
-                              isOutOfStock ? 'text-stone-500' : ''
-                            }`}
-                          >
-                            {product.title}
-                          </h3>
-                          <div className="flex items-baseline justify-center gap-2 mt-0.5">
-                            <span
-                              className={`font-playfair italic font-bold text-sm tracking-wide ${
-                                isOutOfStock ? 'text-stone-400' : ''
-                              }`}
-                              style={!isOutOfStock ? { color: store.primaryColor || '#059669' } : undefined}
-                            >
-                              {formatCurrency(product.price)}
-                            </span>
-                            {hasDiscount && (
-                              <span className="text-[11px] text-stone-400 line-through font-sans">
-                                {formatCurrency(product.compareAtPrice!)}
+                    // ==========================================
+                    // FORMATO 2: CUADRÍCULA VISUAL (4 VISUAL MOODS)
+                    // ==========================================
+                    const cardBorderRadius =
+                      normalizedStyle === 'fresh'
+                        ? 'rounded-3xl border-2 border-amber-100/90 shadow-xs hover:border-amber-300 hover:shadow-md'
+                        : normalizedStyle === 'luxe'
+                        ? 'rounded-2xl border border-stone-200/90 shadow-2xs hover:border-stone-400/60 hover:shadow-lg'
+                        : normalizedStyle === 'market'
+                        ? 'rounded-xl border border-slate-200 shadow-2xs hover:border-emerald-500 hover:shadow-md'
+                        : 'rounded-2xl border border-slate-200/80 bg-white/95 backdrop-blur-xs shadow-xs hover:shadow-xl hover:-translate-y-1';
+
+                    const imgAspect = normalizedStyle === 'luxe' ? 'aspect-[4/5]' : 'aspect-square';
+
+                    return (
+                      <article
+                        key={product.id}
+                        className={`bg-white overflow-hidden flex flex-col group cursor-pointer transition-all duration-300 relative ${cardBorderRadius} ${
+                          isOutOfStock ? 'opacity-70 bg-slate-50' : ''
+                        }`}
+                      >
+                        <Link href={`/s/${store.slug}/p/${product.id}`} className="flex w-full flex-col">
+                          <div className={`${imgAspect} relative overflow-hidden bg-slate-100`}>
+                            <img
+                              src={getSafeProductImage(product.imageUrl)}
+                              alt={product.title}
+                              className={`w-full h-full object-cover transition-transform duration-500 ease-out ${
+                                productHoverZoom ? 'group-hover:scale-105' : ''
+                              } ${isOutOfStock ? 'grayscale contrast-75' : ''}`}
+                              onError={(e) => {
+                                e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
+                              }}
+                            />
+                            {badgeText && !isOutOfStock && (
+                              <span
+                                className="absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded shadow-xs z-10"
+                                style={{ backgroundColor: primaryColor, color: contrastColor }}
+                              >
+                                {badgeText}
                               </span>
                             )}
+                            {hasDiscount && !isOutOfStock && (
+                              <span className="absolute top-2 right-2 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-xs z-10">
+                                -{discountPercent}%
+                              </span>
+                            )}
+                            {isOutOfStock && (
+                              <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-10">
+                                <span className="bg-white/95 text-slate-900 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-md tracking-wider shadow-sm">
+                                  Agotado
+                                </span>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      </Link>
-                    </article>
-                  );
-                }
 
-                // TEMA MINIMALISTA
-                return (
-                  <article key={product.id} className="flex flex-col group cursor-pointer relative">
-                    <Link href={`/s/${store.slug}/p/${product.id}`} className="flex w-full flex-col gap-2">
-                      <div className="aspect-square relative overflow-hidden rounded-2xl bg-neutral-100/90">
-                        <img
-                          src={getSafeProductImage(product.imageUrl)}
-                          alt={product.title}
-                          className={`w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 ${
-                            isOutOfStock ? 'grayscale contrast-75' : ''
-                          }`}
-                          onError={(e) => {
-                            e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
-                          }}
-                        />
-                        {badgeText && !isOutOfStock && (
-                          <span className="absolute top-2 left-2 bg-neutral-900/80 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-md shadow-2xs z-10">
-                            {badgeText}
-                          </span>
-                        )}
-                        {hasDiscount && !isOutOfStock && (
-                          <span className="absolute top-2 right-2 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-md shadow-2xs z-10">
-                            -{discountPercent}%
-                          </span>
-                        )}
-                        {isOutOfStock && (
-                          <div className="absolute inset-0 bg-black/35 backdrop-blur-[1px] flex items-center justify-center z-10">
-                            <span className="bg-white/95 text-neutral-900 text-[10px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider shadow-xs">
-                              Agotado
-                            </span>
+                          <div className="p-3 sm:p-3.5 flex flex-col gap-1 text-left">
+                            <h3
+                              className={`${fontConfig.headingsFont} text-xs sm:text-sm text-slate-800 line-clamp-1 group-hover:opacity-80 transition-opacity ${
+                                isOutOfStock ? 'text-slate-400' : ''
+                              }`}
+                            >
+                              {product.title}
+                            </h3>
+                            {product.description && (
+                              <p className="text-[11px] text-slate-500 line-clamp-1 font-sans">
+                                {product.description}
+                              </p>
+                            )}
+
+                            {/* Precios & Botón de Acción Rápida */}
+                            <div className="mt-1 pt-1.5 flex items-center justify-between gap-1.5">
+                              <div className="flex items-baseline gap-1.5 min-w-0">
+                                <span
+                                  className="font-extrabold text-xs sm:text-sm"
+                                  style={!isOutOfStock ? { color: primaryColor } : { color: '#94a3b8' }}
+                                >
+                                  {formatCurrency(product.price)}
+                                </span>
+                                {hasDiscount && (
+                                  <span className="text-[10px] text-slate-400 line-through font-medium">
+                                    {formatCurrency(product.compareAtPrice!)}
+                                  </span>
+                                )}
+                              </div>
+
+                              {isOutOfStock ? (
+                                <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded select-none">
+                                  Agotado
+                                </span>
+                              ) : product.options && product.options.length > 0 ? (
+                                <div
+                                  className="px-2 py-1 rounded-lg text-[10px] font-bold border border-slate-200 text-slate-700 bg-white shadow-2xs flex items-center gap-1 shrink-0"
+                                >
+                                  <span>Elegir</span>
+                                  <ArrowRight size={10} />
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    addItem(product);
+                                    setRecentlyAddedId(product.id);
+                                    setTimeout(() => setRecentlyAddedId(null), 1200);
+                                  }}
+                                  className={`h-7 px-2 sm:px-2.5 rounded-lg flex items-center justify-center gap-1 text-[10px] font-black transition-all active:scale-95 shadow-2xs cursor-pointer shrink-0 ${
+                                    normalizedStyle === 'fresh' ? 'rounded-full' : 'rounded-lg'
+                                  }`}
+                                  style={{
+                                    backgroundColor: primaryColor,
+                                    color: contrastColor,
+                                  }}
+                                  title="Agregar al carrito"
+                                  aria-label={`Agregar ${product.title} al carrito`}
+                                >
+                                  {isJustAdded ? (
+                                    <>
+                                      <Check size={13} className="stroke-[3] animate-scaleUp" />
+                                      <span className="hidden sm:inline">Listo</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Plus size={13} className="stroke-[3]" />
+                                      <span className="hidden sm:inline">Agregar</span>
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-0.5 text-left px-0.5">
-                        <h3
-                          className={`font-plus-jakarta font-semibold text-xs text-neutral-800 line-clamp-1 group-hover:text-black transition-colors ${
-                            isOutOfStock ? 'text-neutral-400' : ''
-                          }`}
-                        >
-                          {product.title}
-                        </h3>
-                        <div className="flex items-baseline gap-1.5">
-                          <span
-                            className={`font-plus-jakarta font-bold text-xs ${
-                              isOutOfStock ? 'text-neutral-400' : 'text-neutral-900'
-                            }`}
-                          >
-                            {formatCurrency(product.price)}
-                          </span>
-                          {hasDiscount && (
-                            <span className="text-[10px] text-neutral-400 line-through font-normal">
-                              {formatCurrency(product.compareAtPrice!)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  </article>
-                );
-              })
-            )}
-          </div>
-        );
-      })()}
+                        </Link>
+                      </article>
+                    );
+                  })
+                )}
+              </div>
+            );
+          })()}
 
           {/* Footer Tienda Pública */}
           <footer className="py-7 px-4 text-center bg-white border-t border-[#bccac0]/20 flex flex-col items-center gap-2.5">
@@ -888,22 +1005,29 @@ export default function PublicStoreClientView({
         <div className="fixed bottom-20 md:bottom-8 left-4 right-4 md:left-1/2 md:-translate-x-1/2 z-40 max-w-[500px] mx-auto animate-in slide-in-from-bottom-5 duration-300">
           <Link
             href={`/s/${store.slug}/cart`}
-            className="w-full bg-[#0b1c30] text-white p-3.5 px-5 rounded-2xl shadow-xl flex items-center justify-between border border-white/10 hover:scale-[1.01] active:scale-[0.99] transition-all"
+            className="w-full p-3.5 px-5 rounded-2xl shadow-xl flex items-center justify-between border border-white/20 hover:scale-[1.01] active:scale-[0.99] transition-all backdrop-blur-md"
+            style={{
+              backgroundColor: primaryColor,
+              color: contrastColor,
+            }}
           >
             <div className="flex items-center gap-3">
               <div
-                className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs text-white"
-                style={{ backgroundColor: store.primaryColor || '#059669' }}
+                className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-2xs"
+                style={{
+                  backgroundColor: contrastColor === '#ffffff' ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.12)',
+                  color: contrastColor,
+                }}
               >
                 {totalCartCount}
               </div>
               <div className="flex flex-col text-left">
-                <span className="text-xs text-slate-300">Pedido en curso</span>
-                <span className="text-sm font-bold">{formatCurrency(getTotalPrice())}</span>
+                <span className="text-[11px] opacity-85 font-medium">Pedido en curso</span>
+                <span className="text-sm font-extrabold">{formatCurrency(getTotalPrice())}</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1 text-xs font-bold text-emerald-400">
+            <div className="flex items-center gap-1.5 text-xs font-black">
               <span>Ver mi pedido</span>
               <ArrowRight size={16} />
             </div>
@@ -981,7 +1105,7 @@ export default function PublicStoreClientView({
         onClose={() => setSelectedModalProduct(null)}
         onAddToCart={(prod, opts) => addItem(prod, opts)}
         primaryColor={store.primaryColor}
-        themeStyle={store.themeStyle}
+        themeStyle={normalizedStyle}
       />
 
       {/* Modal Informativo: Identidad Oficial Verificada */}
