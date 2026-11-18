@@ -12,6 +12,7 @@ import { auth, googleProvider } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { TermsModal } from '@/components/ui/TermsModal';
 import { isSuperAdminEmail } from '@/lib/auth-helpers';
+import { trackCompleteRegistration, getStoredUtmParams } from '@/lib/analytics';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -142,7 +143,8 @@ export default function RegisterPage() {
         console.warn('No se pudo obtener geolocalización:', geoErr);
       }
 
-      // Guardar perfil de usuario en la colección 'users' de Firestore
+      // Guardar perfil de usuario en la colección 'users' de Firestore con atribución UTM
+      const utmData = getStoredUtmParams();
       const { createUserProfileInFS } = await import('@/lib/firebase/firestore');
       await createUserProfileInFS({
         uid: userCredential.user.uid,
@@ -153,7 +155,17 @@ export default function RegisterPage() {
         country: geoData.country || 'PE',
         city: geoData.city || 'Lima',
         ipSignup: geoData.ip || '',
+        ...(utmData?.utm_source ? { utmSource: utmData.utm_source } : {}),
+        ...(utmData?.utm_medium ? { utmMedium: utmData.utm_medium } : {}),
+        ...(utmData?.utm_campaign ? { utmCampaign: utmData.utm_campaign } : {}),
+        ...(utmData?.utm_content ? { utmContent: utmData.utm_content } : {}),
+        ...(utmData?.utm_term ? { utmTerm: utmData.utm_term } : {}),
+        ...(utmData?.ref ? { ref: utmData.ref } : {}),
+        ...(utmData?.landing_page ? { landingPage: utmData.landing_page } : {}),
       });
+
+      // Disparar evento de conversión: Registro completado
+      trackCompleteRegistration('email');
 
       // Limpiar cualquier paso viejo del Wizard en localStorage para usuarios nuevos
       localStorage.removeItem('apana_wizard_step');
@@ -180,6 +192,7 @@ export default function RegisterPage() {
     setAuthError('');
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
+      trackCompleteRegistration('google');
       localStorage.clear();
 
       const userEmail = userCredential.user.email?.toLowerCase().trim() || '';

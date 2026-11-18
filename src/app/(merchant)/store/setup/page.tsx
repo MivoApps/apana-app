@@ -52,6 +52,7 @@ const STITCH_COLORS = [
 import { useAuth } from '@/lib/firebase/auth-context';
 import { createOrUpdateStoreInFS } from '@/lib/firebase/firestore';
 import { PlanTrialModal } from '@/components/merchant/PlanTrialModal';
+import { trackStoreCreated, getStoredUtmParams } from '@/lib/analytics';
 
 export default function OnboardingWizardPage() {
   const { user, loading: authLoading, logout } = useAuth();
@@ -152,11 +153,19 @@ export default function OnboardingWizardPage() {
 
         // Crear perfil en segundo plano sin frenar al usuario
         if (!userProfile && user.email) {
+          const utmData = getStoredUtmParams();
           createUserProfileInFS({
             uid: user.uid,
             name: user.displayName || 'Comerciante APANA',
             email: user.email,
             role: 'merchant',
+            ...(utmData?.utm_source ? { utmSource: utmData.utm_source } : {}),
+            ...(utmData?.utm_medium ? { utmMedium: utmData.utm_medium } : {}),
+            ...(utmData?.utm_campaign ? { utmCampaign: utmData.utm_campaign } : {}),
+            ...(utmData?.utm_content ? { utmContent: utmData.utm_content } : {}),
+            ...(utmData?.utm_term ? { utmTerm: utmData.utm_term } : {}),
+            ...(utmData?.ref ? { ref: utmData.ref } : {}),
+            ...(utmData?.landing_page ? { landingPage: utmData.landing_page } : {}),
           }).catch((e) => console.warn('Error auto-creando perfil:', e));
         }
 
@@ -228,6 +237,16 @@ export default function OnboardingWizardPage() {
           city: geoData.city || 'Lima',
           ipSignup: geoData.ip || '',
         });
+
+        // Disparar evento de conversión: Tienda Creada (StoreCreated)
+        if (createdFsStore) {
+          trackStoreCreated({
+            storeId: createdFsStore.id,
+            storeName: businessName,
+            category,
+            plan: 'gratis',
+          });
+        }
       } catch (err) {
         console.error('Error guardando tienda en Firestore:', err);
       }

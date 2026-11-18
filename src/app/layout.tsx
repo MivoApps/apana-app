@@ -107,6 +107,7 @@ export const metadata: Metadata = {
 
 import { AuthProvider } from "@/lib/firebase/auth-context";
 import { AuthGuard } from "@/components/merchant/AuthGuard";
+import { AnalyticsScripts } from "@/components/analytics/AnalyticsScripts";
 
 const organizationSchema = {
   "@context": "https://schema.org",
@@ -192,6 +193,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col bg-[#f8f9ff]">
+        <AnalyticsScripts />
         <AuthProvider>
           <AuthGuard>
             {children}

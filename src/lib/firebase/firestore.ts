@@ -54,6 +54,14 @@ export interface UserProfile {
   isEmailVerified?: boolean;
   emailVerifiedAt?: number;
   emailVerifiedMethod?: 'auth' | 'admin';
+  // Atribución de marketing y campañas UTM
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+  ref?: string;
+  landingPage?: string;
 }
 
 export const createUserProfileInFS = async (userProfile: Omit<UserProfile, 'createdAt'> & { createdAt?: any }): Promise<void> => {

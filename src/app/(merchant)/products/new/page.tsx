@@ -21,6 +21,7 @@ import { addProductToFS } from '@/lib/firebase/firestore';
 import { ProductVariantsEditor } from '@/components/merchant/ProductVariantsEditor';
 import { ProductOptionGroup } from '@/types/store';
 import { isSuperAdminEmail } from '@/lib/auth-helpers';
+import { trackStoreActivated } from '@/lib/analytics';
 
 const DEMO_IMAGES = [
   {
@@ -411,6 +412,13 @@ export default function CreateProductPage() {
       }
 
       await addProductToFS(storeId, newProduct);
+
+      // Disparar evento de conversión: Tienda Activada con Producto (StoreActivated)
+      trackStoreActivated({
+        storeId,
+        productName: newProduct.title,
+        price: newProduct.price,
+      });
 
       const rawCached = sessionStorage.getItem(`apana_cache_prods_${user.uid}`);
       let cachedProds = [];
