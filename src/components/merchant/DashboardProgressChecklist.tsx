@@ -228,14 +228,14 @@ export const DashboardProgressChecklist: React.FC<Props> = ({
     },
     {
       id: 5,
-      title: 'Sello de Identidad Verificada (DNI o RUC)',
+      title: 'Sello de Identidad Verificada (Opcional · Recomendado)',
       completed: step5LegalIdentity,
       actionText: step5LegalIdentity ? 'Verificado' : 'Obtener Sello',
       href: step5LegalIdentity ? null : '/settings?tab=legal',
       onClick: null,
       description: step5LegalIdentity
         ? `${store?.legalTaxIdType || 'DOC'}: ${store?.legalTaxId} (${store?.legalBusinessName})`
-        : 'Acredita tu negocio ante SUNAT/RENIEC para activar el sello oficial y Libro de Reclamaciones.',
+        : 'Acredita tu DNI o RUC ante SUNAT/RENIEC para activar el sello de confianza y tu Libro de Reclamaciones.',
     },
   ];
 

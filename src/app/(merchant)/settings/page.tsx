@@ -1526,14 +1526,14 @@ export default function SettingsPage() {
             ) : (
               /* ESTADO PENDIENTE DE REGISTRO: Formulario con Auto-consulta en vivo */
               <>
-                <div className="p-3.5 bg-amber-50/80 rounded-xl border border-amber-200/80 text-[11px] text-amber-950 leading-relaxed flex items-start gap-2.5">
-                  <Building2 size={16} className="text-amber-700 shrink-0 mt-0.5" />
+                <div className="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200/80 text-[11px] text-emerald-950 leading-relaxed flex items-start gap-2.5">
+                  <Building2 size={16} className="text-[#059669] shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <p className="font-bold text-amber-900">
-                      Requisito obligatorio para abrir tu tienda y recibir pedidos
+                    <p className="font-bold text-[#006c49]">
+                      Activa tu Sello de Confianza y Libro de Reclamaciones (Opcional para empezar)
                     </p>
                     <p>
-                      En el Perú (Ley N° 29571 / INDECOPI), todo negocio digital debe identificar a su titular. Si aún no tienes RUC, ingresa tu <strong>DNI personal (8 dígitos)</strong>. Al tipear tu documento, validaremos tus datos oficiales automáticamente. Una vez guardados, quedarán registrados y protegidos contra suplantaciones.
+                      Ya puedes publicar tu catálogo y recibir pedidos por WhatsApp sin completar este paso. Cuando quieras dar más confianza a tus clientes y cumplir con INDECOPI (Ley N° 29571), ingresa tu <strong>RUC</strong> o <strong>DNI personal (8 dígitos)</strong>. Validaremos tus datos oficiales automáticamente para activar tu sello verificado y tu Libro de Reclamaciones Virtual.
                     </p>
                   </div>
                 </div>

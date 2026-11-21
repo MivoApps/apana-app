@@ -457,9 +457,9 @@ export default function MerchantClaimsPage() {
                 <AlertCircle size={20} />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-amber-950">Libro de Reclamaciones Inactivo — Requiere Configuración</h2>
+                <h2 className="text-sm font-bold text-amber-950">Libro de Reclamaciones Inactivo — Actívalo cuando estés listo</h2>
                 <p className="text-xs text-amber-800 leading-relaxed mt-0.5">
-                  Conforme a la <strong>Ley N° 29571 (INDECOPI)</strong>, tu tienda debe registrar su <strong>DNI o RUC y dirección comercial</strong> para emitir y recibir hojas de reclamación válidas y abrir tu tienda a pedidos.
+                  Tu tienda ya puede recibir pedidos con normalidad. Para habilitar tu <strong>Libro de Reclamaciones Virtual oficial</strong> conforme a la <strong>Ley N° 29571 (INDECOPI)</strong>, registra tu <strong>DNI o RUC y dirección comercial</strong>.
                 </p>
               </div>
             </div>
