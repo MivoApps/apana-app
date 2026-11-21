@@ -77,6 +77,7 @@ import {
   getAllUsersForAdminFromFS,
   adminDeleteUserFromFS,
   getAllPaymentRecordsForAdminFromFS,
+  adminMarkPaymentInvoicedInFS,
   adminExtendStoreSubscriptionInFS,
   adminToggleWhatsappVerificationInFS,
   adminToggleEmailVerificationInFS,
@@ -1849,6 +1850,7 @@ export default function SuperAdminPage() {
                         <th className="py-3 px-4">Monto Cobrado</th>
                         <th className="py-3 px-4">Correo</th>
                         <th className="py-3 px-4">Fecha / Hora</th>
+                        <th className="py-3 px-4">Comprobante SUNAT</th>
                         <th className="py-3 px-4 text-right">Estado</th>
                       </tr>
                     </thead>
@@ -1856,6 +1858,9 @@ export default function SuperAdminPage() {
                       {filteredPayments.map((p) => {
                         const targetStore = stores.find((s) => s.id === p.storeId);
                         const isApproved = p.status === 'approved';
+                        const docType = p.billingDocType || targetStore?.legalTaxIdType || '';
+                        const docNum = p.billingDocNumber || targetStore?.legalTaxId || '';
+                        const isEmitted = p.invoiceStatus === 'emitted' && Boolean(p.invoiceNumber);
 
                         return (
                           <tr key={p.id || p.culqiChargeId} className="hover:bg-[#162a45]/50 transition-colors">
@@ -1863,7 +1868,12 @@ export default function SuperAdminPage() {
                               {p.culqiChargeId || p.id}
                             </td>
                             <td className="py-3.5 px-4 font-bold text-white">
-                              {targetStore?.name || p.storeId}
+                              <div>{targetStore?.name || p.storeName || p.storeId}</div>
+                              {docNum && (
+                                <div className="text-[10px] font-mono text-slate-400 font-normal">
+                                  {docType || 'DOC'}: {docNum}
+                                </div>
+                              )}
                             </td>
                             <td className="py-3.5 px-4 font-bold text-emerald-400">
                               S/ {p.amount?.toFixed(2) || '0.00'}
@@ -1873,6 +1883,44 @@ export default function SuperAdminPage() {
                             </td>
                             <td className="py-3.5 px-4 text-slate-400">
                               {p.createdAt ? new Date(p.createdAt).toLocaleString('es-PE') : '—'}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              {!isApproved ? (
+                                <span className="text-slate-500 text-[10px]">—</span>
+                              ) : isEmitted ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-800 font-mono">
+                                  ✓ {p.invoiceNumber}
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const suggestedPrefix = docType === 'RUC' ? 'E001-' : 'EB01-';
+                                    const num = window.prompt(
+                                      `Ingresa la serie y correlativo emitido en SUNAT SOL para ${targetStore?.name || p.storeName || 'esta tienda'} (${docType ? `${docType} ${docNum}` : 'Boleta'}):`,
+                                      suggestedPrefix
+                                    );
+                                    if (!num || !num.trim() || num.trim() === suggestedPrefix) return;
+                                    try {
+                                      await adminMarkPaymentInvoicedInFS(p.id, num.trim());
+                                      setPayments((prev) =>
+                                        prev.map((item) =>
+                                          item.id === p.id
+                                            ? { ...item, invoiceStatus: 'emitted', invoiceNumber: num.trim().toUpperCase(), invoicedAt: Date.now() }
+                                            : item
+                                        )
+                                      );
+                                      setSuccessMsg(`Comprobante ${num.trim().toUpperCase()} registrado correctamente.`);
+                                    } catch (err) {
+                                      console.error('Error marcando comprobante:', err);
+                                      alert('No se pudo actualizar el estado del comprobante.');
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-amber-950/60 hover:bg-amber-900/70 text-amber-300 border border-amber-700/70 text-[10px] font-bold transition-colors cursor-pointer"
+                                >
+                                  Pendiente SUNAT · Marcar emitido
+                                </button>
+                              )}
                             </td>
                             <td className="py-3.5 px-4 text-right">
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isApproved

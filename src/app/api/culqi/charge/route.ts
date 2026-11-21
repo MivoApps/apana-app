@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import { verifyFirebaseAuth, isConfiguredCulqiKey } from '@/lib/firebase/verify-auth';
+import { sendPaymentConfirmationEmails } from '@/lib/email/payment-email';
 
 export const dynamic = 'force-dynamic';
 
@@ -262,7 +263,14 @@ export async function POST(request: Request) {
 
     await storeRef.set(storeUpdatePayload, { merge: true });
 
-    // 7. Guardar registro oficial en payment_records (listo para facturación electrónica)
+    // 7. Guardar registro oficial en payment_records (con datos fiscales para SUNAT SOL)
+    const billingDocType = (storeData.legalTaxIdType === 'RUC' || storeData.legalTaxIdType === 'DNI')
+      ? storeData.legalTaxIdType
+      : '';
+    const billingDocNumber = storeData.legalTaxId || '';
+    const billingLegalName = storeData.legalBusinessName || storeData.ownerName || storeData.name || 'Tienda';
+    const billingAddress = storeData.legalAddress || '';
+
     try {
       await db.collection('payment_records').add({
         storeId,
@@ -278,14 +286,36 @@ export async function POST(request: Request) {
         plan: targetPlan,
         planName,
         billingCycle: targetCycle,
-        invoiceStatus: 'pending_provider',
+        billingDocType,
+        billingDocNumber,
+        billingLegalName,
+        billingAddress,
+        invoiceStatus: 'pending_sunat',
         createdAt: now,
       });
     } catch (e) {
       console.warn('No se pudo crear payment_record:', e);
     }
 
-    // 8. Registrar evento en subscription_events
+    // 8. Enviar constancia de pago al comerciante y alerta de emisión SUNAT al admin
+    await sendPaymentConfirmationEmails({
+      storeId,
+      storeName: storeData.name || 'Tienda',
+      merchantEmail: billingEmail,
+      planName,
+      billingCycle: targetCycle,
+      amountTotal: finalAmount / 100,
+      chargeId: chargeResult.id,
+      paidAt: now,
+      nextBillingDate,
+      paymentType: 'direct_charge',
+      billingDocType,
+      billingDocNumber,
+      billingLegalName,
+      billingAddress,
+    }).catch((mailErr) => console.warn('Aviso enviando correos de pago:', mailErr));
+
+    // 9. Registrar evento en subscription_events
     try {
       await db.collection('subscription_events').add({
         storeId,

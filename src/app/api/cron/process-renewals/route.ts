@@ -3,6 +3,7 @@ import { getAdminFirestore } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { sendWhatsAppNotification, buildTrialDay23ReminderText } from '@/lib/whatsapp-notifications';
 import { isConfiguredCulqiKey } from '@/lib/firebase/verify-auth';
+import { sendPaymentConfirmationEmails } from '@/lib/email/payment-email';
 
 // Wrappers para canalizar todas las operaciones de Firestore a través de Firebase Admin SDK
 const getDb = () => getAdminFirestore();
@@ -385,7 +386,15 @@ async function handleProcessRenewals(request: Request) {
           updatedAt: serverTimestamp(),
         });
 
-        // Registrar comprobante pendiente en payment_records (listo para facturación electrónica)
+        // Registrar comprobante pendiente en payment_records (con datos fiscales para SUNAT SOL)
+        const merchantEmail = store.ownerEmail || store.billingEmail || 'comerciante@beapana.com';
+        const billingDocType = (store.legalTaxIdType === 'RUC' || store.legalTaxIdType === 'DNI')
+          ? store.legalTaxIdType
+          : '';
+        const billingDocNumber = store.legalTaxId || '';
+        const billingLegalName = store.legalBusinessName || store.ownerName || store.name || 'Tienda';
+        const billingAddress = store.legalAddress || '';
+
         try {
           await addDoc(collection(db, 'payment_records'), {
             storeId: store.id,
@@ -393,7 +402,7 @@ async function handleProcessRenewals(request: Request) {
             storeName: store.name || 'Tienda',
             amount: renewalAmount,
             currency: 'PEN',
-            email: store.ownerEmail || store.billingEmail || 'comerciante@beapana.com',
+            email: merchantEmail,
             culqiChargeId: chargeId,
             paymentMethodType: 'card',
             status: 'approved',
@@ -401,12 +410,34 @@ async function handleProcessRenewals(request: Request) {
             plan: targetPlan,
             planName,
             billingCycle,
-            invoiceStatus: 'pending_provider',
+            billingDocType,
+            billingDocNumber,
+            billingLegalName,
+            billingAddress,
+            invoiceStatus: 'pending_sunat',
             createdAt: now,
           });
         } catch (recErr) {
           console.warn('No se pudo crear payment_record en renovación:', recErr);
         }
+
+        // Enviar constancia de pago al comerciante y alerta SUNAT al admin
+        await sendPaymentConfirmationEmails({
+          storeId: store.id,
+          storeName: store.name || 'Tienda',
+          merchantEmail,
+          planName,
+          billingCycle,
+          amountTotal: renewalAmount,
+          chargeId,
+          paidAt: now,
+          nextBillingDate: newNextBillingDate,
+          paymentType: isTrial ? 'trial_conversion' : 'renewal',
+          billingDocType,
+          billingDocNumber,
+          billingLegalName,
+          billingAddress,
+        }).catch((mailErr) => console.warn('Aviso enviando correos de renovación:', mailErr));
 
         // Registrar evento en subscription_events
         try {

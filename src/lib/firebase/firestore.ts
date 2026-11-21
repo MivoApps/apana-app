@@ -1253,14 +1253,38 @@ export const adminUpdateUserDetailsInFS = async (
 export interface PaymentRecord {
   id: string;
   storeId: string;
+  ownerId?: string;
+  storeName?: string;
   amount: number;
   currency: string;
   email?: string;
   culqiChargeId?: string;
   status: 'approved' | 'rejected' | 'pending';
-  plan: 'emprendedor';
+  plan: 'emprendedor' | 'negocio' | string;
+  planName?: string;
+  billingCycle?: 'mensual' | 'anual';
+  paymentMethodType?: 'card' | 'yape' | 'other';
+  billingDocType?: 'RUC' | 'DNI' | '';
+  billingDocNumber?: string;
+  billingLegalName?: string;
+  billingAddress?: string;
+  invoiceStatus?: 'pending_sunat' | 'pending_provider' | 'emitted';
+  invoiceNumber?: string;
+  invoicedAt?: number;
   createdAt: number;
 }
+
+export const adminMarkPaymentInvoicedInFS = async (
+  paymentId: string,
+  invoiceNumber: string
+): Promise<void> => {
+  const paymentRef = doc(db, 'payment_records', paymentId);
+  await updateDoc(paymentRef, {
+    invoiceStatus: 'emitted',
+    invoiceNumber: invoiceNumber.trim().toUpperCase(),
+    invoicedAt: Date.now(),
+  });
+};
 
 export const getAllPaymentRecordsForAdminFromFS = async (): Promise<PaymentRecord[]> => {
   try {
