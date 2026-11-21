@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { sendWhatsAppNotification, buildTrialDay23ReminderText } from '@/lib/whatsapp-notifications';
+import { isConfiguredCulqiKey } from '@/lib/firebase/verify-auth';
 
 // Wrappers para canalizar todas las operaciones de Firestore a través de Firebase Admin SDK
 const getDb = () => getAdminFirestore();
@@ -100,7 +101,7 @@ async function handleProcessRenewals(request: Request) {
 
   const now = Date.now();
   const culqiSecretKey = process.env.CULQI_SECRET_KEY || '';
-  const isRealCulqiKey = culqiSecretKey && !culqiSecretKey.includes('xxxxxxxx') && !culqiSecretKey.includes('demo');
+  const isRealCulqiKey = isConfiguredCulqiKey(culqiSecretKey);
 
   const results: RenewalProcessResult[] = [];
 
@@ -357,10 +358,13 @@ async function handleProcessRenewals(request: Request) {
         } catch (fetchErr: any) {
           chargeErrorMsg = fetchErr.message || 'Error de conexión con Culqi.';
         }
-      } else {
-        // Modo Sandbox / Demo
+      } else if (isDev) {
+        // Modo Sandbox / Demo permitido únicamente en desarrollo local
         chargeSuccess = true;
         chargeId = `chr_sandbox_renewal_${now}`;
+      } else {
+        chargeSuccess = false;
+        chargeErrorMsg = 'CULQI_SECRET_KEY no configurada en producción. No se puede ejecutar cobro automático.';
       }
 
       // Si el cobro fue exitoso:
@@ -373,15 +377,42 @@ async function handleProcessRenewals(request: Request) {
           subscriptionStatus: 'active', // Pasa a cliente de pago activo
           nextBillingDate: newNextBillingDate,
           lastPaymentDate: now,
+          lastPaymentAmount: renewalAmount,
           lastChargeId: chargeId,
+          lastCulqiChargeId: chargeId,
           failedRenewalsCount: 0,
+          lastPaymentError: null,
           updatedAt: serverTimestamp(),
         });
+
+        // Registrar comprobante pendiente en payment_records (listo para facturación electrónica)
+        try {
+          await addDoc(collection(db, 'payment_records'), {
+            storeId: store.id,
+            ownerId: store.ownerId || '',
+            storeName: store.name || 'Tienda',
+            amount: renewalAmount,
+            currency: 'PEN',
+            email: store.ownerEmail || store.billingEmail || 'comerciante@beapana.com',
+            culqiChargeId: chargeId,
+            paymentMethodType: 'card',
+            status: 'approved',
+            type: isTrial ? 'trial_conversion' : 'renewal',
+            plan: targetPlan,
+            planName,
+            billingCycle,
+            invoiceStatus: 'pending_provider',
+            createdAt: now,
+          });
+        } catch (recErr) {
+          console.warn('No se pudo crear payment_record en renovación:', recErr);
+        }
 
         // Registrar evento en subscription_events
         try {
           await addDoc(collection(db, 'subscription_events'), {
             storeId: store.id,
+            ownerId: store.ownerId || '',
             type: isTrial ? 'trial_converted_to_paid' : 'subscription_renewed',
             plan: targetPlan,
             planName,
@@ -389,6 +420,7 @@ async function handleProcessRenewals(request: Request) {
             amount: renewalAmount,
             chargeId,
             wasTrial: isTrial,
+            createdAt: now,
             timestamp: now,
           });
         } catch (_) {}

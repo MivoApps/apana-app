@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { auth } from '@/lib/firebase/config';
 import {
   ChevronLeft,
   X,
@@ -381,8 +382,18 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      const culqiPublicKey = process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY || '';
-      const isRealCulqiKey = culqiPublicKey && !culqiPublicKey.includes('xxxxxxxx') && !culqiPublicKey.includes('demo');
+      const culqiPublicKey = (process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY || '').trim();
+      const isRealCulqiKey = Boolean(
+        culqiPublicKey &&
+        !culqiPublicKey.includes('xxxxxxxx') &&
+        !culqiPublicKey.includes('demo') &&
+        (culqiPublicKey.startsWith('pk_live_') || culqiPublicKey.startsWith('pk_test_'))
+      );
+      const isDevEnv = process.env.NODE_ENV === 'development';
+
+      if (!isRealCulqiKey && !isDevEnv) {
+        throw new Error('La pasarela de pagos aún no está habilitada en producción. Contáctanos por WhatsApp para activar tu prueba.');
+      }
 
       let tokenId = `tkn_test_sandbox_${Date.now()}`;
 
@@ -410,7 +421,9 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
         if (!tokenRes.ok || !tokenData.id) {
           let userMsg = tokenData.user_message || tokenData.merchant_message || 'No pudimos validar tu tarjeta. Revisa los datos ingresados.';
           if (tokenData.merchant_message?.includes('Bin') || userMsg === 'Contactáte con soporte') {
-            userMsg = 'Número de tarjeta no reconocido por Culqi. En modo prueba usa las tarjetas de test oficiales de Culqi (ej. Visa: 4111 1100 0000 0021, CVV: 123).';
+            userMsg = culqiPublicKey.startsWith('pk_test_')
+              ? 'Número de tarjeta no reconocido por Culqi. En modo prueba usa las tarjetas de test oficiales de Culqi (ej. Visa: 4111 1100 0000 0021, CVV: 123).'
+              : 'No pudimos validar tu tarjeta. Verifica el número, fecha de vencimiento y código CVC.';
           }
           throw new Error(userMsg);
         }
@@ -420,10 +433,14 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
 
       // 2. Register Trial in APANA Backend
       const targetStoreId = storeId || (typeof window !== 'undefined' ? localStorage.getItem('apana_active_store_id') || '' : '');
+      const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
 
       const res = await fetch('/api/culqi/register-trial', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({
           tokenId,
           storeId: targetStoreId,

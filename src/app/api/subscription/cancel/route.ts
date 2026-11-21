@@ -1,11 +1,23 @@
 import { NextResponse } from 'next/server';
-import { doc, getDoc, updateDoc, serverTimestamp, addDoc, collection } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { FieldValue } from 'firebase-admin/firestore';
+import { getAdminFirestore } from '@/lib/firebase/admin';
+import { verifyFirebaseAuth } from '@/lib/firebase/verify-auth';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
+    // 1. Verificar sesión autenticada
+    const authUser = await verifyFirebaseAuth(request);
+    if (!authUser) {
+      return NextResponse.json(
+        { error: 'Sesión no válida o expirada. Inicia sesión nuevamente.' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
-    const { storeId, action = 'cancel', userId } = body;
+    const { storeId, action = 'cancel' } = body;
 
     if (!storeId) {
       return NextResponse.json(
@@ -14,40 +26,47 @@ export async function POST(request: Request) {
       );
     }
 
-    const storeRef = doc(db, 'stores', storeId);
-    const storeSnap = await getDoc(storeRef);
+    const db = getAdminFirestore();
+    const storeRef = db.collection('stores').doc(storeId);
+    const storeSnap = await storeRef.get();
 
-    if (!storeSnap.exists()) {
+    if (!storeSnap.exists) {
       return NextResponse.json(
         { error: 'La tienda no existe.' },
         { status: 404 }
       );
     }
 
-    const storeData = storeSnap.data();
+    const storeData = storeSnap.data() || {};
 
-    // Verificación de seguridad del propietario
-    if (userId && storeData.ownerId && storeData.ownerId !== userId) {
+    // 2. Verificación estricta del propietario usando el UID verificado del token
+    if (storeData.ownerId && storeData.ownerId !== authUser.uid && !authUser.isSuperAdmin) {
       return NextResponse.json(
         { error: 'No tienes permisos para modificar esta suscripción.' },
         { status: 403 }
       );
     }
 
-    const isCurrentlyInTrial = storeData.subscriptionStatus === 'trial' || (storeData.trialEndDate && Date.now() < storeData.trialEndDate);
+    const isCurrentlyInTrial =
+      storeData.subscriptionStatus === 'trial' ||
+      Boolean(storeData.trialEndDate && Date.now() < storeData.trialEndDate);
 
     if (action === 'cancel') {
-      await updateDoc(storeRef, {
-        cancelAtPeriodEnd: true,
-        // Si está en periodo de prueba, conservar 'trial' para no quitarle los beneficios hasta el último día
-        subscriptionStatus: isCurrentlyInTrial ? 'trial' : 'cancelled',
-        updatedAt: serverTimestamp(),
-      });
+      await storeRef.set(
+        {
+          cancelAtPeriodEnd: true,
+          // Si está en periodo de prueba, conservar 'trial' para no quitarle los beneficios hasta el último día
+          subscriptionStatus: isCurrentlyInTrial ? 'trial' : 'cancelled',
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
 
       // Log de evento de cancelación
       try {
-        await addDoc(collection(db, 'subscription_events'), {
+        await db.collection('subscription_events').add({
           storeId,
+          ownerId: storeData.ownerId || authUser.uid,
           type: isCurrentlyInTrial ? 'trial_cancellation_requested' : 'cancellation_requested',
           previousPlan: storeData.plan || 'emprendedor',
           isTrial: isCurrentlyInTrial,
@@ -68,11 +87,26 @@ export async function POST(request: Request) {
       });
     } else if (action === 'reactivate') {
       const targetStatus = isCurrentlyInTrial ? 'trial' : 'active';
-      await updateDoc(storeRef, {
-        cancelAtPeriodEnd: false,
-        subscriptionStatus: targetStatus,
-        updatedAt: serverTimestamp(),
-      });
+      await storeRef.set(
+        {
+          cancelAtPeriodEnd: false,
+          subscriptionStatus: targetStatus,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      try {
+        await db.collection('subscription_events').add({
+          storeId,
+          ownerId: storeData.ownerId || authUser.uid,
+          type: isCurrentlyInTrial ? 'trial_reactivated' : 'subscription_reactivated',
+          plan: storeData.plan || 'emprendedor',
+          createdAt: Date.now(),
+        });
+      } catch (e) {
+        console.warn('No se pudo registrar subscription_event:', e);
+      }
 
       return NextResponse.json({
         success: true,

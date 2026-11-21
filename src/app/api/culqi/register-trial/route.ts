@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
-import { doc, getDoc, updateDoc, serverTimestamp, addDoc, collection } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { FieldValue } from 'firebase-admin/firestore';
+import { getAdminFirestore } from '@/lib/firebase/admin';
+import { verifyFirebaseAuth, isConfiguredCulqiKey } from '@/lib/firebase/verify-auth';
+
+export const dynamic = 'force-dynamic';
 
 interface RegisterTrialBody {
   tokenId: string;
@@ -14,8 +17,25 @@ interface RegisterTrialBody {
 
 export async function POST(request: Request) {
   try {
+    // 1. Verificar sesión autenticada del comerciante
+    const authUser = await verifyFirebaseAuth(request);
+    if (!authUser) {
+      return NextResponse.json(
+        { error: 'Sesión no válida o expirada. Inicia sesión nuevamente.' },
+        { status: 401 }
+      );
+    }
+
     const body: RegisterTrialBody = await request.json();
-    const { tokenId, storeId, plan = 'emprendedor', billingCycle = 'mensual', email, customerName, phone } = body;
+    const {
+      tokenId,
+      storeId,
+      plan = 'emprendedor',
+      billingCycle = 'mensual',
+      email,
+      customerName,
+      phone,
+    } = body;
 
     if (!tokenId || !storeId) {
       return NextResponse.json(
@@ -24,71 +44,116 @@ export async function POST(request: Request) {
       );
     }
 
-    const targetPlan = plan === 'negocio' ? 'negocio' : 'emprendedor';
-    const planName = targetPlan === 'negocio' ? 'Plan Negocio Pro' : 'Plan Emprendedor';
-    const culqiSecretKey = process.env.CULQI_SECRET_KEY || '';
+    const db = getAdminFirestore();
+    const storeRef = db.collection('stores').doc(storeId);
+    const storeSnap = await storeRef.get();
 
-    let customerId = `cus_test_${Date.now()}`;
-    let cardId = `crd_test_${Date.now()}`;
+    if (!storeSnap.exists) {
+      return NextResponse.json(
+        { error: 'La tienda no existe en el sistema.' },
+        { status: 404 }
+      );
+    }
+
+    const storeData = storeSnap.data() || {};
+
+    // 2. Verificar propiedad de la tienda
+    if (storeData.ownerId && storeData.ownerId !== authUser.uid && !authUser.isSuperAdmin) {
+      return NextResponse.json(
+        { error: 'No tienes permisos para activar la prueba en esta tienda.' },
+        { status: 403 }
+      );
+    }
+
+    // 3. Evitar abuso de múltiples pruebas gratuitas (salvo superAdmin en dev)
+    if (storeData.hasUsedTrial && !(authUser.isSuperAdmin && process.env.NODE_ENV === 'development')) {
+      return NextResponse.json(
+        { error: 'Esta tienda ya utilizó su periodo de prueba gratuito de 30 días.' },
+        { status: 400 }
+      );
+    }
+
+    const targetPlan: 'emprendedor' | 'negocio' = plan === 'negocio' ? 'negocio' : 'emprendedor';
+    const planName = targetPlan === 'negocio' ? 'Plan Negocio Pro' : 'Plan Emprendedor';
+    const billingEmail = (email || authUser.email || storeData.ownerEmail || 'comerciante@beapana.com').trim();
+
+    const culqiSecretKey = process.env.CULQI_SECRET_KEY || '';
+    const isRealCulqiKey = isConfiguredCulqiKey(culqiSecretKey);
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    if (!isRealCulqiKey && isProduction) {
+      console.error('[/api/culqi/register-trial] CULQI_SECRET_KEY no está configurada en producción.');
+      return NextResponse.json(
+        { error: 'La pasarela de pagos no está configurada en este momento. Por favor contacta a soporte.' },
+        { status: 503 }
+      );
+    }
+
+    let customerId = `cus_dev_mock_${Date.now()}`;
+    let cardId = `crd_dev_mock_${Date.now()}`;
     let cardBrand = 'Visa';
     let cardLastFour = '4242';
 
-    // 1. Si hay una llave secreta real de Culqi configurada, llamar a las APIs oficiales de Culqi
-    const isRealCulqiKey = culqiSecretKey && !culqiSecretKey.includes('xxxxxxxx') && !culqiSecretKey.includes('demo');
-
+    // 4. Registrar Customer + Card en la bóveda de Culqi
     if (isRealCulqiKey) {
       try {
-        // A. Crear o registrar Customer en Culqi
-        const nameParts = (customerName || 'Comerciante APANA').trim().split(' ');
+        const nameParts = (customerName || storeData.ownerName || 'Comerciante APANA').trim().split(' ');
         const firstName = nameParts[0] || 'Comerciante';
         const lastName = nameParts.slice(1).join(' ') || 'APANA';
+        const cleanPhone = (phone || storeData.whatsappPhone || '999999999').replace(/\D/g, '').slice(-9) || '999999999';
 
-        const customerRes = await fetch('https://api.culqi.com/v2/customers', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${culqiSecretKey}`,
-          },
-          body: JSON.stringify({
-            first_name: firstName,
-            last_name: lastName,
-            email: email || 'comerciante@apana.pe',
-            address: 'Lima, Perú',
-            address_city: 'Lima',
-            country_code: 'PE',
-            phone_number: (phone || '999999999').replace(/\D/g, '').slice(-9),
-          }),
-        });
+        let resolvedCustomerId = storeData.culqiCustomerId || '';
 
-        const customerData = await customerRes.json();
-        if (!customerRes.ok) {
-          console.warn('Culqi Customer Creation Response:', customerData);
-          // Si el cliente ya existe en Culqi, buscar su id por email para reutilizarlo
-          try {
-            const searchEmail = email || 'comerciante@apana.pe';
-            const searchRes = await fetch(`https://api.culqi.com/v2/customers?email=${encodeURIComponent(searchEmail)}`, {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${culqiSecretKey}`,
-              },
-            });
+        if (!resolvedCustomerId) {
+          const customerRes = await fetch('https://api.culqi.com/v2/customers', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${culqiSecretKey}`,
+            },
+            body: JSON.stringify({
+              first_name: firstName,
+              last_name: lastName,
+              email: billingEmail,
+              address: storeData.legalAddress || 'Lima, Perú',
+              address_city: storeData.city || 'Lima',
+              country_code: 'PE',
+              phone_number: cleanPhone,
+            }),
+          });
+
+          const customerData = await customerRes.json();
+          if (customerRes.ok && customerData.id) {
+            resolvedCustomerId = customerData.id;
+          } else {
+            // Si el cliente ya existe en Culqi, buscar su ID por email
+            const searchRes = await fetch(
+              `https://api.culqi.com/v2/customers?email=${encodeURIComponent(billingEmail)}`,
+              {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${culqiSecretKey}` },
+              }
+            );
             const searchData = await searchRes.json();
             if (searchData.data && searchData.data.length > 0 && searchData.data[0].id) {
-              customerId = searchData.data[0].id;
+              resolvedCustomerId = searchData.data[0].id;
+            } else {
+              const errMsg =
+                customerData.user_message ||
+                customerData.merchant_message ||
+                'No pudimos registrar tu perfil en la pasarela de pagos.';
+              return NextResponse.json({ error: errMsg }, { status: 400 });
             }
-          } catch (searchErr) {
-            console.warn('Error buscando cliente existente en Culqi:', searchErr);
           }
-        } else if (customerData.id) {
-          customerId = customerData.id;
         }
 
-        // B. Asociar la Tarjeta (Card) al Customer en Culqi con el tokenId
+        customerId = resolvedCustomerId;
+
         const cardRes = await fetch('https://api.culqi.com/v2/cards', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${culqiSecretKey}`,
+            Authorization: `Bearer ${culqiSecretKey}`,
           },
           body: JSON.stringify({
             customer_id: customerId,
@@ -97,16 +162,17 @@ export async function POST(request: Request) {
         });
 
         const cardData = await cardRes.json();
-        if (!cardRes.ok) {
-          const errMsg = cardData.user_message || cardData.merchant_message || 'Error al vincular tu tarjeta en Culqi.';
+        if (!cardRes.ok || !cardData.id) {
+          const errMsg =
+            cardData.user_message ||
+            cardData.merchant_message ||
+            'Error al vincular tu tarjeta en Culqi.';
           return NextResponse.json({ error: errMsg }, { status: 400 });
         }
 
-        if (cardData.id) {
-          cardId = cardData.id;
-          cardLastFour = cardData.last_four || cardData.source?.last_four || '4242';
-          cardBrand = cardData.iin?.card_brand || cardData.source?.iin?.card_brand || 'Visa';
-        }
+        cardId = cardData.id;
+        cardLastFour = cardData.last_four || cardData.source?.last_four || '4242';
+        cardBrand = cardData.iin?.card_brand || cardData.source?.iin?.card_brand || 'Visa';
       } catch (culqiErr: any) {
         console.error('Error conectando con la API de Culqi:', culqiErr);
         return NextResponse.json(
@@ -115,46 +181,43 @@ export async function POST(request: Request) {
         );
       }
     } else {
-      console.log('⚡ [Culqi Sandbox Mock] Registrando prueba gratuita con tarjeta simulada.');
+      console.log('⚡ [Culqi Dev Mock] Registrando prueba gratuita con tarjeta simulada.');
     }
 
-    // 2. Calcular las fechas de los 30 días de prueba gratuita
+    // 5. Calcular las fechas de los 30 días de prueba gratuita
     const now = Date.now();
     const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
     const trialEndDate = now + thirtyDaysMs;
 
-    // 3. Actualizar la tienda en Firestore
-    const storeRef = doc(db, 'stores', storeId);
-    const storeSnap = await getDoc(storeRef);
+    const targetCycle: 'mensual' | 'anual' = billingCycle === 'anual' ? 'anual' : 'mensual';
+    const renewalAmount =
+      targetCycle === 'anual'
+        ? targetPlan === 'negocio'
+          ? 219.9
+          : 139.9
+        : targetPlan === 'negocio'
+          ? 39.9
+          : 19.9;
 
-    if (!storeSnap.exists()) {
-      return NextResponse.json(
-        { error: 'La tienda no existe en el sistema.' },
-        { status: 404 }
-      );
-    }
-
-    const targetCycle = billingCycle === 'anual' ? 'anual' : 'mensual';
-    const renewalAmount = targetCycle === 'anual'
-      ? (targetPlan === 'negocio' ? 219.90 : 139.90)
-      : (targetPlan === 'negocio' ? 39.90 : 19.90);
-
-    const storeData = storeSnap.data();
     const updatePayload: Record<string, any> = {
       plan: targetPlan,
       subscriptionStatus: 'trial',
       billingCycle: targetCycle,
       renewalAmount,
       trialStartDate: now,
-      trialEndDate: trialEndDate,
+      trialEndDate,
       nextBillingDate: trialEndDate,
       cancelAtPeriodEnd: false,
       hasUsedTrial: true,
       culqiCustomerId: customerId,
       culqiCardId: cardId,
-      cardLastFour: cardLastFour,
-      cardBrand: cardBrand,
-      updatedAt: serverTimestamp(),
+      cardLastFour,
+      cardBrand,
+      paymentMethodType: 'card',
+      ownerEmail: storeData.ownerEmail || billingEmail,
+      failedRenewalsCount: 0,
+      lastPaymentError: null,
+      updatedAt: FieldValue.serverTimestamp(),
     };
 
     if (phone && (!storeData?.whatsappPhone || storeData.whatsappPhone.trim() === '')) {
@@ -162,19 +225,20 @@ export async function POST(request: Request) {
       updatePayload.whatsappPhone = cleanP.startsWith('51') ? cleanP : `51${cleanP}`;
     }
 
-    await updateDoc(storeRef, updatePayload);
+    await storeRef.set(updatePayload, { merge: true });
 
-    // 4. Registrar evento en historial de suscripción
+    // 6. Registrar evento en historial de suscripción
     try {
-      await addDoc(collection(db, 'subscription_events'), {
+      await db.collection('subscription_events').add({
         storeId,
+        ownerId: storeData.ownerId || authUser.uid,
         type: 'trial_activated',
         plan: targetPlan,
         planName,
         billingCycle: targetCycle,
         renewalAmount,
         trialStartDate: now,
-        trialEndDate: trialEndDate,
+        trialEndDate,
         culqiCustomerId: customerId,
         culqiCardId: cardId,
         cardLastFour,

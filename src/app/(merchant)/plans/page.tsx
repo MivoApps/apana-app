@@ -96,9 +96,13 @@ export default function PlansPage() {
             : (planToCharge === 'negocio' ? 3990 : 1990);
 
           try {
+            const idToken = user ? await user.getIdToken() : '';
             const res = await fetch('/api/culqi/charge', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+              },
               body: JSON.stringify({
                 tokenId: token.id,
                 storeId: store?.id,
@@ -150,8 +154,21 @@ export default function PlansPage() {
       : (targetPlan === 'negocio' ? 3990 : 1990);
     const planName = targetPlan === 'negocio' ? 'Plan Negocio Pro' : 'Plan Emprendedor';
 
-    if (typeof window !== 'undefined' && window.Culqi) {
-      const publicKey = process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY || 'pk_test_demo12345';
+    const publicKey = (process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY || '').trim();
+    const isRealPublicKey = Boolean(
+      publicKey &&
+      !publicKey.includes('xxxxxxxx') &&
+      !publicKey.includes('demo') &&
+      (publicKey.startsWith('pk_live_') || publicKey.startsWith('pk_test_'))
+    );
+    const isDevEnv = process.env.NODE_ENV === 'development';
+
+    if (!isRealPublicKey && !isDevEnv) {
+      setErrorMsg('La pasarela de pagos aún no está habilitada en producción. Contáctanos por WhatsApp para activar tu plan.');
+      return;
+    }
+
+    if (typeof window !== 'undefined' && window.Culqi && isRealPublicKey) {
       window.Culqi.publicKey = publicKey;
       window.Culqi.settings({
         title: 'APANA SaaS',
@@ -169,15 +186,17 @@ export default function PlansPage() {
         },
       });
       window.Culqi.open();
-    } else {
-      // Fallback de desarrollo
-      const fakeConfirm = confirm(`Simulación de Culqi Checkout: ¿Deseas autorizar el cobro de S/ ${(amountInCents / 100).toFixed(2)} para activar el ${planName}?`);
+    } else if (isDevEnv) {
+      // Fallback de simulación permitido únicamente en desarrollo local
+      const fakeConfirm = confirm(`Simulación DEV de Culqi Checkout: ¿Deseas autorizar el cobro de S/ ${(amountInCents / 100).toFixed(2)} para activar el ${planName}?`);
       if (fakeConfirm) {
         if (window.culqi) {
           window.Culqi = { token: { id: `tkn_test_${Date.now()}`, email: user?.email } };
           window.culqi();
         }
       }
+    } else {
+      setErrorMsg('No se pudo cargar la pasarela de pagos Culqi. Por favor recarga la página e intenta nuevamente.');
     }
   };
 
@@ -186,13 +205,16 @@ export default function PlansPage() {
     setIsCancelling(true);
     setErrorMsg('');
     try {
+      const idToken = user ? await user.getIdToken() : '';
       const res = await fetch('/api/subscription/cancel', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({
           storeId: store.id,
           action: 'cancel',
-          userId: user?.uid,
         }),
       });
 
@@ -222,13 +244,16 @@ export default function PlansPage() {
     setIsCancelling(true);
     setErrorMsg('');
     try {
+      const idToken = user ? await user.getIdToken() : '';
       const res = await fetch('/api/subscription/cancel', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({
           storeId: store.id,
           action: 'reactivate',
-          userId: user?.uid,
         }),
       });
 
