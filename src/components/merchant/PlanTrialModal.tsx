@@ -395,43 +395,9 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
         throw new Error('La pasarela de pagos aún no está habilitada en producción. Contáctanos por WhatsApp para activar tu prueba.');
       }
 
-      let tokenId = `tkn_test_sandbox_${Date.now()}`;
+      const fullYear = yearStr.length === 2 ? `20${yearStr}` : yearStr;
 
-      // 1. Culqi Tokenization (Official CORS-enabled API)
-      if (isRealCulqiKey) {
-        const fullYear = yearStr.length === 2 ? `20${yearStr}` : yearStr;
-
-        const tokenRes = await fetch('https://secure.culqi.com/v2/tokens', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${culqiPublicKey}`,
-          },
-          body: JSON.stringify({
-            card_number: cleanCard,
-            cvv: cardCvc.trim(),
-            expiration_month: monthStr.trim(),
-            expiration_year: fullYear.trim(),
-            email: email.trim(),
-          }),
-        });
-
-        const tokenData = await tokenRes.json();
-
-        if (!tokenRes.ok || !tokenData.id) {
-          let userMsg = tokenData.user_message || tokenData.merchant_message || 'No pudimos validar tu tarjeta. Revisa los datos ingresados.';
-          if (tokenData.merchant_message?.includes('Bin') || userMsg === 'Contactáte con soporte') {
-            userMsg = culqiPublicKey.startsWith('pk_test_')
-              ? 'Número de tarjeta no reconocido por Culqi. En modo prueba usa las tarjetas de test oficiales de Culqi (ej. Visa: 4111 1100 0000 0021, CVV: 123).'
-              : 'No pudimos validar tu tarjeta. Verifica el número, fecha de vencimiento y código CVC.';
-          }
-          throw new Error(userMsg);
-        }
-
-        tokenId = tokenData.id;
-      }
-
-      // 2. Register Trial in APANA Backend
+      // Enviar tarjeta al backend para tokenizar server-to-server en secure.culqi.com/v2/tokens (evita bloqueo CORS del navegador)
       const targetStoreId = storeId || (typeof window !== 'undefined' ? localStorage.getItem('apana_active_store_id') || '' : '');
       const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
 
@@ -442,7 +408,12 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
           ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
         },
         body: JSON.stringify({
-          tokenId,
+          card: {
+            card_number: cleanCard,
+            cvv: cardCvc.trim(),
+            expiration_month: monthStr.trim(),
+            expiration_year: fullYear.trim(),
+          },
           storeId: targetStoreId,
           plan: selectedPlanTier,
           billingCycle,

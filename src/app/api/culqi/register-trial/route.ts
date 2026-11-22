@@ -6,7 +6,13 @@ import { verifyFirebaseAuth, isConfiguredCulqiKey } from '@/lib/firebase/verify-
 export const dynamic = 'force-dynamic';
 
 interface RegisterTrialBody {
-  tokenId: string;
+  tokenId?: string;
+  card?: {
+    card_number: string;
+    cvv: string;
+    expiration_month: string;
+    expiration_year: string;
+  };
   storeId: string;
   plan: 'emprendedor' | 'negocio';
   billingCycle?: 'mensual' | 'anual';
@@ -28,7 +34,8 @@ export async function POST(request: Request) {
 
     const body: RegisterTrialBody = await request.json();
     const {
-      tokenId,
+      tokenId: incomingTokenId,
+      card,
       storeId,
       plan = 'emprendedor',
       billingCycle = 'mensual',
@@ -37,9 +44,9 @@ export async function POST(request: Request) {
       phone,
     } = body;
 
-    if (!tokenId || !storeId) {
+    if ((!incomingTokenId && !card) || !storeId) {
       return NextResponse.json(
-        { error: 'Faltan parámetros requeridos (tokenId, storeId).' },
+        { error: 'Faltan parámetros requeridos para validar tu tarjeta.' },
         { status: 400 }
       );
     }
@@ -77,7 +84,8 @@ export async function POST(request: Request) {
     const planName = targetPlan === 'negocio' ? 'Plan Negocio Pro' : 'Plan Emprendedor';
     const billingEmail = (email || authUser.email || storeData.ownerEmail || 'comerciante@beapana.com').trim();
 
-    const culqiSecretKey = process.env.CULQI_SECRET_KEY || '';
+    const culqiSecretKey = (process.env.CULQI_SECRET_KEY || '').trim();
+    const culqiPublicKey = (process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY || process.env.CULQI_PUBLIC_KEY || '').trim();
     const isRealCulqiKey = isConfiguredCulqiKey(culqiSecretKey);
     const isProduction = process.env.NODE_ENV === 'production';
 
@@ -89,14 +97,61 @@ export async function POST(request: Request) {
       );
     }
 
+    let resolvedTokenId = incomingTokenId || `tkn_dev_mock_${Date.now()}`;
     let customerId = `cus_dev_mock_${Date.now()}`;
     let cardId = `crd_dev_mock_${Date.now()}`;
     let cardBrand = 'Visa';
     let cardLastFour = '4242';
 
-    // 4. Registrar Customer + Card en la bóveda de Culqi
+    // 4. Tokenizar (si vino tarjeta directa) + Registrar Customer y Card en la bóveda de Culqi (server-to-server, sin CORS)
     if (isRealCulqiKey) {
       try {
+        if (!incomingTokenId && card) {
+          if (!isConfiguredCulqiKey(culqiPublicKey)) {
+            console.error('[/api/culqi/register-trial] NEXT_PUBLIC_CULQI_PUBLIC_KEY no configurada.');
+            return NextResponse.json(
+              { error: 'Falta configurar la llave pública de Culqi en el servidor.' },
+              { status: 503 }
+            );
+          }
+
+          const tokenRes = await fetch('https://secure.culqi.com/v2/tokens', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${culqiPublicKey}`,
+            },
+            body: JSON.stringify({
+              card_number: String(card.card_number || '').replace(/\D/g, ''),
+              cvv: String(card.cvv || '').trim(),
+              expiration_month: String(card.expiration_month || '').trim(),
+              expiration_year: String(card.expiration_year || '').trim(),
+              email: billingEmail,
+            }),
+          });
+
+          const tokenData = await tokenRes.json().catch(() => ({}));
+          if (!tokenRes.ok || !tokenData.id) {
+            console.warn('[/api/culqi/register-trial] Culqi token error:', {
+              status: tokenRes.status,
+              type: tokenData.type,
+              merchant_message: tokenData.merchant_message,
+              user_message: tokenData.user_message,
+            });
+            let userMsg =
+              tokenData.user_message ||
+              tokenData.merchant_message ||
+              'No pudimos validar tu tarjeta. Revisa los datos ingresados.';
+            if (culqiPublicKey.startsWith('pk_test_') && (tokenData.merchant_message?.includes('Bin') || userMsg === 'Contactáte con soporte')) {
+              userMsg =
+                'Tu entorno está usando llaves de prueba Culqi (pk_test_). Con llaves de prueba solo se aceptan tarjetas de test de Culqi.';
+            }
+            return NextResponse.json({ error: userMsg }, { status: 400 });
+          }
+
+          resolvedTokenId = tokenData.id;
+        }
+
         const nameParts = (customerName || storeData.ownerName || 'Comerciante APANA').trim().split(' ');
         const firstName = nameParts[0] || 'Comerciante';
         const lastName = nameParts.slice(1).join(' ') || 'APANA';
@@ -157,7 +212,7 @@ export async function POST(request: Request) {
           },
           body: JSON.stringify({
             customer_id: customerId,
-            token_id: tokenId,
+            token_id: resolvedTokenId,
           }),
         });
 
