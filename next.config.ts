@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ['firebase-admin', '@google-cloud/firestore'],
   allowedDevOrigins: [
     'localhost:3000',
     'localhost:3001',

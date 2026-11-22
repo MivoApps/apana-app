@@ -24,6 +24,7 @@ const addDoc = async (colRef: any, data: any) => await colRef.add(data);
 const serverTimestamp = () => FieldValue.serverTimestamp();
 const db = null;
 
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 interface RenewalProcessResult {

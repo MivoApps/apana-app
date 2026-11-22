@@ -3,6 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import { verifyFirebaseAuth, isConfiguredCulqiKey } from '@/lib/firebase/verify-auth';
 
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 interface RegisterTrialBody {

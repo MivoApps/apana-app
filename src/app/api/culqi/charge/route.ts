@@ -4,6 +4,7 @@ import { getAdminFirestore } from '@/lib/firebase/admin';
 import { verifyFirebaseAuth, isConfiguredCulqiKey } from '@/lib/firebase/verify-auth';
 import { sendPaymentConfirmationEmails } from '@/lib/email/payment-email';
 
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const PLAN_PRICES_CENTS: Record<'emprendedor' | 'negocio', Record<'mensual' | 'anual', number>> = {

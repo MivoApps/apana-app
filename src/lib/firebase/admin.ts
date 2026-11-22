@@ -78,7 +78,11 @@ export function getAdminFirestore(): Firestore {
     const databaseId = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID || '(default)';
     adminDb = getFirestore(adminApp, databaseId);
     // Configuración para ignorar propiedades indefinidas como en el cliente
-    adminDb.settings({ ignoreUndefinedProperties: true });
+    try {
+      adminDb.settings({ ignoreUndefinedProperties: true });
+    } catch (_) {
+      // Ya configurado en una invocación previa del contenedor
+    }
   }
   return adminDb;
 }
