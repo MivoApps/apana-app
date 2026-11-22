@@ -184,6 +184,13 @@ export default function PlansPage() {
           yape: true,
           billetera: true,
         },
+        style: {
+          logo: 'https://www.beapana.com/icon-192.png',
+          bannerColor: '#059669',
+          buttonBackground: '#059669',
+          menuColor: '#0b1c30',
+          links: '#059669',
+        },
       });
       window.Culqi.open();
     } else if (isDevEnv) {
