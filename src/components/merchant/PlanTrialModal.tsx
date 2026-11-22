@@ -51,14 +51,29 @@ interface PlanTrialModalProps {
 }
 
 /**
- * Carga dinámicamente el script oficial de Culqi Checkout v4 si aún no existe en window.
+ * Preconecta con checkout.culqi.com y carga dinámicamente el script oficial de Culqi Checkout v4.
  */
+function preconnectCulqi() {
+  if (typeof document === 'undefined') return;
+  const origins = ['https://checkout.culqi.com', 'https://secure.culqi.com'];
+  origins.forEach((href) => {
+    if (!document.querySelector(`link[rel="preconnect"][href="${href}"]`)) {
+      const link = document.createElement('link');
+      link.rel = 'preconnect';
+      link.href = href;
+      link.crossOrigin = 'anonymous';
+      document.head.appendChild(link);
+    }
+  });
+}
+
 function ensureCulqiCheckoutScript(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined') {
       reject(new Error('Entorno de navegador no disponible.'));
       return;
     }
+    preconnectCulqi();
     if (window.Culqi) {
       resolve();
       return;
@@ -108,6 +123,7 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
 
   // Processing & Feedback State
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isOpeningCheckout, setIsOpeningCheckout] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [activatedInfo, setActivatedInfo] = useState<{
     cardLastFour?: string;
@@ -116,12 +132,18 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
     planName?: string;
   }>({});
 
-  // Precargar Culqi Checkout v4 cuando se abre el modal
+  // Precargar Culqi Checkout v4 + preconnect en segundo plano apenas se monta el componente
+  useEffect(() => {
+    ensureCulqiCheckoutScript().catch(() => {});
+  }, []);
+
+  // Resetear estado al abrir el modal
   useEffect(() => {
     if (isOpen) {
       setStep(1);
       setErrorMessage('');
       setIsSubmitting(false);
+      setIsOpeningCheckout(false);
       if (initialPlan) setSelectedPlanTier(initialPlan);
       ensureCulqiCheckoutScript().catch(() => {});
     }
@@ -254,6 +276,7 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
   // Abrir Culqi Checkout v4 oficial (PCI-DSS + 3DS + branding APANA)
   const handleOpenCulqiTrialCheckout = async () => {
     setErrorMessage('');
+    setIsOpeningCheckout(true);
 
     const culqiPublicKey = (process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY || '').trim();
     const isRealCulqiKey = Boolean(
@@ -265,6 +288,7 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
     const isDevEnv = process.env.NODE_ENV === 'development';
 
     if (!isRealCulqiKey) {
+      setIsOpeningCheckout(false);
       if (isDevEnv) {
         await submitTrialToken(`tkn_dev_mock_${Date.now()}`, userEmail);
         return;
@@ -278,6 +302,7 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
     try {
       await ensureCulqiCheckoutScript();
     } catch (scriptErr: any) {
+      setIsOpeningCheckout(false);
       setErrorMessage(
         scriptErr?.message || 'No se pudo cargar la pasarela de pagos Culqi. Recarga e intenta de nuevo.'
       );
@@ -285,6 +310,7 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
     }
 
     if (typeof window === 'undefined' || !window.Culqi) {
+      setIsOpeningCheckout(false);
       setErrorMessage('La pasarela Culqi no está disponible en este momento. Recarga la página.');
       return;
     }
@@ -293,6 +319,7 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
     const previousCulqiCallback = window.culqi;
 
     window.culqi = async () => {
+      setIsOpeningCheckout(false);
       try {
         if (window.Culqi?.token?.id) {
           const token = window.Culqi.token;
@@ -338,6 +365,11 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
     });
 
     window.Culqi.open();
+
+    // Quitar el spinner una vez que el iframe de Culqi terminó de aparecer (o si el usuario lo cierra sin pagar)
+    setTimeout(() => {
+      setIsOpeningCheckout(false);
+    }, 2200);
   };
 
   // Finalizar paso 3 de celebración y propagar resultado actualizado
@@ -674,14 +706,19 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
 
                   <button
                     type="button"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isOpeningCheckout}
                     onClick={handleOpenCulqiTrialCheckout}
-                    className="w-full h-11 sm:h-12 rounded-xl bg-[#059669] hover:bg-[#00855d] disabled:bg-emerald-300 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                    className="w-full h-11 sm:h-12 rounded-xl bg-[#059669] hover:bg-[#00855d] disabled:bg-emerald-400 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
                   >
                     {isSubmitting ? (
                       <span className="flex items-center gap-2">
                         <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         <span>Activando tu prueba gratis...</span>
+                      </span>
+                    ) : isOpeningCheckout ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Abriendo pasarela segura...</span>
                       </span>
                     ) : (
                       <>
