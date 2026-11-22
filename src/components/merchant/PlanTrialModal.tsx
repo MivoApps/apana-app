@@ -401,7 +401,7 @@ export const PlanTrialModal: React.FC<PlanTrialModalProps> = ({
       if (isRealCulqiKey) {
         const fullYear = yearStr.length === 2 ? `20${yearStr}` : yearStr;
 
-        const tokenRes = await fetch('https://api.culqi.com/v2/tokens', {
+        const tokenRes = await fetch('https://secure.culqi.com/v2/tokens', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
