@@ -13,12 +13,16 @@ import {
   CheckCircle2
 } from 'lucide-react';
 
+export const CURRENT_WHATS_NEW_VERSION = 'v1_legal';
+export const CURRENT_WHATS_NEW_RELEASE_AT = new Date('2026-11-22T00:00:00-05:00').getTime();
+
 interface WhatsNewModalProps {
   isOpen: boolean;
   onClose: () => void;
   storeId: string;
   storeName: string;
   isLegalConfigured?: boolean;
+  onMarkSeen?: (version: string) => void | Promise<void>;
 }
 
 export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
@@ -27,23 +31,29 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   storeId,
   storeName,
   isLegalConfigured = false,
+  onMarkSeen,
 }) => {
   const router = useRouter();
 
   if (!isOpen) return null;
 
-  const handleGoToSettings = () => {
+  const markAsSeen = () => {
     if (typeof window !== 'undefined' && storeId) {
-      localStorage.setItem(`apana_whats_new_seen_${storeId}_v1_legal`, 'true');
+      localStorage.setItem(`apana_whats_new_seen_${storeId}_${CURRENT_WHATS_NEW_VERSION}`, 'true');
     }
+    if (onMarkSeen) {
+      Promise.resolve(onMarkSeen(CURRENT_WHATS_NEW_VERSION)).catch(() => {});
+    }
+  };
+
+  const handleGoToSettings = () => {
+    markAsSeen();
     onClose();
     router.push('/settings?tab=legal');
   };
 
   const handleDismiss = () => {
-    if (typeof window !== 'undefined' && storeId) {
-      localStorage.setItem(`apana_whats_new_seen_${storeId}_v1_legal`, 'true');
-    }
+    markAsSeen();
     onClose();
   };
 

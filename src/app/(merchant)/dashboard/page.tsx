@@ -40,7 +40,7 @@ import { WhatsAppIcon } from '@/components/ui/WhatsAppIcon';
 import { Store, Product } from '@/types/store';
 import { isSuperAdminEmail } from '@/lib/auth-helpers';
 import { MerchantSidebar } from '@/components/merchant/MerchantSidebar';
-import { WhatsNewModal } from '@/components/merchant/WhatsNewModal';
+import { WhatsNewModal, CURRENT_WHATS_NEW_VERSION, CURRENT_WHATS_NEW_RELEASE_AT } from '@/components/merchant/WhatsNewModal';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -62,18 +62,96 @@ export default function DashboardPage() {
   const [emailSentToast, setEmailSentToast] = React.useState(false);
   const [isWhatsNewOpen, setIsWhatsNewOpen] = React.useState(false);
 
-  // Apertura automática única del modal de novedades para tiendas existentes
+  // Helper para leer el timestamp de creación de la tienda en milisegundos
+  const getStoreCreatedAtMs = (createdAt: any): number => {
+    if (!createdAt) return 0;
+    if (typeof createdAt === 'number') return createdAt;
+    if (typeof createdAt?.toMillis === 'function') return createdAt.toMillis();
+    if (typeof createdAt?.seconds === 'number') return createdAt.seconds * 1000;
+    const parsed = Date.parse(String(createdAt));
+    return Number.isNaN(parsed) ? 0 : parsed;
+  };
+
+  // Orquestación anti-colisión de modales (compatible con React StrictMode y persistente en Firestore):
+  // 1) Primero evaluar "Gran Actualización" (máx. 1 vez por versión; solo para tiendas previas al release o sin createdAt).
+  // 2) Solo si NO corresponde "Gran Actualización", evaluar el popup de 30 días gratis (cooldown 14 días en Firestore).
   React.useEffect(() => {
-    if (!isLoading && fsStore?.id && typeof window !== 'undefined') {
-      const hasSeen = localStorage.getItem(`apana_whats_new_seen_${fsStore.id}_v1_legal`);
-      if (!hasSeen) {
-        const timer = setTimeout(() => {
-          setIsWhatsNewOpen(true);
-        }, 800);
+    if (isLoading || !fsStore?.id || typeof window === 'undefined') return;
+
+    const createdAtMs = getStoreCreatedAtMs(fsStore.createdAt);
+    const isStoreOlderThanRelease = createdAtMs === 0 || createdAtMs < CURRENT_WHATS_NEW_RELEASE_AT;
+    const hasSeenWhatsNewInFS = fsStore.lastSeenWhatsNewVersion === CURRENT_WHATS_NEW_VERSION;
+    const hasSeenWhatsNewLocal =
+      localStorage.getItem(`apana_whats_new_seen_${fsStore.id}_${CURRENT_WHATS_NEW_VERSION}`) === 'true';
+
+    const shouldShowWhatsNew = isStoreOlderThanRelease && !hasSeenWhatsNewInFS && !hasSeenWhatsNewLocal;
+
+    if (shouldShowWhatsNew) {
+      const timer = setTimeout(() => setIsWhatsNewOpen(true), 800);
+      return () => clearTimeout(timer);
+    }
+
+    if ((!fsStore.plan || fsStore.plan === 'gratis') && !fsStore.hasUsedTrial) {
+      const dismissedAtFS = Number(fsStore.trialModalDismissedAt || 0);
+      const dismissedAtLocal =
+        parseInt(localStorage.getItem(`apana_trial_dismissed_${fsStore.id}`) || '0', 10) || 0;
+      const lastDismissedAt = Math.max(dismissedAtFS, dismissedAtLocal);
+      const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+      const shouldAutoShowTrial = !lastDismissedAt || Date.now() - lastDismissedAt > FOURTEEN_DAYS_MS;
+
+      if (shouldAutoShowTrial) {
+        const timer = setTimeout(() => setIsTrialModalOpen(true), 1200);
         return () => clearTimeout(timer);
       }
     }
-  }, [isLoading, fsStore?.id]);
+  }, [
+    isLoading,
+    fsStore?.id,
+    fsStore?.createdAt,
+    fsStore?.lastSeenWhatsNewVersion,
+    fsStore?.plan,
+    fsStore?.hasUsedTrial,
+    fsStore?.trialModalDismissedAt,
+  ]);
+
+  // Persistir en Firestore que el usuario ya vio la versión actual de "Gran Actualización"
+  const handleMarkWhatsNewSeen = async (version: string) => {
+    if (!user || !fsStore) return;
+    setFsStore((prev) => (prev ? { ...prev, lastSeenWhatsNewVersion: version } : prev));
+    try {
+      const updated = await createOrUpdateStoreInFS(user.uid, {
+        lastSeenWhatsNewVersion: version,
+      });
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(updated));
+      }
+    } catch (err) {
+      console.warn('No se pudo guardar lastSeenWhatsNewVersion en Firestore:', err);
+    }
+  };
+
+  // Persistir en Firestore el descarte del modal de prueba (cooldown de 14 días multi-dispositivo)
+  const handleDismissTrialModal = async () => {
+    setIsTrialModalOpen(false);
+    if (!fsStore?.id) return;
+    const now = Date.now();
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`apana_trial_dismissed_${fsStore.id}`, now.toString());
+    }
+    setFsStore((prev) => (prev ? { ...prev, trialModalDismissedAt: now } : prev));
+    if (user) {
+      try {
+        const updated = await createOrUpdateStoreInFS(user.uid, {
+          trialModalDismissedAt: now,
+        });
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(`apana_cache_store_${user.uid}`, JSON.stringify(updated));
+        }
+      } catch (err) {
+        console.warn('No se pudo guardar trialModalDismissedAt en Firestore:', err);
+      }
+    }
+  };
 
   const handleResendEmail = async () => {
     if (!user) return;
@@ -247,20 +325,7 @@ export default function DashboardPage() {
           });
         }
 
-        // Para usuarios existentes en Plan Gratis que nunca usaron el trial:
-        // Mostrar automáticamente el modal de 30 días gratis (con cooldown de 7 días si lo descartaron)
-        if (storeFromFS && (!storeFromFS.plan || storeFromFS.plan === 'gratis') && !storeFromFS.hasUsedTrial) {
-          if (typeof window !== 'undefined') {
-            const dismissedAt = localStorage.getItem(`apana_trial_dismissed_${storeFromFS.id}`);
-            const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-            const shouldAutoShow = !dismissedAt || (Date.now() - parseInt(dismissedAt, 10)) > SEVEN_DAYS_MS;
-            if (shouldAutoShow) {
-              setTimeout(() => {
-                if (isMounted) setIsTrialModalOpen(true);
-              }, 1200);
-            }
-          }
-        }
+        // Los modales de novedades y prueba gratis se orquestan en el useEffect dedicado (compatible con StrictMode).
       } catch (err) {
         console.warn('Aviso sincronizando dashboard:', err);
         // Si falló la consulta o el cliente está offline y no hay tienda en caché, dirigir a setup
@@ -1045,12 +1110,7 @@ export default function DashboardPage() {
       {fsStore && (
         <PlanTrialModal
           isOpen={isTrialModalOpen}
-          onClose={() => {
-            if (fsStore?.id && typeof window !== 'undefined') {
-              localStorage.setItem(`apana_trial_dismissed_${fsStore.id}`, Date.now().toString());
-            }
-            setIsTrialModalOpen(false);
-          }}
+          onClose={handleDismissTrialModal}
           storeId={fsStore.id}
           storeName={fsStore.name}
           userEmail={user?.email || ''}
@@ -1083,12 +1143,7 @@ export default function DashboardPage() {
               }).catch(() => {});
             }
           }}
-          onContinueFree={() => {
-            if (fsStore?.id && typeof window !== 'undefined') {
-              localStorage.setItem(`apana_trial_dismissed_${fsStore.id}`, Date.now().toString());
-            }
-            setIsTrialModalOpen(false);
-          }}
+          onContinueFree={handleDismissTrialModal}
         />
       )}
 
@@ -1100,6 +1155,7 @@ export default function DashboardPage() {
           storeId={fsStore.id}
           storeName={fsStore.name}
           isLegalConfigured={Boolean(fsStore.legalTaxId && fsStore.legalBusinessName)}
+          onMarkSeen={handleMarkWhatsNewSeen}
         />
       )}
     </div>

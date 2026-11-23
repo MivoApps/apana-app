@@ -71,6 +71,10 @@ export interface Store {
   // Flag de persistencia en base de datos para la celebración de onboarding
   isOnboardingCelebrated?: boolean;
 
+  // Persistencia de modales de novedades y oferta de prueba (evita repetición tras cerrar sesión)
+  lastSeenWhatsNewVersion?: string;
+  trialModalDismissedAt?: number;
+
   // Datos Legales / Fiscales para Libro de Reclamaciones Oficial (Opcional con fallback inteligente)
   legalBusinessName?: string; // Razón Social o Nombre del Titular
   legalTaxIdType?: 'RUC' | 'DNI';

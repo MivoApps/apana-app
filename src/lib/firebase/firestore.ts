@@ -324,6 +324,8 @@ export const createOrUpdateStoreInFS = async (
     nameChangesHistory: storeData.nameChangesHistory !== undefined ? storeData.nameChangesHistory : (existingData?.nameChangesHistory ?? []),
     phoneChangesHistory: storeData.phoneChangesHistory !== undefined ? storeData.phoneChangesHistory : (existingData?.phoneChangesHistory ?? []),
     isOnboardingCelebrated: storeData.isOnboardingCelebrated !== undefined ? storeData.isOnboardingCelebrated : (existingData?.isOnboardingCelebrated ?? false),
+    lastSeenWhatsNewVersion: storeData.lastSeenWhatsNewVersion !== undefined ? storeData.lastSeenWhatsNewVersion : (existingData?.lastSeenWhatsNewVersion ?? ''),
+    trialModalDismissedAt: storeData.trialModalDismissedAt !== undefined ? storeData.trialModalDismissedAt : (existingData?.trialModalDismissedAt ?? null),
     legalBusinessName: storeData.legalBusinessName !== undefined ? storeData.legalBusinessName : (existingData?.legalBusinessName ?? ''),
     legalTaxIdType: storeData.legalTaxIdType !== undefined ? storeData.legalTaxIdType : (existingData?.legalTaxIdType ?? 'RUC'),
     legalTaxId: storeData.legalTaxId !== undefined ? storeData.legalTaxId : (existingData?.legalTaxId ?? ''),
